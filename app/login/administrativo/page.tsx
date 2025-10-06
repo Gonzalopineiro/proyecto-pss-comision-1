@@ -1,9 +1,6 @@
-import React from 'react'
+import React from "react"
+import { redirect } from "next/navigation"
 
-function page() {
-  return (
-    <div>page</div>
-  )
+export default function AdministrativoLoginRedirect(){
+  redirect('/login?role=administrativo')
 }
-
-export default page
