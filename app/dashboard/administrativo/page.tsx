@@ -1,6 +1,7 @@
 import React from 'react'
 import Link from 'next/link'
 import Sidebar from '@/components/ui/sidebar'
+import HeaderClient from '@/components/ui/HeaderClient'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
@@ -26,9 +27,15 @@ export default async function AdministrativoDashboard(){
       <div className="flex">
         <Sidebar />
         <main className="flex-1 p-8">
-          <div className="max-w-4xl bg-white dark:bg-slate-800 p-6 rounded-xl shadow">
+          {/* Panel superior con información de sesión */}
+          {/* Header cliente con legajo, rol y logout */}
+          <div>
+            <HeaderClient legajo={session.legajo} role={session.role} />
+          </div>
+
+          <div className="max-w-6xl bg-white dark:bg-slate-800 p-6 rounded-xl shadow mx-auto">
             <h1 className="text-2xl font-bold">Panel Administrativo</h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-300">Herramientas administrativas y reportes.</p>
+            <p className="mt-2 text-gray-600 dark:text-gray-300">Bienvenido al sistema, ha iniciado correctamente como <span className="font-medium text-gray-900 dark:text-gray-100">{session.role?.charAt(0).toUpperCase() + session.role?.slice(1)}</span>.</p>
             <div className="mt-6 space-y-2">
               <Link href="/" className="text-sm text-blue-600">Volver al inicio</Link>
             </div>
