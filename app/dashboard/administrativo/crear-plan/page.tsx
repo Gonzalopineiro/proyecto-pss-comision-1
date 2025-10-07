@@ -1,27 +1,27 @@
-import React from 'react'
-import Link from 'next/link'
-import Sidebar from '@/components/ui/sidebar'
-import HeaderClient from '@/components/ui/HeaderClient'
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import Sidebar from '@/components/ui/sidebar';
+import HeaderClient from '@/components/ui/HeaderClient';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import CrearPlanForm from '@/components/admin/CrearPlanForm';
+import { Users, User, Book, ChevronRight } from 'lucide-react';
+import { Suspense } from 'react';
 
 async function parseSession() {
-  const ck = await cookies()
-  const c = ck.get('session')?.value
-  if (!c) return null
+  const ck = await cookies();
+  const c = ck.get('session')?.value;
+  if (!c) return null;
   try {
-    const s = JSON.parse(Buffer.from(c, 'base64').toString('utf8'))
-    return s as any
+    const s = JSON.parse(Buffer.from(c, 'base64').toString('utf8'));
+    return s as any;
   } catch {
-    return null
+    return null;
   }
 }
 
-export default async function CrearPlan(){
-  const session = await parseSession()
-  if (!session) redirect('/login?role=administrativo')
-  if (session?.role !== 'administrativo') redirect(`/login?role=${session?.role ?? 'estudiante'}`)
+export default async function CrearPlanPage() {
+  const session = await parseSession();
+  if (!session) redirect('/login?role=administrativo');
+  if (session?.role !== 'administrativo') redirect(`/login?role=${session?.role ?? 'estudiante'}`);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
@@ -31,18 +31,12 @@ export default async function CrearPlan(){
           <HeaderClient name={"Juan Pérez"} role={session.role} />
 
           <div className="max-w-6xl mx-auto mt-6">
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow">
-              <h1 className="text-2xl font-bold">Crear Plan de Estudio</h1>
-              <p className="mt-2 text-gray-600 dark:text-gray-300">Formulario para crear planes de estudio (placeholder).</p>
-              <div className="mt-6">
-                <Link href="/dashboard/administrativo">
-                  <Button variant="outline">Volver al panel administrativo</Button>
-                </Link>
-              </div>
-            </div>
+            <Suspense fallback={<div>Cargando...</div>}>
+              <CrearPlanForm />
+            </Suspense>
           </div>
         </main>
       </div>
     </div>
-  )
+  );
 }

@@ -12,5 +12,54 @@
     "descripcion": "aa",
     "duracion": "Anual",
     "createdAt": "2025-10-07T00:38:39.094Z"
+  },
+  {
+    "codigo": "MAT-2025-544",
+    "nombre": "ingles",
+    "descripcion": "sdsdada",
+    "duracion": "Anual",
+    "createdAt": "2025-10-07T14:39:41.179Z"
+  },
+  {
+    "codigo": "MAT-2025-685",
+    "nombre": "pss",
+    "descripcion": "sdsadasdas",
+    "duracion": "Anual",
+    "createdAt": "2025-10-07T14:39:59.050Z"
+  },
+  {
+    "codigo": "MAT-2025-849",
+    "nombre": "cal-1",
+    "descripcion": "dsdasd",
+    "duracion": "Cuatrimestral",
+    "createdAt": "2025-10-07T14:40:13.427Z"
+  },
+  {
+    "codigo": "MAT-2025-365",
+    "nombre": "cal-2",
+    "descripcion": "dsdasdas",
+    "duracion": "Cuatrimestral",
+    "createdAt": "2025-10-07T14:40:28.159Z"
+  },
+  {
+    "codigo": "MAT-2025-437",
+    "nombre": "prom-1",
+    "descripcion": "dfsdfsdf",
+    "duracion": "Cuatrimestral",
+    "createdAt": "2025-10-07T14:40:40.945Z"
+  },
+  {
+    "codigo": "MAT-2025-166",
+    "nombre": "prom-2",
+    "descripcion": "dsadsadsa",
+    "duracion": "Cuatrimestral",
+    "createdAt": "2025-10-07T14:40:50.151Z"
+  },
+  {
+    "codigo": "MAT-2025-116",
+    "nombre": "prom-3",
+    "descripcion": "dsadsadasd",
+    "duracion": "Cuatrimestral",
+    "createdAt": "2025-10-07T14:41:00.411Z"
   }
 ]

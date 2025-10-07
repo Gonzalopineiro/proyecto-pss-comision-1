@@ -1,0 +1,104 @@
+[
+  {
+    "codigo": "DCIC-01",
+    "nombre": "Como ser Pro",
+    "añoCreacion": "2025",
+    "duracionTotal": 5,
+    "carrera": "Ingeniería Química",
+    "descripcion": "como ser pro en la vida ",
+    "materias": [
+      {
+        "materiaId": "MAT-2025-685",
+        "nombre": "pss",
+        "año": "1er Año",
+        "cuatrimestre": "Anual",
+        "correlativasCursada": [],
+        "correlativasExamen": []
+      },
+      {
+        "materiaId": "MAT-2025-544",
+        "nombre": "ingles",
+        "año": "2do Año",
+        "cuatrimestre": "1er Cuatrimestre",
+        "correlativasCursada": [],
+        "correlativasExamen": []
+      },
+      {
+        "materiaId": "MAT-2025-808",
+        "nombre": "aa",
+        "año": "2do Año",
+        "cuatrimestre": "2do Cuatrimestre",
+        "correlativasCursada": [],
+        "correlativasExamen": []
+      },
+      {
+        "materiaId": "MAT-2025-849",
+        "nombre": "cal-1",
+        "año": "3er Año",
+        "cuatrimestre": "Anual",
+        "correlativasCursada": [],
+        "correlativasExamen": []
+      },
+      {
+        "materiaId": "MAT-2025-365",
+        "nombre": "cal-2",
+        "año": "4to Año",
+        "cuatrimestre": "Anual",
+        "correlativasCursada": [],
+        "correlativasExamen": []
+      },
+      {
+        "materiaId": "MAT-2025-437",
+        "nombre": "prom-1",
+        "año": "5to Año",
+        "cuatrimestre": "1er Cuatrimestre",
+        "correlativasCursada": [],
+        "correlativasExamen": []
+      },
+      {
+        "materiaId": "MAT-2025-166",
+        "nombre": "prom-2",
+        "año": "5to Año",
+        "cuatrimestre": "2do Cuatrimestre",
+        "correlativasCursada": [],
+        "correlativasExamen": []
+      }
+    ],
+    "createdAt": "2025-10-07T14:46:12.912Z"
+  },
+  {
+    "codigo": "D-452",
+    "nombre": "dsdsdasddsdadsadasas",
+    "añoCreacion": "2025",
+    "duracionTotal": 5,
+    "carrera": "Ingeniería en Sistemas",
+    "descripcion": "sddasd",
+    "materias": [
+      {
+        "materiaId": "MAT-2025-544",
+        "nombre": "ingles",
+        "año": "1er Año",
+        "cuatrimestre": "1er Cuatrimestre",
+        "correlativasCursada": [],
+        "correlativasExamen": []
+      },
+      {
+        "materiaId": "MAT-2025-808",
+        "nombre": "aa",
+        "año": "1er Año",
+        "cuatrimestre": "2do Cuatrimestre",
+        "correlativasCursada": [],
+        "correlativasExamen": []
+      },
+      {
+        "materiaId": "MAT-2025-849",
+        "nombre": "cal-1",
+        "año": "2do Año",
+        "cuatrimestre": "Anual",
+        "correlativasCursada": [],
+        "correlativasExamen": []
+      }
+    ],
+    "createdAt": "2025-10-07T15:42:42.321Z"
+  }
+]
