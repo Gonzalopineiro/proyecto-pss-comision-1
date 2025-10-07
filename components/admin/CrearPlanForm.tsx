@@ -1,4 +1,3 @@
-// RUTA: components/admin/CrearPlanForm.tsx
 "use client";
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -31,12 +30,22 @@ const carrerasDisponibles = [
   "Ingeniería Química"
 ];
 
-
 function generarCodigoPlan(nombre: string) {
   if (!nombre || nombre.trim() === '') return '';
   const acronimo = nombre.split(' ').map(n => n[0]).join('').toUpperCase();
-  const rand = Math.floor(100 + Math.random() * 900); 
+  const rand = Math.floor(100 + Math.random() * 900);
   return `${acronimo}-${rand}`;
+}
+
+function añoToNumber(añoString: string): number {
+  return parseInt(añoString.replace(/[^0-9]/g, ''));
+}
+
+function numberToAño(num: number): string {
+  if (num === 1) return '1er Año';
+  if (num === 2) return '2do Año';
+  if (num === 3) return '3er Año';
+  return `${num}to Año`;
 }
 
 // Componente auxiliar para la selección de correlativas
@@ -97,14 +106,12 @@ function CorrelativasInput({ materiasDisponibles, correlativasSeleccionadas, onU
   );
 }
 
-// Componente principal
 export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
 
   // --- Step 1 States ---
   const [nombrePlan, setNombrePlan] = useState('');
-  // *** CORRECCIÓN: Estado inicial vacío para el código ***
   const [codigoPlan, setCodigoPlan] = useState('');
   const [añoCreacion, setAñoCreacion] = useState(new Date().getFullYear().toString());
   const [duracionTotal, setDuracionTotal] = useState('5');
@@ -183,7 +190,7 @@ export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
   function handleQuitarMateria(codigoMateria: string) {
     setMateriasAsociadas(materiasAsociadas.filter(m => m.materiaId !== codigoMateria));
   }
-
+  
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault();
     setServerError(null);
@@ -191,6 +198,15 @@ export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
     if (materiasAsociadas.length === 0) {
         alert("Debe asociar al menos una materia para crear el plan de estudios.");
         return;
+    }
+    
+    const duracionPlan = parseInt(duracionTotal);
+    const añosDeMaterias = materiasAsociadas.map(m => añoToNumber(m.año));
+    const maxAñoEnPlan = Math.max(...añosDeMaterias);
+
+    if (maxAñoEnPlan !== duracionPlan) {
+      setServerError(`El plan de estudios está incompleto.`);
+      return; 
     }
     
     setLoading(true);
@@ -341,7 +357,10 @@ export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
     </div>
   );
   
-  const renderStep2 = () => {
+  const renderStep2 = () => {    
+    const duracionNumerica = parseInt(duracionTotal) || 1;
+    const opcionesAño = Array.from({ length: duracionNumerica }, (_, i) => numberToAño(i + 1));
+
     const handleUpdateCorrelativas = (materiaId: string, tipo: 'cursada' | 'examen', nuevasCorrelativas: string[]) => {
       setMateriasAsociadas(prevMaterias => 
         prevMaterias.map(m => {
@@ -399,9 +418,11 @@ export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
                     </select>
                 </div>
                 <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Año</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Año</label>                    
                     <select value={añoNuevaMateria} onChange={e => setAñoNuevaMateria(e.target.value)} className="w-full p-3 rounded-md border border-gray-300 bg-white shadow-sm">
-                        <option>1er Año</option> <option>2do Año</option> <option>3er Año</option> <option>4to Año</option> <option>5to Año</option>
+                      {opcionesAño.map(opcion => (
+                        <option key={opcion} value={opcion}>{opcion}</option>
+                      ))}
                     </select>
                 </div>
                 <div className="md:col-span-2">
