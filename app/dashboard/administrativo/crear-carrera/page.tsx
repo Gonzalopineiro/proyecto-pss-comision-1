@@ -1,5 +1,6 @@
 import React from 'react'
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
 export default function CrearCarrera(){
   return (
@@ -8,7 +9,9 @@ export default function CrearCarrera(){
         <h1 className="text-2xl font-bold">Crear Carrera</h1>
         <p className="mt-2 text-gray-600 dark:text-gray-300">Formulario para crear carreras (placeholder).</p>
         <div className="mt-6">
-          <Link href="/dashboard/administrativo" className="text-blue-600">Volver al panel administrativo</Link>
+          <Link href="/dashboard/administrativo">
+            <Button variant="outline">Volver al panel administrativo</Button>
+          </Link>
         </div>
       </div>
     </div>

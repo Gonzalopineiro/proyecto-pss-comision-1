@@ -31,49 +31,57 @@ export default function LandingPage() {
               </p>
             </div>
             <div className="mx-auto grid max-w-sm items-start gap-8 sm:max-w-4xl sm:grid-cols-2 md:gap-12 lg:max-w-5xl lg:grid-cols-3 mt-12">
-              <Card className="w-full transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl border-t-4 border-blue-600">
-                <CardHeader className="flex flex-row items-center gap-4 p-6">
-                  <GraduationCap className="h-10 w-10 text-blue-600" />
+              <Card className="w-full transform-gpu transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl rounded-2xl border border-transparent">
+                <CardHeader className="flex flex-row items-center gap-4 p-6 bg-gradient-to-r from-white/50 to-slate-50 dark:from-slate-800 dark:to-slate-800 rounded-t-2xl">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-full bg-blue-50 dark:bg-blue-900">
+                    <GraduationCap className="h-6 w-6 text-blue-600" />
+                  </div>
                   <div className="grid gap-1">
                     <CardTitle className="font-bold">Soy Estudiante</CardTitle>
                     <CardDescription>Acceso a materias, notas y trámites.</CardDescription>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6 pt-0">
+                <CardContent className="p-6 pt-4">
                   <Link href="/login?role=estudiante">
-                    <Button className="w-full font-semibold">
+                    <Button variant="primary-dark" className="w-full font-semibold">
                       Ingresar
                     </Button>
                   </Link>
                 </CardContent>
               </Card>
-              <Card className="w-full transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl border-t-4 border-green-600">
-                <CardHeader className="flex flex-row items-center gap-4 p-6">
-                  <Briefcase className="h-10 w-10 text-green-600" />
+
+              <Card className="w-full transform-gpu transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl rounded-2xl border border-transparent">
+                <CardHeader className="flex flex-row items-center gap-4 p-6 bg-gradient-to-r from-white/50 to-slate-50 dark:from-slate-800 dark:to-slate-800 rounded-t-2xl">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-full bg-green-50 dark:bg-green-900">
+                    <Briefcase className="h-6 w-6 text-green-600" />
+                  </div>
                   <div className="grid gap-1">
                     <CardTitle className="font-bold">Soy Docente</CardTitle>
                     <CardDescription>Gestión de cursos, alumnos y actas.</CardDescription>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6 pt-0">
+                <CardContent className="p-6 pt-4">
                   <Link href="/login?role=docente">
-                    <Button className="w-full font-semibold bg-green-600 hover:bg-green-700">
+                    <Button variant="primary-dark" className="w-full font-semibold">
                       Ingresar
                     </Button>
                   </Link>
                 </CardContent>
               </Card>
-              <Card className="w-full transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl border-t-4 border-red-600">
-                <CardHeader className="flex flex-row items-center gap-4 p-6">
-                  <User className="h-10 w-10 text-red-600" />
+
+              <Card className="w-full transform-gpu transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl rounded-2xl border border-transparent">
+                <CardHeader className="flex flex-row items-center gap-4 p-6 bg-gradient-to-r from-white/50 to-slate-50 dark:from-slate-800 dark:to-slate-800 rounded-t-2xl">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-full bg-red-50 dark:bg-red-900">
+                    <User className="h-6 w-6 text-red-600" />
+                  </div>
                   <div className="grid gap-1">
                     <CardTitle className="font-bold">Soy Administrativo</CardTitle>
                     <CardDescription>Administración general del sistema.</CardDescription>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6 pt-0">
+                <CardContent className="p-6 pt-4">
                   <Link href="/login?role=administrativo">
-                    <Button className="w-full font-semibold bg-red-600 hover:bg-red-700">
+                    <Button variant="primary-dark" className="w-full font-semibold">
                       Ingresar
                     </Button>
                   </Link>

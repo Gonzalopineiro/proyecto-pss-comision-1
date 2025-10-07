@@ -2,7 +2,7 @@
 import React from 'react'
 import { LogOut, GraduationCap, Briefcase, User } from 'lucide-react'
 
-export default function Header({ legajo, role }: { legajo: string; role: string }){
+export default function Header({ name, legajo, role }: { name?: string; legajo?: string; role: string }){
   async function handleLogout(){
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
@@ -13,6 +13,7 @@ export default function Header({ legajo, role }: { legajo: string; role: string 
     }
   }
 
+  const displayName = name ?? legajo ?? ''
   const roleLabel = role ? role.charAt(0).toUpperCase() + role.slice(1) : ''
 
   const Icon = role === 'estudiante' ? GraduationCap : role === 'docente' ? Briefcase : User
@@ -21,13 +22,12 @@ export default function Header({ legajo, role }: { legajo: string; role: string 
   return (
     <div className="max-w-6xl mx-auto mb-6">
       <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md flex items-center justify-between">
-        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
           <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold ${bgClass}`}>
             <Icon className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">Legajo</div>
-            <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{legajo}</div>
+            <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{displayName}</div>
             <div className="text-xs text-gray-500 dark:text-gray-400">{roleLabel}</div>
           </div>
         </div>

@@ -2,6 +2,6 @@
 import React from 'react'
 import Header from './header'
 
-export default function HeaderClient({ legajo, role }: { legajo: string; role: string }){
-  return <Header legajo={legajo} role={role} />
+export default function HeaderClient({ name, role }: { name: string; role: string }){
+  return <Header name={name} role={role} />
 }

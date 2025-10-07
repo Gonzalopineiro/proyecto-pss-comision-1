@@ -11,7 +11,7 @@ async function parseSession() {
   if (!c) return null
   try {
     const s = JSON.parse(Buffer.from(c, 'base64').toString('utf8'))
-    return s as { legajo: string; role: string }
+    return s as any
   } catch {
     return null
   }
@@ -28,7 +28,7 @@ export default async function EstudianteDashboard(){
           {/* Panel superior con información de sesión */}
           {/* Header cliente con legajo, rol y logout */}
           <div>
-            <HeaderClient legajo={session.legajo} role={session.role} />
+            <HeaderClient name={"Juan Pérez"} role={session.role} />
           </div>
 
           <div className="max-w-6xl bg-white dark:bg-slate-800 p-6 rounded-xl shadow mx-auto">
