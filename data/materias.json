@@ -5,5 +5,12 @@
     "descripcion": "aaa",
     "duracion": "Anual",
     "createdAt": "2025-10-06T23:39:28.156Z"
+  },
+  {
+    "codigo": "MAT-2025-808",
+    "nombre": "aa",
+    "descripcion": "aa",
+    "duracion": "Anual",
+    "createdAt": "2025-10-07T00:38:39.094Z"
   }
 ]

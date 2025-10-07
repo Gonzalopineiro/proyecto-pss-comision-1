@@ -6,6 +6,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ChevronRight, Users, User, Book } from 'lucide-react'
+import CrearMateriaModal from '@/components/admin/CrearMateriaModal'
 
 async function parseSession() {
   const ck = await cookies()
