@@ -6,6 +6,9 @@ export default function Header({ name, legajo, role }: { name?: string; legajo?:
   async function handleLogout(){
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
+      // marcar sesión como inactiva antes de recargar
+      try { localStorage.removeItem('siu_session_active') } catch(e) {}
+      try { window.dispatchEvent(new Event('siu_session_active_cleared')) } catch(e) {}
       // forzar recarga para limpiar sesión y redirigir al login
       window.location.href = '/'
     } catch (err) {

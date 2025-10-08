@@ -66,6 +66,10 @@ export function LoginForm({ role }: { role?: string }) {
       try {
         if (remember) localStorage.setItem('siu_legajo', String(legajo))
         else localStorage.removeItem('siu_legajo')
+        // marcar sesión como activa para el SessionTimeout
+        localStorage.setItem('siu_session_active', '1')
+        // notify same-tab listeners (storage event doesn't fire in same tab)
+        try { window.dispatchEvent(new Event('siu_session_active_set')) } catch (e) {}
       } catch (e) {
         // ignore
       }

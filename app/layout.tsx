@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import SessionTimeout from '../components/ui/SessionTimeout'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,6 +28,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+  {/* Cliente que cierra sesión tras inactividad (20 min) y muestra advertencia 1 min antes */}
+  <SessionTimeout timeoutMinutes={20} warningMinutes={1} />
         {children}
       </body>
     </html>
