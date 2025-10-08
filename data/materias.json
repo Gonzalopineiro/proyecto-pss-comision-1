@@ -12,5 +12,19 @@
     "descripcion": "aa",
     "duracion": "Anual",
     "createdAt": "2025-10-07T00:38:39.094Z"
+  },
+  {
+    "codigo": "MAT-2025-912",
+    "nombre": "ana",
+    "descripcion": "aa",
+    "duracion": "Cuatrimestral",
+    "createdAt": "2025-10-07T20:06:18.257Z"
+  },
+  {
+    "codigo": "MAT-2025-545",
+    "nombre": "alejo",
+    "descripcion": "aa",
+    "duracion": "Anual",
+    "createdAt": "2025-10-07T23:28:27.567Z"
   }
 ]
