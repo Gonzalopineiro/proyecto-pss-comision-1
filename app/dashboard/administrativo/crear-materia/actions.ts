@@ -14,7 +14,7 @@ export async function checkMateriaExistente(nombre: string): Promise<boolean> {
   const supabase = await createClient()
   
   const { data, error } = await supabase
-    .from('materia')
+    .from('materias')
     .select('id')
     .ilike('nombre', nombre)
     .maybeSingle()
@@ -86,7 +86,7 @@ export async function obtenerMaterias() {
   const supabase = await createClient()
   
   const { data, error } = await supabase
-    .from('materia')
+    .from('materias')
     .select('*')
     .order('created_at', { ascending: false })
   

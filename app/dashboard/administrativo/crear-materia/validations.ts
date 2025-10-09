@@ -14,7 +14,7 @@ export const materiaSchema = z.object({
     .min(1, 'La descripción es obligatoria')
     .max(500, 'La descripción no puede tener más de 500 caracteres'),
   duracion: z.enum(['Anual', 'Cuatrimestral'], {
-    errorMap: () => ({ message: 'La duración debe ser Anual o Cuatrimestral' })
+    message: 'La duración debe ser Anual o Cuatrimestral'
   })
 })
 
