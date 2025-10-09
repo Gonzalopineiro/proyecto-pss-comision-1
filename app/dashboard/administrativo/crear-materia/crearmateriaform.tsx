@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { crearMateria, checkMateriaExistente } from './actions'
 
 type Duracion = 'Anual' | 'Cuatrimestral'
 
@@ -27,13 +28,17 @@ export default function CrearMateriaForm({ onCancel }: { onCancel?: () => void }
   }, [])
 
   async function checkNombreUnique(name: string){
-    if (!name) return
-    try{
-      const res = await fetch('/api/materias')
-      const list = await res.json()
-      const exists = list.find((m:any)=> m.nombre.toLowerCase() === name.toLowerCase())
-      setErrors(prev=> ({...prev, nombre: exists ? 'El nombre de la materia ya existe' : ''}))
-    }catch(e){ }
+    if (!name || name.trim() === '') return
+    try {
+      const exists = await checkMateriaExistente(name)
+      if (exists) {
+        setErrors(prev => ({...prev, nombre: 'El nombre de la materia ya existe'}))
+      } else {
+        setErrors(prev => ({...prev, nombre: ''}))
+      }
+    } catch(e) {
+      console.error('Error al verificar el nombre:', e)
+    }
   }
 
   function validate(){
@@ -49,28 +54,35 @@ export default function CrearMateriaForm({ onCancel }: { onCancel?: () => void }
     ev.preventDefault()
     setServerError(null)
     if (!validate()) return
+    
     setLoading(true)
-    try{
-      const res = await fetch('/api/materias', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ codigo, nombre, descripcion, duracion })
+    try {
+      // Usamos la función del servidor para crear la materia
+      const result = await crearMateria({
+        codigo,
+        nombre,
+        descripcion,
+        duracion: duracion as Duracion
       })
-      const data = await res.json()
-      if (!res.ok){
-        setServerError(data?.error || 'Error al crear materia')
+      
+      if (result.error) {
+        setServerError(result.error)
         setLoading(false)
         return
       }
-
+      
+      // Si fue exitoso
       if (onCancel) {
-        // close modal and optionally navigate or refresh
+        // Si está en un modal, cerrar
         onCancel()
       } else {
+        // Redirigir a la lista de materias
         router.push('/dashboard/administrativo')
+        router.refresh() // Refrescar para mostrar los cambios
       }
-    }catch(err){
-      setServerError('Error de red')
+    } catch (err) {
+      console.error('Error al crear materia:', err)
+      setServerError('Error inesperado. Por favor, inténtalo de nuevo.')
       setLoading(false)
     }
   }
@@ -134,7 +146,7 @@ export default function CrearMateriaForm({ onCancel }: { onCancel?: () => void }
           )}
 
           <div className="ml-auto w-48">
-            <Button type="submit" variant="primary-dark" className="w-full py-3 rounded-2xl" disabled={loading}>{loading ? 'Creando...' : 'Crear Materia'}</Button>
+            <Button type="submit" variant="default" className="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700" disabled={loading}>{loading ? 'Creando...' : 'Crear Materia'}</Button>
           </div>
         </div>
       </form>
