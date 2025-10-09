@@ -23,12 +23,10 @@ interface MateriaPlan {
   correlativasExamen: string[];
 }
 
-// Datos simulados de carreras
-const carrerasDisponibles = [
-  "Ingeniería en Sistemas",
-  "Licenciatura en Análisis de Sistemas",
-  "Ingeniería Química"
-];
+interface Carrera {
+  codigo: string;
+  nombre: string;
+}
 
 function generarCodigoPlan(nombre: string) {
   if (!nombre || nombre.trim() === '') return '';
@@ -117,6 +115,7 @@ export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
   const [duracionTotal, setDuracionTotal] = useState('5');
   const [carrera, setCarrera] = useState('');
   const [descripcion, setDescripcion] = useState('');
+  const [carrerasDisponibles, setCarrerasDisponibles] = useState<Carrera[]>([]);
 
   // --- Step 2 States ---
   const [materiasDisponibles, setMateriasDisponibles] = useState<Materia[]>([]);
@@ -133,7 +132,7 @@ export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
   useEffect(() => {
     setCodigoPlan(generarCodigoPlan(nombrePlan));
   }, [nombrePlan]);
-
+ 
   useEffect(() => {
     async function fetchMaterias() {
       try {
@@ -145,7 +144,20 @@ export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
         setServerError('Error: No se pudieron cargar las materias. Asegúrese de que haya materias creadas.');
       }
     }
+
+    async function fetchCarreras() {
+      try {
+        const res = await fetch('/api/carreras');
+        if (!res.ok) throw new Error('No se pudieron cargar las carreras');
+        const data = await res.json();
+        setCarrerasDisponibles(data);
+      } catch (error) {
+        setServerError('Error: No se pudieron cargar las carreras. Asegúrese de que haya carreras creadas.');
+      }
+    }
+
     fetchMaterias();
+    fetchCarreras();
   }, []);
 
   function validateStep1() {
@@ -205,7 +217,7 @@ export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
     const maxAñoEnPlan = Math.max(...añosDeMaterias);
 
     if (maxAñoEnPlan !== duracionPlan) {
-      setServerError(`El plan de estudios está incompleto.`);
+      setServerError(`El plan de estudios está incompleto. La duración es de ${duracionPlan} años, pero la materia de año más alto corresponde al ${maxAñoEnPlan}º año. Debe agregar al menos una materia del último año.`);
       return; 
     }
     
@@ -319,14 +331,14 @@ export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
                   </div>
               </div>
               <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Carrera *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Carrera *</label>                  
                   <select 
                     value={carrera} 
                     onChange={(e) => setCarrera(e.target.value)} 
                     className={`w-full p-3 rounded-md border bg-white text-gray-800 shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${errors.carrera ? 'border-red-500' : 'border-gray-300'}`}
                   >
                       <option value="" className="text-gray-400">Seleccionar carrera...</option>
-                      {carrerasDisponibles.map(c => <option key={c} value={c}>{c}</option>)}
+                      {carrerasDisponibles.map(c => <option key={c.codigo} value={c.nombre}>{c.nombre}</option>)}
                   </select>
                   {errors.carrera && <p className="text-xs text-red-600 mt-1">{errors.carrera}</p>}
               </div>
