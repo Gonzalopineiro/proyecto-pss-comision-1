@@ -1,10 +1,8 @@
-import React from 'react'
-import Link from 'next/link'
 import Sidebar from '@/components/ui/sidebar'
 import HeaderClient from '@/components/ui/HeaderClient'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import RegistrarAdminForm from '@/components/admin/RegistrarAdminForm'
 
 async function parseSession() {
   const ck = await cookies()
@@ -18,31 +16,23 @@ async function parseSession() {
   }
 }
 
-export default async function RegistrarAdministrativo(){
+export default async function RegistrarAdministrativoPage() {
   const session = await parseSession()
   if (!session) redirect('/login?role=administrativo')
   if (session?.role !== 'administrativo') redirect(`/login?role=${session?.role ?? 'estudiante'}`)
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          <HeaderClient name={"Juan Pérez"} role={session.role} />
-
-          <div className="max-w-6xl mx-auto mt-6">
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow">
-              <h1 className="text-2xl font-bold">Registrar Administrativo</h1>
-              <p className="mt-2 text-gray-600 dark:text-gray-300">Formulario para registrar personal administrativo (placeholder).</p>
-              <div className="mt-6">
-                <Link href="/dashboard/administrativo">
-                  <Button variant="outline">Volver al panel administrativo</Button>
-                </Link>
-              </div>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+        <div className="flex">
+          <Sidebar />
+          <main className="flex-1 p-8">
+            <HeaderClient name={"Juan Pérez"} role={session.role} />
+  
+            <div className="max-w-6xl mx-auto mt-6">
+              <RegistrarAdminForm />
             </div>
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
-    </div>
-  )
+    )
 }
