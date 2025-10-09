@@ -1,0 +1,25 @@
+[
+  {
+    "id": "DEP-COMP",
+    "nombre": "Departamento de Computación"
+  },
+  {
+    "id": "DEP-QUIM",
+    "nombre": "Departamento de Química"
+  },
+  {
+    "id": "DEP-FIS",
+    "nombre": "Departamento de Física"
+  },
+  {
+    "id": "DEP-HUM",
+    "nombre": "Departamento de Humanidades"
+  },
+  {
+    "nombre": "ingenieria en sonido ",
+    "codigo": "IES-2025",
+    "departamento": "Departamento de Física",
+    "planDeEstudiosId": "DCIC-01",
+    "createdAt": "2025-10-09T13:25:51.637Z"
+  }
+]
