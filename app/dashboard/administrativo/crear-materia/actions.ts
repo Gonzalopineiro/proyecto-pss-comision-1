@@ -56,10 +56,10 @@ export async function crearMateria(data: MateriaData) {
   // Insertar en la base de datos
   try {
     const { data: newMateria, error } = await supabase
-      .from('materia')
+      .from('materias')
       .insert([
         { 
-          codigio: data.codigo, // Nota: hay un error de escritura en la columna de la tabla
+          codigo_materia: data.codigo, // Nota: hay un error de escritura en la columna de la tabla
           nombre: data.nombre,
           descripcion: data.descripcion,
           duracion: data.duracion
