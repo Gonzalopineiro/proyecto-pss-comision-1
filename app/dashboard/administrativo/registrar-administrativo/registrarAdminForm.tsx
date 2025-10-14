@@ -3,7 +3,8 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
-import { RefreshCcw, Info } from 'lucide-react' 
+import { RefreshCcw, Info } from 'lucide-react'
+// Las acciones se importarán dinámicamente para evitar problemas con 'use server' 
 
 export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: () => void }) {
   const router = useRouter()
@@ -53,35 +54,59 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
     return Object.keys(e).length === 0
   }
 
+  const [passwordUsed, setPasswordUsed] = useState<string | null>(null)
+  const [registroExitoso, setRegistroExitoso] = useState(false)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setServerError(null)
+    setPasswordUsed(null)
+    setRegistroExitoso(false)
     if (!validate()) return
     setLoading(true)
 
     try {
-      const response = await fetch('/api/admin/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          contrasenaTemporal: generatePassword(),
-        }),
-      })
-
-      const data = await response.json()
-      if (!response.ok) {
-        setServerError(data?.error || 'Error al registrar el administrador')
+      // Importamos las funciones desde el archivo actions.ts
+      const { registrarAdministrativo, verificarDuplicados } = await import('./actions')
+      
+      // Primero verificamos si el email o legajo ya existen
+      const verificacion = await verificarDuplicados(formData.email, formData.legajo)
+      if (verificacion.duplicado) {
+        setServerError(verificacion.mensaje || 'Datos duplicados')
+        if (verificacion.campo) {
+          setErrors({...errors, [verificacion.campo as string]: verificacion.mensaje || 'Ya existe'})
+        }
+        setLoading(false)
+        return
+      }
+      
+      // Si no hay duplicados, procedemos con el registro
+      // Nota: Ya no usamos la contraseña temporal, usamos el DNI como base
+      const result = await registrarAdministrativo(formData)
+      
+      if (!result.success) {
+        setServerError(result.error || 'Error al registrar el administrador')
         return
       }
 
-      if (onCancel) {
-        onCancel()
-      } else {
-        router.push('/dashboard/administrativo')
+      // Si hay contraseña devuelta, la mostramos
+      if (result.passwordUsed) {
+        setPasswordUsed(result.passwordUsed)
       }
+      
+      setRegistroExitoso(true)
+      
+      // Esperar un momento antes de redirigir
+      setTimeout(() => {
+        if (onCancel) {
+          onCancel()
+        } else {
+          router.push('/dashboard/administrativo')
+        }
+      }, 3000)
     } catch (err) {
-      setServerError('Error de red')
+      console.error('Error al registrar:', err)
+      setServerError('Error inesperado al procesar la solicitud')
     } finally {
       setLoading(false)
     }
@@ -246,42 +271,40 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
           </div>
         </div>
 
-        <div>
-          <label className="text-sm">Contraseña Temporal</label>
-          <div className="flex items-stretch mt-1">
-            <input
-              title='Contraseña Temporal'
-              type="text"
-              name="contrasenaTemporal"
-              value={formData.contrasenaTemporal || 'Se generará automáticamente'}
-              readOnly
-              className="flex-grow p-2 rounded-l border bg-gray-50 text-slate-600"
-            />
-            <button
-              type="button" 
-              onClick={() => {
-                setFormData(prev => ({
-                  ...prev,
-                  contrasenaTemporal: generatePassword()
-                }))
-              }}
-              className="flex-shrink-0 px-4 py-2 rounded-r border border-l-0 bg-gray-200 hover:bg-gray-300 text-slate-700 flex items-center justify-center"
-            >
-              <RefreshCcw className="w-4 h-4 mr-1 mt-px" />
-              Generar
-            </button>
+        {passwordUsed ? (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+            <h3 className="font-bold text-green-700 mb-2">¡Administrador creado con éxito!</h3>
+            <p className="text-green-800 mb-2">Se ha generado la siguiente contraseña temporal:</p>
+            <div className="bg-white p-3 rounded border border-green-300 font-mono text-lg mb-2">
+              {passwordUsed}
+            </div>
+            <p className="text-xs text-green-700">
+              ⚠️ IMPORTANTE: Guarde esta contraseña en un lugar seguro. No se volverá a mostrar.
+            </p>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            La contraseña cumple con: mínimo 8 caracteres, mayúsculas, minúsculas, números y símbolos
+        ) : (
+          <div>
+            <label className="text-sm">Información de Contraseña</label>
+            <div className="p-3 bg-blue-50 border border-blue-100 rounded-md">
+              <p className="text-sm text-blue-800">
+                La contraseña inicial se generará automáticamente usando el DNI como base.
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                El administrador deberá cambiar su contraseña en el primer inicio de sesión.
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
+          <Info className="w-4 h-4 mr-2 flex-shrink-0 mt-px" />
+          <p className="font-medium">
+            {registroExitoso 
+              ? "Administrador creado exitosamente. Redirigiendo..." 
+              : "El administrador quedará activo inmediatamente"
+            }
           </p>
         </div>
-
-         <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
-                <Info className="w-4 h-4 mr-2 flex-shrink-0 mt-px" />
-                <p className="font-medium">
-                    El administrador quedará activo inmediatamente
-                </p>
-            </div>
 
       </form>
     </div>

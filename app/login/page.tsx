@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { login } from './actions'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,10 +10,27 @@ import { AlertCircle } from 'lucide-react'
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const searchParams = useSearchParams()
+  const redirectedFrom = searchParams.get('redirectedFrom')
+  const redirectTo = searchParams.get('redirectTo') // Añadimos soporte para el parámetro redirectTo
+  
+  // Mostrar un mensaje si el usuario fue redirigido por falta de autenticación
+  useEffect(() => {
+    if (redirectedFrom) {
+      setError('Debes iniciar sesión para acceder a esta sección')
+    }
+  }, [redirectedFrom])
   
   const handleSubmit = async (formData: FormData) => {
     setError(null)
     setIsLoading(true)
+    
+    // Prioridad: redirectTo explícito > redirectedFrom > default (/dashboard)
+    if (redirectTo) {
+      formData.append('redirectTo', redirectTo)
+    } else if (redirectedFrom) {
+      formData.append('redirectTo', redirectedFrom)
+    }
     
     try {
       const result = await login(formData)

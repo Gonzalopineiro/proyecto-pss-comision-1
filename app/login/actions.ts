@@ -81,8 +81,11 @@ export async function login(formData: FormData): Promise<LoginResult> {
     }
   }
 
+  // Comprobar si hay un destino de redirección personalizado
+  const redirectTo = formData.get('redirectTo') as string || '/dashboard'
+  
   revalidatePath('/', 'layout')
-  redirect('/dashboard')
+  redirect(redirectTo)
 }
 
 export async function signup(formData: FormData) {

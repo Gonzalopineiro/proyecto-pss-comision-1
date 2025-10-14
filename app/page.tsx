@@ -1,10 +1,12 @@
-
 import Link from "next/link"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { GraduationCap, Briefcase, User, School } from "lucide-react"
+import { checkAuthAndRedirect } from "./actions"
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // Verificar si el usuario está autenticado, y redirigir si es así
+  await checkAuthAndRedirect()
+  
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900">
       <main className="flex-1">
