@@ -59,7 +59,7 @@ export async function crearMateria(data: MateriaData) {
       .from('materias')
       .insert([
         { 
-          codigo_materia: data.codigo, // Nota: hay un error de escritura en la columna de la tabla
+          codigo_materia: data.codigo, 
           nombre: data.nombre,
           descripcion: data.descripcion,
           duracion: data.duracion
@@ -73,7 +73,7 @@ export async function crearMateria(data: MateriaData) {
     }
     
     // Invalidar la caché para reflejar los cambios
-    revalidatePath('/dashboard/administrativo')
+    revalidatePath('/dashboard')
     
     return { success: true, data: newMateria }
   } catch (error) {
