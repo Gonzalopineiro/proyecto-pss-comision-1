@@ -1,8 +1,30 @@
+'use client'
+
+import { useState } from 'react'
 import { login } from './actions'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  
+  const handleSubmit = async (formData: FormData) => {
+    setError(null)
+    setIsLoading(true)
+    
+    try {
+      const result = await login(formData)
+      if (result && 'error' in result) {
+        setError(result.error)
+      }
+    } catch (err) {
+      setError('Ha ocurrido un error al intentar iniciar sesión')
+    } finally {
+      setIsLoading(false)
+    }
+  }
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
       <Card className="w-full max-w-md">
@@ -19,7 +41,14 @@ export default function LoginPage() {
           <CardDescription>Accede al sistema con tus credenciales</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4">
+          <form action={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md flex items-center gap-2">
+                <AlertCircle className="size-5" />
+                <span>{error}</span>
+              </div>
+            )}
+            
             <div className="space-y-2">
               <label htmlFor="legajo" className="text-sm font-medium">Legajo</label>
               <div className="relative">
@@ -35,7 +64,7 @@ export default function LoginPage() {
                   id="legajo" 
                   name="legajo" 
                   type="text" 
-                  className="block w-full pl-10 py-2 border rounded-md focus:ring-2 focus:ring-offset-1 focus:outline-none" 
+                  className={`block w-full pl-10 py-2 border ${error ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'} rounded-md focus:ring-2 focus:ring-offset-1 focus:outline-none`} 
                   placeholder="Ingresa tu legajo" 
                   required 
                 />
@@ -55,7 +84,7 @@ export default function LoginPage() {
                   id="password" 
                   name="password" 
                   type="password" 
-                  className="block w-full pl-10 py-2 border rounded-md focus:ring-2 focus:ring-offset-1 focus:outline-none" 
+                  className={`block w-full pl-10 py-2 border ${error ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'} rounded-md focus:ring-2 focus:ring-offset-1 focus:outline-none`} 
                   placeholder="Ingresa tu contraseña" 
                   required 
                 />
@@ -71,10 +100,11 @@ export default function LoginPage() {
             </div>
             
             <Button 
+              type="submit"
               className="w-full py-2 mt-4 bg-slate-800 hover:bg-slate-700 text-white rounded-md transition-colors" 
-              formAction={login}
+              disabled={isLoading}
             >
-              Iniciar Sesión
+              {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </Button>
             
             <p className="text-center text-sm text-gray-500 mt-4">

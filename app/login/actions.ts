@@ -5,7 +5,11 @@ import { redirect } from 'next/navigation'
 
 import { createClient } from '@/utils/supabase/server'
 
-export async function login(formData: FormData) {
+type LoginResult = 
+  | { success: false; error: string }
+  | undefined;
+
+export async function login(formData: FormData): Promise<LoginResult> {
   const supabase = await createClient()
   
   // Obtener el legajo y la contraseña del formulario
@@ -13,8 +17,10 @@ export async function login(formData: FormData) {
   const password = formData.get('password') as string
   
   if (!legajo || !password) {
-    console.error('Faltan credenciales: legajo o contraseña')
-    redirect('/error')
+    return {
+      success: false,
+      error: 'Por favor, ingresa legajo y contraseña'
+    }
   }
   
   try {
@@ -27,12 +33,18 @@ export async function login(formData: FormData) {
     
     if (roleError) {
       console.error('Error al buscar el legajo:', roleError.message)
-      redirect('/error')
+      return {
+        success: false,
+        error: 'El legajo ingresado no existe'
+      }
     }
     
     if (!roleData?.email) {
       console.error('No se encontró email para el legajo:', legajo)
-      redirect('/error')
+      return {
+        success: false,
+        error: 'No hay correo electrónico asociado al legajo'
+      }
     }
     
     console.log('Email encontrado:', roleData.email) // Para depuración
@@ -45,20 +57,28 @@ export async function login(formData: FormData) {
     
     if (authError) {
       console.error('Error de autenticación:', authError.message)
-      // Proporcionar más detalles sobre el error
+      
+      // Proporcionar un mensaje de error más amigable
       if (authError.message.includes('Invalid login credentials')) {
-        console.error('Credenciales inválidas. Verifica que:')
-        console.error('1. La contraseña sea correcta')
-        console.error('2. El email (' + roleData.email + ') esté registrado en Auth')
-        console.error('3. El usuario esté activo en la plataforma de autenticación')
+        return {
+          success: false,
+          error: 'La contraseña es incorrecta'
+        }
       }
-      redirect('/error')
+      
+      return {
+        success: false,
+        error: 'Error al iniciar sesión: ' + authError.message
+      }
     }
     
     console.log('Inicio de sesión exitoso', authData?.user?.id)
   } catch (error) {
     console.error('Error inesperado:', error)
-    redirect('/error')
+    return {
+      success: false,
+      error: 'Ha ocurrido un error inesperado al iniciar sesión'
+    }
   }
 
   revalidatePath('/', 'layout')
