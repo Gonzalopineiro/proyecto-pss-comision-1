@@ -9,9 +9,9 @@ export async function checkAuthAndRedirect() {
   
   const { data: { session } } = await supabase.auth.getSession()
   
-  if (session) {
+  /*if (session) {
     redirect('/dashboard')
-  }
+  }*/
   
   return { isAuthenticated: false }
 }
