@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 // Esquema de validación para los datos de la materia
 export const materiaSchema = z.object({
-  codigo: z.string()
+  codigo_materia: z.string()
     .min(1, 'El código es obligatorio')
     .max(20, 'El código no puede tener más de 20 caracteres'),
   nombre: z.string()

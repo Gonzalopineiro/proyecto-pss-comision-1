@@ -1,14 +1,32 @@
 import React from 'react'
 import Link from 'next/link'
 import Sidebar from '@/components/dashboard/sidebar'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import AltaUsuarioForm from './altaUsuarioForm'
-
-
+import { createClient } from '@/utils/supabase/server'
 
 export default async function RegistrarAlumno(){
+  // Verificar permisos
+  const supabase = await createClient()
+  
+  // Obtener el usuario autenticado
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  
+  if (userError || !userData.user) {
+    redirect('/login')
+  }
+  
+  // Obtener el perfil del usuario
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userData.user.id)
+    .single()
+  
+  if (error || !profile || profile.role !== 'admin') {
+    redirect('/dashboard')
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">

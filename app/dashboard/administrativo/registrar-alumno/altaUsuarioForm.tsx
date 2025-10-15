@@ -1,18 +1,15 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { useRouter } from 'next/navigation'
 
-// Datos mock de carreras disponibles
-const CARRERAS_DISPONIBLES = [
-  { id: 1, nombre: 'Ingeniería en Sistemas' },
-  { id: 2, nombre: 'Licenciatura en Administración' },
-  { id: 3, nombre: 'Contaduría Pública' },
-  { id: 4, nombre: 'Ingeniería Industrial' },
-  { id: 5, nombre: 'Licenciatura en Marketing' },
-  { id: 6, nombre: 'Ingeniería Civil' },
-]
+interface Carrera {
+  id: number
+  nombre: string
+  codigo: string
+}
 
 interface FormData {
   nombre: string
@@ -31,6 +28,7 @@ interface FormErrors {
 }
 
 const AltaUsuarioForm = () => {
+  const router = useRouter()
   const [formData, setFormData] = useState<FormData>({
     nombre: '',
     apellido: '',
@@ -46,21 +44,31 @@ const AltaUsuarioForm = () => {
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
+  const [passwordUsed, setPasswordUsed] = useState<string | null>(null)
+  const [carreras, setCarreras] = useState<Carrera[]>([])
+  const [carrerasLoading, setCarrerasLoading] = useState(true)
 
-  // Función para generar contraseña automática
-  const generatePassword = (): string => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-    let password = ''
-    for (let i = 0; i < 8; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length))
+  // Cargar carreras al iniciar
+  useEffect(() => {
+    async function loadCarreras() {
+      try {
+        const { obtenerCarreras } = await import('./actions')
+        const data = await obtenerCarreras()
+        if (data && Array.isArray(data)) {
+          setCarreras(data)
+        } else {
+          setErrors(prev => ({ ...prev, general: 'Error al cargar las carreras disponibles' }))
+        }
+      } catch (error) {
+        console.error('Error al cargar carreras:', error)
+        setErrors(prev => ({ ...prev, general: 'No se pudieron cargar las carreras disponibles' }))
+      } finally {
+        setCarrerasLoading(false)
+      }
     }
-    return password
-  }
 
-  // Función para generar ID automático
-  const generateUserId = (): string => {
-    return 'ALU-' + Date.now().toString()
-  }
+    loadCarreras()
+  }, [])
 
   // Validaciones en tiempo real
   const validateField = (name: string, value: string): string => {
@@ -173,29 +181,38 @@ const AltaUsuarioForm = () => {
 
     setIsSubmitting(true)
     setSuccessMessage('')
+    setPasswordUsed(null)
 
     try {
-      // Generar datos automáticos
-      const userId = generateUserId()
-      const password = generatePassword()
+      // Importamos las funciones del servidor
+      const { registrarAlumno, verificarDuplicados } = await import('./actions')
       
-      // Simular llamada a API
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Verificamos si hay duplicados antes de continuar
+      const verificacion = await verificarDuplicados(formData.email, formData.legajo, formData.dni)
+      if (verificacion.duplicado) {
+        setErrors({ 
+          general: verificacion.mensaje || 'Datos duplicados',
+          ...verificacion.campo ? { [verificacion.campo]: verificacion.mensaje || 'Ya existe' } : {}
+        })
+        setIsSubmitting(false)
+        return
+      }
       
-      const alumnoData = {
-        ...formData,
-        id: userId,
-        password: password,
-        rol: 'alumno',
-        fechaCreacion: new Date().toISOString()
+      // Registrar el alumno
+      const resultado = await registrarAlumno(formData)
+      
+      if (!resultado.success) {
+        setErrors({ general: resultado.error || 'Error al registrar el alumno' })
+        setIsSubmitting(false)
+        return
       }
 
-      console.log('Datos del alumno creado:', alumnoData)
+      // Si hay contraseña devuelta, la mostramos
+      if (resultado.passwordUsed) {
+        setPasswordUsed(resultado.passwordUsed)
+      }
       
-      setSuccessMessage(`¡Alumno registrado exitosamente! 
-      ID: ${userId} 
-      Contraseña inicial: ${password}
-      El alumno puede iniciar sesión inmediatamente.`)
+      setSuccessMessage(`¡Alumno ${formData.nombre} ${formData.apellido} registrado exitosamente!`)
       
       // Limpiar formulario
       setFormData({
@@ -209,6 +226,11 @@ const AltaUsuarioForm = () => {
         telefono: '',
         carreraId: ''
       })
+      
+      // Redirigir después de un tiempo
+      setTimeout(() => {
+        router.push('/dashboard/administrativo')
+      }, 3000)
       
     } catch (error) {
       console.error('Error al registrar alumno:', error)
@@ -408,40 +430,54 @@ const AltaUsuarioForm = () => {
                     name="carreraId"
                     value={formData.carreraId}
                     onChange={handleInputChange}
+                    disabled={carrerasLoading}
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       errors.carreraId ? 'border-red-300 bg-red-50' : 'border-gray-300'
                     }`}
                   >
                     <option value="">Seleccione una carrera</option>
-                    {CARRERAS_DISPONIBLES.map(carrera => (
+                    {carreras.map(carrera => (
                       <option key={carrera.id} value={carrera.id}>
-                        {carrera.nombre}
+                        {carrera.nombre} ({carrera.codigo})
                       </option>
                     ))}
                   </select>
+                  {carrerasLoading && <p className="text-xs text-blue-500 mt-1">Cargando carreras...</p>}
                   <p className="text-xs text-gray-500 mt-1">El alumno será asociado a esta carrera</p>
                   {errors.carreraId && <p className="mt-1 text-sm text-red-600">{errors.carreraId}</p>}
                 </div>
               </div>
             </div>
 
-            {/* Información Automática */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <h4 className="font-semibold text-blue-900 mb-3">Información Generada Automáticamente</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div>
-                    <span className="text-sm font-medium text-blue-800">ID de Usuario</span>
-                    <p className="text-sm text-blue-600">Se generará automáticamente</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-blue-800">Contraseña Inicial</span>
-                    <p className="text-sm text-blue-600">Se generará automáticamente</p>
-                    <p className="text-xs text-blue-500 mt-1">💡 La contraseña será enviada al email del alumno para su primer acceso</p>
+            {passwordUsed ? (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                <h3 className="font-bold text-green-700 mb-2">¡Alumno registrado con éxito!</h3>
+                <p className="text-green-800 mb-2">Se ha generado la siguiente contraseña inicial:</p>
+                <div className="bg-white p-3 rounded border border-green-300 font-mono text-lg mb-2">
+                  {passwordUsed}
+                </div>
+                <p className="text-xs text-green-700">
+                  ⚠️ IMPORTANTE: Proporcione esta contraseña al alumno. El alumno deberá cambiarla en su primer inicio de sesión.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <h4 className="font-semibold text-blue-900 mb-3">Información Generada Automáticamente</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-sm font-medium text-blue-800">ID de Usuario</span>
+                      <p className="text-sm text-blue-600">Se generará automáticamente</p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-blue-800">Contraseña Inicial</span>
+                      <p className="text-sm text-blue-600">Se generará automáticamente usando el DNI del alumno</p>
+                      <p className="text-xs text-blue-500 mt-1">💡 La contraseña se mostrará aquí después del registro exitoso</p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Botones */}
             <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t">

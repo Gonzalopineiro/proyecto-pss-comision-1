@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { obtenerMaterias } from './actions';
+import { obtenerMaterias, MateriaData } from './actions';
 
 interface AsociarMateriasProps {
   planId: number;
@@ -13,12 +13,7 @@ interface AsociarMateriasProps {
   onAnterior: () => void;
 }
 
-interface Materia {
-  id: number;
-  nombre: string;
-  codigo: string;
-  descripcion?: string;
-}
+// Usamos la interfaz MateriaData importada desde actions.ts
 
 export default function AsociarMaterias({ 
   planId, 
@@ -27,7 +22,7 @@ export default function AsociarMaterias({
   onContinuar, 
   onAnterior 
 }: AsociarMateriasProps) {
-  const [materias, setMaterias] = useState<Materia[]>([]);
+  const [materias, setMaterias] = useState<MateriaData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -36,10 +31,18 @@ export default function AsociarMaterias({
   const [anio, setAnio] = useState<number>(1);
   const [cuatrimestre, setCuatrimestre] = useState<number>(1);
   const [addingMateria, setAddingMateria] = useState(false);
+  
+  // Lista de materias seleccionadas para asociar al continuar
+  const [materiasParaAsociar, setMateriasParaAsociar] = useState<{
+    materiaId: number;
+    anio: number;
+    cuatrimestre: number;
+    nombre: string;
+  }[]>([]);
 
   // Código generado automáticamente (ejemplo)
   const generatedCode = selectedMateriaId 
-    ? `${codigoPlan}-MAT${materias.findIndex(m => m.id === selectedMateriaId).toString().padStart(3, '0')}`
+    ? `${codigoPlan}-${materias.find(m => m.id === selectedMateriaId)?.codigo_materia || 'MAT???'}`
     : `${codigoPlan}-MAT???`;
 
   useEffect(() => {
@@ -63,28 +66,39 @@ export default function AsociarMaterias({
     loadMaterias();
   }, []);
 
-  const handleAsociarMateria = async () => {
+  const handleAsociarMateria = () => {
     if (!selectedMateriaId) {
       setError('Debe seleccionar una materia');
       return;
     }
-
-    setAddingMateria(true);
-    try {
-      await onAsociarMateria(Number(selectedMateriaId), anio, cuatrimestre);
-      // Limpiar formulario después de asociar
-      setSelectedMateriaId('');
-      setError(null);
-    } catch (err) {
-      console.error('Error al asociar materia:', err);
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Error al asociar la materia al plan');
-      }
-    } finally {
-      setAddingMateria(false);
+    
+    const materiaSeleccionada = materias.find(m => m.id === selectedMateriaId);
+    if (!materiaSeleccionada) {
+      setError('Materia no encontrada');
+      return;
     }
+    
+    // Verificar si la materia ya está en la lista
+    const yaExiste = materiasParaAsociar.some(m => m.materiaId === selectedMateriaId);
+    if (yaExiste) {
+      setError('Esta materia ya está en la lista para asociar');
+      return;
+    }
+    
+    // Agregar materia a la lista local
+    setMateriasParaAsociar(prev => [
+      ...prev, 
+      {
+        materiaId: Number(selectedMateriaId),
+        anio,
+        cuatrimestre,
+        nombre: materiaSeleccionada.nombre
+      }
+    ]);
+    
+    // Limpiar formulario después de agregar a la lista
+    setSelectedMateriaId('');
+    setError(null);
   };
 
   if (loading) {
@@ -182,6 +196,43 @@ export default function AsociarMaterias({
       </div>
       
       <hr className="my-8 border-t border-gray-200" />
+      
+      {/* Lista de materias para asociar */}
+      {materiasParaAsociar.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold mb-3">Materias para asociar</h3>
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+            <table className="min-w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-500">Materia</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-500">Año</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-500">Cuatrimestre</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-500">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {materiasParaAsociar.map((materia, index) => (
+                  <tr key={index} className="border-b border-gray-100">
+                    <td className="py-2 px-3 text-sm">{materia.nombre}</td>
+                    <td className="py-2 px-3 text-sm">{materia.anio}° año</td>
+                    <td className="py-2 px-3 text-sm">{materia.cuatrimestre}° cuatrimestre</td>
+                    <td className="py-2 px-3 text-sm">
+                      <Button 
+                        variant="ghost" 
+                        className="h-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => setMateriasParaAsociar(prev => prev.filter((_, i) => i !== index))}
+                      >
+                        Eliminar
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="flex justify-between pt-6 border-t border-gray-200 mt-6">
         <Button
@@ -193,14 +244,53 @@ export default function AsociarMaterias({
           Anterior
         </Button>
         
-        <Button
-          type="button"
-          variant="default"
-          onClick={onContinuar}
-          className="px-6 py-2"
-        >
-          Continuar
-        </Button>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500">
+            {materiasParaAsociar.length} materias seleccionadas
+          </span>
+          <Button
+            type="button"
+            variant="default"
+            onClick={async () => {
+              if (materiasParaAsociar.length === 0) {
+                setError('No hay materias para asociar');
+                return;
+              }
+              
+              setAddingMateria(true);
+              try {
+                // Asociar cada materia en la lista
+                for (const materia of materiasParaAsociar) {
+                  await onAsociarMateria(
+                    materia.materiaId,
+                    materia.anio,
+                    materia.cuatrimestre
+                  );
+                }
+                
+                // Limpiar la lista después de asociar todas
+                setMateriasParaAsociar([]);
+                setError(null);
+                
+                // Continuar al siguiente paso
+                onContinuar();
+              } catch (err) {
+                console.error('Error al asociar materias:', err);
+                if (err instanceof Error) {
+                  setError(err.message);
+                } else {
+                  setError('Error al asociar las materias al plan');
+                }
+              } finally {
+                setAddingMateria(false);
+              }
+            }}
+            className="px-6 py-2"
+            disabled={addingMateria || materiasParaAsociar.length === 0}
+          >
+            {addingMateria ? 'Procesando...' : 'Continuar'}
+          </Button>
+        </div>
       </div>
     </div>
   );

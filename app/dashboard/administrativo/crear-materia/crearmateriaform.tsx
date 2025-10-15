@@ -59,7 +59,7 @@ export default function CrearMateriaForm({ onCancel }: { onCancel?: () => void }
     try {
       // Usamos la función del servidor para crear la materia
       const result = await crearMateria({
-        codigo,
+        codigo_materia: codigo,
         nombre,
         descripcion,
         duracion: duracion as Duracion

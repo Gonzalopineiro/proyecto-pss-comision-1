@@ -2,23 +2,21 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Info } from 'lucide-react';
+import { 
+  crearCarrera, 
+  verificarCarreraExistente, 
+  verificarCodigoExistente, 
+  obtenerPlanesDeEstudio, 
+  obtenerDepartamentos,
+  generarCodigoCarrera as generarCodigo,
+  type CarreraData
+} from './actions';
 
 interface PlanDeEstudio {
-  codigo: string;
+  id: number;
   nombre: string;
-}
-
-interface Departamento {
-  id: string;
-  nombre: string;
-}
-
-// Función para generar el código de la carrera
-function generarCodigoCarrera(nombre: string): string {
-  if (!nombre || nombre.trim() === '') return '';
-  const acronimo = nombre.split(' ').map(n => n[0]).join('').toUpperCase();
-  const year = new Date().getFullYear();
-  return `${acronimo}-${year}`;
+  anio_creacion: number;
+  duracion: string;
 }
 
 export default function CrearCarreraForm() {
@@ -32,50 +30,69 @@ export default function CrearCarreraForm() {
   
   // --- Estados de Soporte ---
   const [planesDisponibles, setPlanesDisponibles] = useState<PlanDeEstudio[]>([]);
-  const [departamentosDisponibles, setDepartamentosDisponibles] = useState<Departamento[]>([]);
+  const [departamentosDisponibles, setDepartamentosDisponibles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ [k: string]: string }>({});
   const [serverError, setServerError] = useState<string | null>(null);
 
-  // Efecto para generar el código automáticamente cuando cambia el nombre
+  // Efecto para generar el código automáticamente cuando cambia el departamento
   useEffect(() => {
-    setCodigo(generarCodigoCarrera(nombre));
-  }, [nombre]);
-
-  // Efecto para cargar los datos necesarios (planes y departamentos) al montar el componente
-  useEffect(() => {
-    async function fetchPlanesDeEstudio() {
-      try {
-        const res = await fetch('/api/planes');
-        if (!res.ok) throw new Error('No se pudieron cargar los planes de estudio');
-        const data = await res.json();
-        setPlanesDisponibles(data);
-      } catch (error) {
-        setServerError('Error crítico: No se pudieron cargar los planes de estudio. Asegúrese de que haya planes creados.');
+    async function updateCodigo() {
+      if (departamento) {
+        const codigoGenerado = await generarCodigo(departamento);
+        setCodigo(codigoGenerado);
       }
     }
     
-    async function fetchDepartamentos() {
-        try {
-            const res = await fetch('/api/departamentos');
-            if (!res.ok) throw new Error('No se pudieron cargar los departamentos');
-            const data = await res.json();
-            setDepartamentosDisponibles(data);
-        } catch (error) {
-            setServerError('Error crítico: No se pudieron cargar los departamentos desde el servidor.');
-        }
-    }
+    updateCodigo();
+  }, [departamento]);
 
-    fetchPlanesDeEstudio();
-    fetchDepartamentos();
+  // Efecto para cargar los planes de estudio y departamentos al montar el componente
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // Cargar planes de estudio
+        const planes = await obtenerPlanesDeEstudio();
+        if (planes) {
+          setPlanesDisponibles(planes);
+        } else {
+          setServerError('Error crítico: No se pudieron cargar los planes de estudio. Asegúrese de que haya planes creados.');
+        }
+        
+        // Cargar departamentos
+        const deps = await obtenerDepartamentos();
+        setDepartamentosDisponibles(deps);
+      } catch (error) {
+        setServerError('Error crítico: No se pudieron cargar los datos necesarios.');
+      }
+    }
+    
+    fetchData();
   }, []);
 
   // Función de validación del lado del cliente
-  const validate = (): boolean => {
+  const validate = async (): Promise<boolean> => {
     const e: { [k: string]: string } = {};
     if (!nombre.trim()) e.nombre = 'El nombre es obligatorio';
     if (!departamento) e.departamento = 'El departamento es obligatorio';
     if (!planDeEstudiosId) e.planDeEstudiosId = 'El plan de estudios es obligatorio';
+    
+    // Verificar si ya existe una carrera con el mismo nombre
+    if (nombre.trim()) {
+      const existeNombre = await verificarCarreraExistente(nombre.trim());
+      if (existeNombre) {
+        e.nombre = 'Ya existe una carrera con este nombre';
+      }
+    }
+    
+    // Verificar si ya existe una carrera con el mismo código
+    if (codigo.trim()) {
+      const existeCodigo = await verificarCodigoExistente(codigo.trim());
+      if (existeCodigo) {
+        e.codigo = 'Ya existe una carrera con este código';
+      }
+    }
+    
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -84,25 +101,44 @@ export default function CrearCarreraForm() {
   const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     setServerError(null);
-    if (!validate()) return;
-
+    
     setLoading(true);
     try {
-      const res = await fetch('/api/carreras', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, codigo, departamento, planDeEstudiosId })
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Error al crear la carrera');
+      // Validar antes de enviar
+      const isValid = await validate();
+      if (!isValid) {
+        setLoading(false);
+        return;
       }
       
-      router.push('/dashboard/administrativo');
-
+      // Convertir el ID del plan a número
+      const planId = parseInt(planDeEstudiosId, 10);
+      
+      if (isNaN(planId)) {
+        setServerError('El ID del plan de estudios debe ser un número válido');
+        setLoading(false);
+        return;
+      }
+      
+      // Crear los datos para enviar
+      const carreraData: CarreraData = {
+        nombre,
+        codigo,
+        departamento,
+        plan_de_estudio_id: planId
+      };
+      
+      // Llamar a la acción del servidor
+      const resultado = await crearCarrera(carreraData);
+      
+      if ('error' in resultado) {
+        setServerError(resultado.error);
+      } else {
+        // Redireccionar en caso de éxito
+        router.push('/dashboard/administrativo');
+      }
     } catch (err: any) {
-      setServerError(err.message);
+      setServerError(err.message || 'Error desconocido al crear la carrera');
     } finally {
       setLoading(false);
     }
@@ -157,7 +193,9 @@ export default function CrearCarreraForm() {
                 className={`w-full p-2.5 rounded-md border ${errors.departamento ? 'border-red-500' : 'border-gray-300'} shadow-sm`}
               >
                 <option value="">Seleccionar departamento...</option>
-                {departamentosDisponibles.map(dep => <option key={dep.id} value={dep.nombre}>{dep.nombre}</option>)}
+                {departamentosDisponibles.map((dep) => (
+                  <option key={dep} value={dep}>{dep}</option>
+                ))}
               </select>
             </div>
             <div className="md:col-span-2">
@@ -169,7 +207,7 @@ export default function CrearCarreraForm() {
                 className={`w-full p-2.5 rounded-md border ${errors.planDeEstudiosId ? 'border-red-500' : 'border-gray-300'} shadow-sm`}
               >
                 <option value="">Seleccionar plan de estudios...</option>
-                {planesDisponibles.map(plan => <option key={plan.codigo} value={plan.codigo}>{plan.nombre}</option>)}
+                {planesDisponibles.map(plan => <option key={plan.id} value={plan.id}>{plan.nombre}</option>)}
               </select>
               <p className="text-xs text-gray-500 mt-1">Solo se muestran planes de estudios vigentes y aprobados</p>
             </div>

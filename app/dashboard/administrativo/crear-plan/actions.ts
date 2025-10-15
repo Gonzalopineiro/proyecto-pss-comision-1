@@ -12,11 +12,13 @@ interface PlanDeEstudiosData {
   codigo?: string
 }
 
-interface MateriaData {
+export interface MateriaData {
   id: number
+  codigo_materia: string
   nombre: string
-  descripcion?: string
-  duracion?: string
+  descripcion: string
+  duracion: string
+  created_at?: string
 }
 
 interface PlanMateriaData {

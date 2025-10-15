@@ -204,25 +204,46 @@ export async function obtenerCorrelativasCursado(
   try {
     const supabase = await createClient()
     
-    const { data, error } = await supabase
+    // Primero obtenemos las correlatividades
+    const { data: correlativas, error: errorCorrelativas } = await supabase
       .from('correlatividades_cursado')
-      .select(`
-        id,
-        correlativa_id,
-        materias!correlatividades_cursado_correlativa_id_fkey (
-          id,
-          nombre
-        )
-      `)
+      .select('id, correlativa_id')
       .eq('plan_id', planId)
       .eq('materia_id', materiaId)
     
-    if (error) {
-      console.error('Error al obtener correlatividades de cursado:', error)
+    if (errorCorrelativas) {
+      console.error('Error al obtener correlatividades de cursado:', errorCorrelativas)
       return null
     }
     
-    return data
+    // Si no hay correlativas, devolvemos un array vacío
+    if (!correlativas || correlativas.length === 0) {
+      return []
+    }
+    
+    // Luego obtenemos los datos de las materias correlativas
+    const resultado = []
+    
+    for (const correlativa of correlativas) {
+      const { data: materia, error: errorMateria } = await supabase
+        .from('materias')
+        .select('id, nombre')
+        .eq('id', correlativa.correlativa_id)
+        .single()
+      
+      if (errorMateria) {
+        console.error('Error al obtener datos de materia:', errorMateria)
+        continue
+      }
+      
+      resultado.push({
+        id: correlativa.id,
+        correlativa_id: correlativa.correlativa_id,
+        materias: materia
+      })
+    }
+    
+    return resultado
     
   } catch (e) {
     console.error('Error inesperado al obtener correlatividades de cursado:', e)
@@ -244,25 +265,46 @@ export async function obtenerCorrelativasFinal(
   try {
     const supabase = await createClient()
     
-    const { data, error } = await supabase
+    // Primero obtenemos las correlatividades
+    const { data: correlativas, error: errorCorrelativas } = await supabase
       .from('correlatividades_final')
-      .select(`
-        id,
-        correlativa_id,
-        materias!correlatividades_final_correlativa_id_fkey (
-          id,
-          nombre
-        )
-      `)
+      .select('id, correlativa_id')
       .eq('plan_id', planId)
       .eq('materia_id', materiaId)
     
-    if (error) {
-      console.error('Error al obtener correlatividades de final:', error)
+    if (errorCorrelativas) {
+      console.error('Error al obtener correlatividades de final:', errorCorrelativas)
       return null
     }
     
-    return data
+    // Si no hay correlativas, devolvemos un array vacío
+    if (!correlativas || correlativas.length === 0) {
+      return []
+    }
+    
+    // Luego obtenemos los datos de las materias correlativas
+    const resultado = []
+    
+    for (const correlativa of correlativas) {
+      const { data: materia, error: errorMateria } = await supabase
+        .from('materias')
+        .select('id, nombre')
+        .eq('id', correlativa.correlativa_id)
+        .single()
+      
+      if (errorMateria) {
+        console.error('Error al obtener datos de materia:', errorMateria)
+        continue
+      }
+      
+      resultado.push({
+        id: correlativa.id,
+        correlativa_id: correlativa.correlativa_id,
+        materias: materia
+      })
+    }
+    
+    return resultado
     
   } catch (e) {
     console.error('Error inesperado al obtener correlatividades de final:', e)

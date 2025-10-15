@@ -4,10 +4,10 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 interface MateriaData {
-  codigo: string
+  codigo_materia: string
   nombre: string
   descripcion: string
-  duracion: 'Anual' | 'Cuatrimestral'
+  duracion: string
 }
 
 export async function checkMateriaExistente(nombre: string): Promise<boolean> {
@@ -59,7 +59,7 @@ export async function crearMateria(data: MateriaData) {
       .from('materias')
       .insert([
         { 
-          codigo_materia: data.codigo, 
+          codigo_materia: data.codigo_materia, 
           nombre: data.nombre,
           descripcion: data.descripcion,
           duracion: data.duracion

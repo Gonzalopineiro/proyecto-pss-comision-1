@@ -14,14 +14,16 @@ import { eliminarMateriaAsociada } from './eliminarMateriaAsociada';
 import AsociarMaterias from './asociarMaterias';
 import ListaMateriasAsociadas from './listaMateriasAsociadas';
 import GestionCorrelativas from './gestionCorrelativas';
+import FinalizacionPlan from './finalizacionPlan';
 
 // Tipos de datos
 interface Materia {
-  codigo: string;
+  id: number;
+  codigo_materia: string;
   nombre: string;
   descripcion: string;
-  duracion: 'Anual' | 'Cuatrimestral';
-  createdAt: string;
+  duracion: string;
+  created_at: string;
 }
 
 interface MateriaPlan {
@@ -136,7 +138,9 @@ export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
       setStep(3);
     } else if (step === 3) {
       // Avanzar del paso 3 al paso 4 (finalizar)
-      // Por ahora, redirigiremos a la página administrativa
+      setStep(4);
+    } else if (step === 4) {
+      // Reiniciar o volver al dashboard
       if (onCancel) {
         onCancel();
       } else {
@@ -147,7 +151,9 @@ export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
   
   // Función para manejar la vuelta al paso anterior
   function handleAnterior() {
-    setStep(1);
+    if (step > 1) {
+      setStep(step - 1);
+    }
   }
   
   // Estado para mensajes de éxito
@@ -454,6 +460,28 @@ export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
               onContinuar={handleNextStep}
               onAnterior={handleAnterior}
               loading={loading}
+            />
+          </div>
+        )}
+        
+        {/* Paso 4: Finalización */}
+        {step === 4 && (
+          <div>
+            <FinalizacionPlan 
+              planId={planId!}
+              nombrePlan={nombrePlan}
+              materiasCount={materiasAsociadas.length}
+              onVolver={() => {
+                // Resetear el formulario para crear un nuevo plan
+                setStep(1);
+                setNombrePlan('');
+                setAñoCreacion(new Date().getFullYear().toString());
+                setDuracionTotal('');
+                setDescripcion('');
+                setCodigoPlan(generarCodigoPlan());
+                setPlanId(null);
+                setMateriasAsociadas([]);
+              }}
             />
           </div>
         )}

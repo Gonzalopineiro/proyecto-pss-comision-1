@@ -1,24 +1,20 @@
-// import { redirect } from 'next/navigation'
-// import { createClient } from '@/utils/supabase/server'
-// export default async function PrivatePage() {
-//   const supabase = await createClient()
-//   const { data, error } = await supabase.auth.getUser()
-//   if (error || !data?.user) {
-//     redirect('/login')
-//   }
-//   return <p>Hello {data.user.email}</p>
-// }
-
+import { redirect } from 'next/navigation'
+import { createClient } from '@/utils/supabase/server'
 import React from 'react'
 import Link from 'next/link'
 import Sidebar from '@/components/dashboard/sidebar'
 import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ChevronRight, Users, User, Book } from 'lucide-react'
 
 
 export default async function AdministrativoDashboard(){
+  // Verificar autenticación
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.getUser()
+  if (error || !data?.user) {
+    redirect('/login')
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">

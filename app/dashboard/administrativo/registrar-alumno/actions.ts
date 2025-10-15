@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-interface AdminFormData {
+interface AlumnoFormData {
   nombre: string
   apellido: string
   dni: string
@@ -13,14 +13,14 @@ interface AdminFormData {
   email: string
   direccion: string
   telefono: string
-  contrasenaTemporal: string
+  carreraId: string
 }
 
-export async function registrarAdministrativo(formData: AdminFormData) {
+export async function registrarAlumno(formData: AlumnoFormData) {
   try {
     const supabase = await createClient()
     
-    // Verificar permisos antes de continuar - usar getUser() por seguridad
+    // Verificar permisos antes de continuar
     const { data: userData, error: userError } = await supabase.auth.getUser()
     if (userError || !userData.user) {
       return { success: false, error: 'No hay sesión activa o usuario autenticado' }
@@ -32,12 +32,12 @@ export async function registrarAdministrativo(formData: AdminFormData) {
       .select('role')
       .eq('id', userData.user.id)
       .single()
-      console.log('Perfil del usuario actual:', currentUserProfile) // Para depuración
+    
     if (!currentUserProfile || currentUserProfile.role !== 'admin') {
       return { success: false, error: 'No tienes permisos para realizar esta acción' }
     }
     
-    // Verificar que el email no exista ya en auth.users
+    // Verificar que el email no exista ya
     const { data: existingUserCheck } = await supabase
       .from('profiles')
       .select('id')
@@ -48,9 +48,9 @@ export async function registrarAdministrativo(formData: AdminFormData) {
       return { success: false, error: 'El email ya está registrado en el sistema' }
     }
     
-    // Crear el usuario en auth.users usando signUp en lugar de admin.createUser
-    // Usamos el DNI como contraseña (con el sufijo indicado para cumplir requisitos de seguridad)
-    const password = formData.dni + ""; // Agregamos sufijo para cumplir requisitos de seguridad
+    // Crear el usuario en auth.users usando signUp
+    // Usamos el DNI como contraseña
+    const password = formData.dni + "";
     
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: formData.email,
@@ -73,17 +73,17 @@ export async function registrarAdministrativo(formData: AdminFormData) {
 
     const userId = authData.user.id
 
-    // Insertar en la tabla profiles con rol admin
+    // Insertar en la tabla profiles con rol user
     const { error: profileError } = await supabase
       .from('profiles')
       .insert({
         id: userId,
         email: formData.email,
-        role: 'admin'
+        role: 'user'
       })
 
     if (profileError) {
-      // Si hay error, intentamos eliminar el usuario creado, aunque no tengamos permisos de admin
+      // Si hay error, intentamos eliminar el usuario creado
       try {
         await supabase.auth.admin.deleteUser(userId)
       } catch (err) {
@@ -111,9 +111,9 @@ export async function registrarAdministrativo(formData: AdminFormData) {
       console.log(`Registro agregado a Roles: legajo ${formData.legajo} mapeado a email ${formData.email}`)
     }
 
-    // Insertar en la tabla administrativos
-    const { error: adminError } = await supabase
-      .from('administrativos')
+    // Insertar en la tabla usuarios (alumnos)
+    const { error: alumnoError } = await supabase
+      .from('usuarios')
       .insert({
         nombre: formData.nombre,
         apellido: formData.apellido,
@@ -121,11 +121,12 @@ export async function registrarAdministrativo(formData: AdminFormData) {
         legajo: parseInt(formData.legajo),
         nacimiento: formData.fechaNacimiento,
         email: formData.email,
-        direccion: formData.direccion, // El campo en la base de datos ahora se llama direccion
-        telefono: formData.telefono
+        direccion: formData.direccion,
+        telefono: formData.telefono,
+        carrera_id: parseInt(formData.carreraId)
       })
 
-    if (adminError) {
+    if (alumnoError) {
       // Si hay error, intentar limpiar los datos creados
       // Eliminar de profiles
       await supabase.from('profiles').delete().eq('id', userId)
@@ -133,7 +134,7 @@ export async function registrarAdministrativo(formData: AdminFormData) {
       // Eliminar de Roles
       await supabase.from('Roles').delete().eq('email', formData.email)
       
-      // Intentar eliminar el usuario (aunque puede fallar por permisos)
+      // Intentar eliminar el usuario
       try {
         await supabase.auth.admin.deleteUser(userId)
       } catch (err) {
@@ -142,55 +143,55 @@ export async function registrarAdministrativo(formData: AdminFormData) {
       
       return { 
         success: false, 
-        error: `Error al registrar administrativo: ${adminError.message}` 
+        error: `Error al registrar alumno: ${alumnoError.message}` 
       }
     }
 
-    // Revalidar la ruta para actualizar la lista de administrativos
+    // Revalidar la ruta para actualizar la lista de alumnos
     revalidatePath('/dashboard/administrativo')
     return { 
       success: true, 
       userId,
-      mensaje: `Administrador ${formData.nombre} ${formData.apellido} creado exitosamente`,
-      passwordUsed, // Devolvemos la contraseña usada (DNI + sufijo)
+      mensaje: `Alumno ${formData.nombre} ${formData.apellido} creado exitosamente`,
+      passwordUsed,
       details: {
         auth: true,
         profiles: true,
         roles: true,
-        administrativos: true,
+        usuarios: true,
         legajo: parseInt(formData.legajo),
         email: formData.email
       }
     }
     
   } catch (error: any) {
-    console.error('Error al registrar administrativo:', error)
+    console.error('Error al registrar alumno:', error)
     return { 
       success: false, 
-      error: error.message || 'Ocurrió un error al registrar el administrativo' 
+      error: error.message || 'Ocurrió un error al registrar el alumno' 
     }
   }
 }
 
 interface VerificacionResult {
   duplicado: boolean;
-  campo?: 'email' | 'legajo';
+  campo?: 'email' | 'legajo' | 'dni';
   mensaje?: string;
 }
 
-// Función para verificar si un email o legajo ya existe
-export async function verificarDuplicados(email: string, legajo: string): Promise<VerificacionResult> {
+// Función para verificar si un email, legajo o dni ya existe
+export async function verificarDuplicados(email: string, legajo: string, dni: string): Promise<VerificacionResult> {
   const supabase = await createClient()
   
-  // Verificar si el email ya existe en administrativos
-  const { data: emailExistsAdmin } = await supabase
-    .from('administrativos')
+  // Verificar si el email ya existe en usuarios
+  const { data: emailExistsUsuarios } = await supabase
+    .from('usuarios')
     .select('id')
     .eq('email', email)
     .single()
 
-  if (emailExistsAdmin) {
-    return { duplicado: true, campo: 'email', mensaje: 'El email ya está registrado en administrativos' }
+  if (emailExistsUsuarios) {
+    return { duplicado: true, campo: 'email', mensaje: 'El email ya está registrado en usuarios' }
   }
 
   // Verificar si el email ya existe en Roles
@@ -204,15 +205,15 @@ export async function verificarDuplicados(email: string, legajo: string): Promis
     return { duplicado: true, campo: 'email', mensaje: 'El email ya está registrado para otro legajo' }
   }
 
-  // Verificar si el legajo ya existe en administrativos
-  const { data: legajoExistsAdmin } = await supabase
-    .from('administrativos')
+  // Verificar si el legajo ya existe en usuarios
+  const { data: legajoExistsUsuarios } = await supabase
+    .from('usuarios')
     .select('id')
     .eq('legajo', parseInt(legajo))
     .single()
 
-  if (legajoExistsAdmin) {
-    return { duplicado: true, campo: 'legajo', mensaje: 'El número de legajo ya está en uso por otro administrativo' }
+  if (legajoExistsUsuarios) {
+    return { duplicado: true, campo: 'legajo', mensaje: 'El número de legajo ya está en uso por otro alumno' }
   }
 
   // Verificar si el legajo ya existe en Roles
@@ -225,53 +226,54 @@ export async function verificarDuplicados(email: string, legajo: string): Promis
   if (legajoExistsRoles) {
     return { duplicado: true, campo: 'legajo', mensaje: 'El número de legajo ya está asignado a otro email' }
   }
+  
+  // Verificar si el DNI ya existe en usuarios
+  const { data: dniExistsUsuarios } = await supabase
+    .from('usuarios')
+    .select('id')
+    .eq('dni', parseInt(dni))
+    .single()
+
+  if (dniExistsUsuarios) {
+    return { duplicado: true, campo: 'dni', mensaje: 'El DNI ya está registrado para otro alumno' }
+  }
 
   return { duplicado: false }
 }
 
-// Función para obtener la lista de administrativos
-export async function obtenerAdministrativos() {
+// Función para obtener la lista de alumnos
+export async function obtenerAlumnos() {
   const supabase = await createClient()
   
   const { data, error } = await supabase
-    .from('administrativos')
-    .select('*')
+    .from('usuarios')
+    .select(`
+      *,
+      carrera:carreras(id, nombre, codigo)
+    `)
     .order('apellido', { ascending: true })
   
   if (error) {
-    console.error('Error al obtener administrativos:', error)
+    console.error('Error al obtener alumnos:', error)
     return []
   }
   
   return data
 }
 
-// Función para verificar que el usuario actual tenga permisos de administrador
-export async function verificarPermisosAdmin() {
+// Función para obtener la lista de carreras disponibles
+export async function obtenerCarreras() {
   const supabase = await createClient()
   
-  // Obtener el usuario autenticado usando getUser() por seguridad
-  const { data: userData, error: userError } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('carreras')
+    .select('id, nombre, codigo')
+    .order('nombre', { ascending: true })
   
-  if (userError || !userData.user) {
-    return { autorizado: false, mensaje: 'Usuario no autenticado' }
+  if (error) {
+    console.error('Error al obtener carreras:', error)
+    return []
   }
   
-  // Obtener el perfil del usuario
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', userData.user.id)
-    .single()
-  
-  if (error || !profile) {
-    return { autorizado: false, mensaje: 'No se pudo verificar los permisos' }
-  }
-  
-  // Verificar si el usuario tiene rol de admin
-  if (profile.role !== 'admin') {
-    return { autorizado: false, mensaje: 'No tienes permisos de administrador' }
-  }
-  
-  return { autorizado: true }
+  return data
 }
