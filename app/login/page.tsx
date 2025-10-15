@@ -125,9 +125,6 @@ export default function LoginPage() {
               {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </Button>
             
-            <p className="text-center text-sm text-gray-500 mt-4">
-              La sesión expira automáticamente tras 20 minutos de inactividad
-            </p>
           </form>
         </CardContent>
       </Card>
