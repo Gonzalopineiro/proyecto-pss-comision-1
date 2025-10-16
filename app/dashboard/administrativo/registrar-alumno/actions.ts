@@ -48,17 +48,41 @@ export async function registrarAlumno(formData: AlumnoFormData) {
       return { success: false, error: 'El email ya está registrado en el sistema' }
     }
     
-    // Crear el usuario en auth.users usando signUp
+    // Crear el usuario usando signUp pero guardando la sesión actual del administrador
     // Usamos el DNI como contraseña
     const password = formData.dni + "";
+    
+    // Guardar la sesión actual del administrador antes de crear el nuevo usuario
+    const { data: currentSession } = await supabase.auth.getSession()
     
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: formData.email,
       password: password,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+        data: {
+          role: 'user'
+        }
       }
     })
+    
+    // Confirmar el email automáticamente si el usuario fue creado
+    if (authData.user && !authData.user.email_confirmed_at) {
+      // Intentar confirmar el email automáticamente usando la API admin
+      try {
+        await supabase.auth.admin.updateUserById(authData.user.id, {
+          email_confirm: true
+        })
+      } catch (confirmError) {
+        console.log('No se pudo confirmar automáticamente el email:', confirmError)
+        // Continuamos sin bloquear el proceso
+      }
+    }
+    
+    // Restaurar la sesión del administrador después de crear el nuevo usuario
+    if (currentSession?.session) {
+      await supabase.auth.setSession(currentSession.session)
+    }
 
     if (authError || !authData.user) {
       console.error('Error al crear usuario:', authError)
