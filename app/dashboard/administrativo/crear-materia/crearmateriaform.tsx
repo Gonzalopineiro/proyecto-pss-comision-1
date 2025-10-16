@@ -77,7 +77,7 @@ export default function CrearMateriaForm({ onCancel }: { onCancel?: () => void }
         onCancel()
       } else {
         // Redirigir a la lista de materias
-        router.push('/dashboard')
+        router.push('/dashboard/administrativo')
         router.refresh() // Refrescar para mostrar los cambios
       }
     } catch (err) {
@@ -98,7 +98,7 @@ export default function CrearMateriaForm({ onCancel }: { onCancel?: () => void }
           {onCancel ? (
             <button type="button" className="text-sm text-slate-600 hover:underline" onClick={onCancel}>← Volver</button>
           ) : (
-            <Link href="/dashboard">
+            <Link href="/dashboard/administrativo">
               <Button variant="outline">← Volver</Button>
             </Link>
           )}
@@ -140,7 +140,7 @@ export default function CrearMateriaForm({ onCancel }: { onCancel?: () => void }
           {onCancel ? (
             <button type="button" onClick={onCancel} className="px-4 py-2 rounded-md border">Cancelar</button>
           ) : (
-            <Link href="/dashboard">
+            <Link href="/dashboard/administrativo">
               <Button variant="outline">Cancelar</Button>
             </Link>
           )}
