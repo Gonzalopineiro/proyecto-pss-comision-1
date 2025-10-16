@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation'
+/*import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import React from 'react'
 import Link from 'next/link'
@@ -21,8 +21,8 @@ export default async function AdministrativoDashboard(){
       <div className="flex">
         <Sidebar />
         <main className="flex-1 p-8">
-          {/* Panel superior con información de sesión */}
-          {/* Header cliente con legajo, rol y logout */}
+          {/* Panel superior con información de sesión */
+          {/* Header cliente con legajo, rol y logout */}/*
           <div>
           </div>
 
@@ -108,3 +108,4 @@ export default async function AdministrativoDashboard(){
     </div>
   )
 }
+*/

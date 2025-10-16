@@ -81,8 +81,47 @@ export async function login(formData: FormData): Promise<LoginResult> {
     }
   }
 
-  // Comprobar si hay un destino de redirección personalizado
-  const redirectTo = formData.get('redirectTo') as string || '/dashboard'
+  // Obtener el usuario autenticado
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    return {
+      success: false,
+      error: 'Error al obtener información del usuario autenticado'
+    }
+  }
+  
+  // Obtener el rol del usuario desde la tabla profiles
+  const { data: profileData, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  
+  if (profileError) {
+    console.error('Error al obtener el rol del usuario:', profileError)
+    return {
+      success: false,
+      error: 'Error al obtener el rol del usuario'
+    }
+  }
+  
+  // Determinar a qué dashboard redirigir según el rol
+  let redirectTo = '/login' // Valor por defecto en caso de error
+  
+  if (profileData?.role === 'admin') {
+    redirectTo = '/dashboard/administrativo'
+  } else if (profileData?.role === 'user') {
+    redirectTo = '/dashboard/alumno'
+  } else if (profileData?.role === 'docente') {
+    redirectTo = '/dashboard/docente'
+  }
+  
+  // Sobrescribir con redirect personalizado si se proporciona
+  const customRedirect = formData.get('redirectTo') as string
+  if (customRedirect) {
+    redirectTo = customRedirect
+  }
   
   revalidatePath('/', 'layout')
   redirect(redirectTo)

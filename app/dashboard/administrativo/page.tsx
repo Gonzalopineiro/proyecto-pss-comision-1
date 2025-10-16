@@ -100,7 +100,7 @@ export default async function AdministrativoDashboard() {
                 </div>
               </Link>
               
-              <Link href="/dashboard" className="block">
+              <Link href="/dashboard/administrativo" className="block">
                 <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow hover:shadow-md transition-shadow">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">

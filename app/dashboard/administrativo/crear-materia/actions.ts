@@ -73,7 +73,7 @@ export async function crearMateria(data: MateriaData) {
     }
     
     // Invalidar la caché para reflejar los cambios
-    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/administrativo')
     
     return { success: true, data: newMateria }
   } catch (error) {
