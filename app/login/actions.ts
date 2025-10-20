@@ -16,7 +16,8 @@ export async function login(formData: FormData): Promise<LoginResult> {
   const legajo = formData.get('legajo') as string
   const password = formData.get('password') as string
   
-  if (!legajo || !password) {
+  // Validación más estricta para evitar procesar datos incorrectos
+  if (!legajo?.trim() || !password?.trim()) {
     return {
       success: false,
       error: 'Por favor, ingresa legajo y contraseña'
@@ -24,11 +25,28 @@ export async function login(formData: FormData): Promise<LoginResult> {
   }
   
   try {
+    // Manejo de posibles errores de parseo del legajo
+    let legajoNumber;
+    try {
+      legajoNumber = parseInt(legajo);
+      if (isNaN(legajoNumber)) {
+        return {
+          success: false,
+          error: 'El formato del legajo no es válido'
+        }
+      }
+    } catch (e) {
+      return {
+        success: false,
+        error: 'El formato del legajo no es válido'
+      }
+    }
+    
     // Consultar la tabla Roles para obtener el email asociado al legajo
     const { data: roleData, error: roleError } = await supabase
       .from('Roles')
       .select('email')
-      .eq('legajo', parseInt(legajo))
+      .eq('legajo', legajoNumber)
       .single()
     
     if (roleError) {
@@ -123,6 +141,13 @@ export async function login(formData: FormData): Promise<LoginResult> {
     redirectTo = customRedirect
   }
   
+  // Asegurarse de que haya una ruta válida antes de redirigir
+  // y prevenir posibles errores con rutas inválidas
+  if (!redirectTo || typeof redirectTo !== 'string' || !redirectTo.startsWith('/')) {
+    redirectTo = '/dashboard'; // Ruta por defecto segura
+  }
+  
+  // Realizar estas operaciones al final para evitar condiciones de carrera
   revalidatePath('/', 'layout')
   redirect(redirectTo)
 }

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { RefreshCcw, Info } from 'lucide-react'
+import ConfirmationPopup from '@/components/ui/confirmation-popup'
 // Las acciones se importarán dinámicamente para evitar problemas con 'use server' 
 
 export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: () => void }) {
@@ -24,15 +25,120 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
   const [errors, setErrors] = useState<{[k:string]:string}>({})
   const [serverError, setServerError] = useState<string | null>(null)
 
+  // Validaciones en tiempo real
+  const validateField = (name: string, value: string): string => {
+    switch (name) {
+      case 'nombre':
+      case 'apellido':
+        if (!value.trim()) {
+          return 'Este campo es obligatorio'
+        }
+        if (value.trim().length < 2) {
+          return 'Debe tener al menos 2 caracteres'
+        }
+        // Verificar que no contenga números
+        if (/\d/.test(value)) {
+          return 'No puede contener números'
+        }
+        // Validación adicional para solo permitir letras, espacios y algunos caracteres especiales
+        if (!/^[A-Za-záéíóúÁÉÍÓÚüÜñÑ\s'-]+$/.test(value)) {
+          return 'Solo puede contener letras y espacios'
+        }
+        return ''
+      
+      case 'dni':
+        if (!value.trim()) {
+          return 'Este campo es obligatorio'
+        }
+        // Verificar que solo contenga dígitos (más estricto)
+        if (/[^\d]/.test(value)) {
+          return 'El DNI solo debe contener números'
+        }
+        if (!/^\d{7,8}$/.test(value)) {
+          return 'El DNI debe tener 7 u 8 dígitos'
+        }
+        return ''
+      
+      case 'legajo':
+        if (!value.trim()) {
+          return 'Este campo es obligatorio'
+        }
+        if (value.trim().length < 3) {
+          return 'El legajo debe tener al menos 3 caracteres'
+        }
+        // Validación para formato de legajo (alfanumérico)
+        if (!/^[A-Za-z0-9-]+$/.test(value)) {
+          return 'El legajo solo puede contener letras, números y guiones'
+        }
+        return ''
+      
+      case 'fechaNacimiento':
+        if (!value) {
+          return 'Este campo es obligatorio'
+        }
+        const fechaNac = new Date(value)
+        const hoy = new Date()
+        const edad = hoy.getFullYear() - fechaNac.getFullYear()
+        if (edad < 18 || edad > 100) {
+          return 'La edad debe estar entre 18 y 100 años'
+        }
+        return ''
+      
+      case 'email':
+        if (!value.trim()) {
+          return 'Este campo es obligatorio'
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(value)) {
+          return 'Ingrese un email válido'
+        }
+        return ''
+      
+      case 'direccion':
+        if (!value.trim()) {
+          return 'Este campo es obligatorio'
+        }
+        if (value.trim().length < 10) {
+          return 'La dirección debe ser más específica'
+        }
+        // Verificar que contenga al menos un número (para la altura de la calle)
+        if (!/\d/.test(value)) {
+          return 'La dirección debe incluir altura (números)'
+        }
+        // Verificar caracteres válidos para una dirección
+        if (!/^[A-Za-z0-9áéíóúÁÉÍÓÚüÜñÑ\s,.'-]+$/.test(value)) {
+          return 'La dirección contiene caracteres no permitidos'
+        }
+        return ''
+      
+      case 'telefono':
+        if (!value.trim()) {
+          return '' // Campo opcional
+        }
+        // Verificar que solo contenga dígitos, espacios y algunos caracteres permitidos
+        if (/[^\d\s+-]/.test(value)) {
+          return 'El teléfono solo debe contener números y caracteres como + o -'
+        }
+        if (!/^\+?[\d-\s]{10,15}$/.test(value.replace(/\s/g, ''))) {
+          return 'Ingrese un número de teléfono válido (10-15 dígitos)'
+        }
+        return ''
+      
+      default:
+        return ''
+    }
+  }
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     })
-    // Clear error when user types
-    if (errors[e.target.name]) {
-      setErrors(prev => ({...prev, [e.target.name]: ''}))
-    }
+    
+    // Validación en tiempo real
+    const error = validateField(name, value)
+    setErrors(prev => ({ ...prev, [name]: error }))
   }
 
   const generatePassword = () => {
@@ -43,19 +149,22 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
 
   function validate() {
     const e: {[k:string]:string} = {}
-    if (!formData.nombre) e.nombre = 'El nombre es obligatorio'
-    if (!formData.apellido) e.apellido = 'El apellido es obligatorio'
-    if (!formData.dni) e.dni = 'El DNI es obligatorio'
-    if (!formData.legajo) e.legajo = 'El legajo es obligatorio'
-    if (!formData.fechaNacimiento) e.fechaNacimiento = 'La fecha de nacimiento es obligatoria'
-    if (!formData.email) e.email = 'El email es obligatorio'
-    if (!formData.direccion) e.direccion = 'La dirección es obligatoria'
+    
+    // Usamos la función validateField para validar cada campo
+    Object.entries(formData).forEach(([key, value]) => {
+      const error = validateField(key, value as string)
+      if (error) {
+        e[key] = error
+      }
+    })
+    
     setErrors(e)
     return Object.keys(e).length === 0
   }
 
   const [passwordUsed, setPasswordUsed] = useState<string | null>(null)
   const [registroExitoso, setRegistroExitoso] = useState(false)
+  const [showPopup, setShowPopup] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -95,15 +204,7 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
       }
       
       setRegistroExitoso(true)
-      
-      // Esperar un momento antes de redirigir
-      setTimeout(() => {
-        if (onCancel) {
-          onCancel()
-        } else {
-          router.push('/dashboard/administrativo')
-        }
-      }, 3000)
+      setShowPopup(true) // Mostrar el popup de confirmación
     } catch (err) {
       console.error('Error al registrar:', err)
       setServerError('Error inesperado al procesar la solicitud')
@@ -139,6 +240,8 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
               name="nombre"
               value={formData.nombre}
               onChange={handleChange}
+              pattern="[A-Za-záéíóúÁÉÍÓÚüÜñÑ\s'-]+"
+              title="Solo puede contener letras y espacios, sin números"
               className={`w-full mt-1 p-2 rounded border ${errors.nombre ? 'border-red-500' : ''}`}
               placeholder="Ingrese el nombre"
             />
@@ -151,6 +254,8 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
               name="apellido"
               value={formData.apellido}
               onChange={handleChange}
+              pattern="[A-Za-záéíóúÁÉÍÓÚüÜñÑ\s'-]+"
+              title="Solo puede contener letras y espacios, sin números"
               className={`w-full mt-1 p-2 rounded border ${errors.apellido ? 'border-red-500' : ''}`}
               placeholder="Ingrese el apellido"
             />
@@ -166,9 +271,14 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
               name="dni"
               value={formData.dni}
               onChange={handleChange}
+              pattern="[0-9]{7,8}"
+              inputMode="numeric"
+              title="El DNI solo debe contener entre 7 y 8 dígitos numéricos"
+              maxLength={8}
               className={`w-full mt-1 p-2 rounded border ${errors.dni ? 'border-red-500' : ''}`}
               placeholder="Ej: 12345678"
             />
+            <p className="text-xs text-gray-500 mt-1">Solo números, sin puntos ni espacios</p>
             {errors.dni && <p className="text-xs text-red-600 mt-1">{errors.dni}</p>}
           </div>
           <div>
@@ -178,6 +288,8 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
               name="legajo"
               value={formData.legajo}
               onChange={handleChange}
+              pattern="[A-Za-z0-9-]+"
+              title="El legajo solo puede contener letras, números y guiones"
               className={`w-full mt-1 p-2 rounded border ${errors.legajo ? 'border-red-500' : ''}`}
               placeholder="Número de legajo"
             />
@@ -232,9 +344,13 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
               name="telefono"
               value={formData.telefono}
               onChange={handleChange}
-              className="w-full mt-1 p-2 rounded border"
+              pattern="[\d\s+\-]+"
+              title="El teléfono solo debe contener números, espacios y los símbolos + o -"
+              className={`w-full mt-1 p-2 rounded border ${errors.telefono ? 'border-red-500' : ''}`}
               placeholder="Ej: +54 11 1234-5678"
             />
+            <p className="text-xs text-gray-500 mt-1">Campo opcional</p>
+            {errors.telefono && <p className="text-xs text-red-600 mt-1">{errors.telefono}</p>}
           </div>
           <div>
             <label className="text-sm">ID de Usuario</label>
@@ -307,6 +423,24 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
         </div>
 
       </form>
+
+      {/* Popup de confirmación */}
+      <ConfirmationPopup
+        isOpen={showPopup}
+        onClose={() => {
+          setShowPopup(false)
+          // Redirigir después de cerrar el popup
+          if (onCancel) {
+            onCancel()
+          } else {
+            router.push('/dashboard/administrativo')
+          }
+        }}
+        title="¡Administrador Registrado con Éxito!"
+        message={`El administrador ${formData.nombre} ${formData.apellido} ha sido registrado correctamente en el sistema.`}
+        passwordUsed={passwordUsed}
+        userType="administrador"
+      />
     </div>
   )
 }

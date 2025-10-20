@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { crearMateria, checkMateriaExistente } from './actions'
+import ConfirmationPopup from '@/components/ui/confirmation-popup'
 
 type Duracion = 'Anual' | 'Cuatrimestral'
 
@@ -22,6 +23,8 @@ export default function CrearMateriaForm({ onCancel }: { onCancel?: () => void }
   const [errors, setErrors] = useState<{[k:string]:string}>({})
   const [serverError, setServerError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [showPopup, setShowPopup] = useState(false)
+  const [materiaCreada, setMateriaCreada] = useState<{codigo: string, nombre: string} | null>(null)
 
   useEffect(()=>{
     setCodigo(generarCodigo())
@@ -71,15 +74,13 @@ export default function CrearMateriaForm({ onCancel }: { onCancel?: () => void }
         return
       }
       
-      // Si fue exitoso
-      if (onCancel) {
-        // Si está en un modal, cerrar
-        onCancel()
-      } else {
-        // Redirigir a la lista de materias
-        router.push('/dashboard/administrativo')
-        router.refresh() // Refrescar para mostrar los cambios
-      }
+      // Si fue exitoso, guardar la información de la materia creada y mostrar el popup
+      setMateriaCreada({
+        codigo,
+        nombre
+      })
+      setShowPopup(true)
+      setLoading(false)
     } catch (err) {
       console.error('Error al crear materia:', err)
       setServerError('Error inesperado. Por favor, inténtalo de nuevo.')
@@ -150,6 +151,23 @@ export default function CrearMateriaForm({ onCancel }: { onCancel?: () => void }
           </div>
         </div>
       </form>
+
+      {/* Popup de confirmación */}
+      <ConfirmationPopup
+        isOpen={showPopup}
+        onClose={() => {
+          setShowPopup(false)
+          // Redirigir después de cerrar el popup
+          if (onCancel) {
+            onCancel()
+          } else {
+            router.push('/dashboard/administrativo')
+            router.refresh() // Refrescar para mostrar los cambios
+          }
+        }}
+        title="¡Materia Creada con Éxito!"
+        message={materiaCreada ? `La materia "${materiaCreada.nombre}" (${materiaCreada.codigo}) ha sido registrada correctamente en el sistema.` : 'La materia ha sido registrada correctamente en el sistema.'}
+      />
     </div>
   )
 }

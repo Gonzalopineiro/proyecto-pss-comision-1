@@ -33,15 +33,21 @@ export default function LoginPage() {
     }
     
     try {
+      // No actualizamos el estado a false automáticamente porque
+      // queremos mantenerlo en true mientras ocurre la redirección
       const result = await login(formData)
+      
+      // Solo si hay un error explícito, actualizamos los estados
       if (result && 'error' in result) {
         setError(result.error)
+        setIsLoading(false)
       }
+      // Si no hay error, mantenemos isLoading=true ya que estamos por redirigir
     } catch (err) {
       setError('Ha ocurrido un error al intentar iniciar sesión')
-    } finally {
       setIsLoading(false)
     }
+    // Eliminamos el finally que siempre ponía isLoading en false
   }
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -60,7 +66,7 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <form action={handleSubmit} className="space-y-4">
-            {error && (
+            {error && !isLoading && (
               <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md flex items-center gap-2">
                 <AlertCircle className="size-5" />
                 <span>{error}</span>
@@ -122,7 +128,15 @@ export default function LoginPage() {
               className="w-full py-2 mt-4 bg-slate-800 hover:bg-slate-700 text-white rounded-md transition-colors" 
               disabled={isLoading}
             >
-              {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Iniciando sesión...
+                </span>
+              ) : 'Iniciar Sesión'}
             </Button>
             
           </form>

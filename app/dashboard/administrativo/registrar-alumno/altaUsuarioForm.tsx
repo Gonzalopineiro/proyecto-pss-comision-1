@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import ConfirmationPopup from '@/components/ui/confirmation-popup'
 
 interface Carrera {
   id: number
@@ -47,6 +48,7 @@ const AltaUsuarioForm = () => {
   const [passwordUsed, setPasswordUsed] = useState<string | null>(null)
   const [carreras, setCarreras] = useState<Carrera[]>([])
   const [carrerasLoading, setCarrerasLoading] = useState(true)
+  const [showPopup, setShowPopup] = useState(false)
 
   // Cargar carreras al iniciar
   useEffect(() => {
@@ -81,11 +83,23 @@ const AltaUsuarioForm = () => {
         if (value.trim().length < 2) {
           return 'Debe tener al menos 2 caracteres'
         }
+        // Validación para no permitir números
+        if (/\d/.test(value)) {
+          return 'No puede contener números'
+        }
+        // Validación adicional para solo permitir letras, espacios y algunos caracteres especiales
+        if (!/^[A-Za-záéíóúÁÉÍÓÚüÜñÑ\s'-]+$/.test(value)) {
+          return 'Solo puede contener letras y espacios'
+        }
         return ''
       
       case 'dni':
         if (!value.trim()) {
           return 'Este campo es obligatorio'
+        }
+        // Verificar que solo contenga dígitos (más estricto)
+        if (/[^\d]/.test(value)) {
+          return 'El DNI solo debe contener números'
         }
         if (!/^\d{7,8}$/.test(value)) {
           return 'El DNI debe tener 7 u 8 dígitos'
@@ -98,6 +112,10 @@ const AltaUsuarioForm = () => {
         }
         if (value.trim().length < 3) {
           return 'El legajo debe tener al menos 3 caracteres'
+        }
+        // Validación para formato de legajo (alfanumérico)
+        if (!/^[A-Za-z0-9-]+$/.test(value)) {
+          return 'El legajo solo puede contener letras, números y guiones'
         }
         return ''
       
@@ -130,11 +148,26 @@ const AltaUsuarioForm = () => {
         if (value.trim().length < 10) {
           return 'La dirección debe ser más específica'
         }
+        // Verificar que contenga al menos un número (para la altura de la calle)
+        if (!/\d/.test(value)) {
+          return 'La dirección debe incluir altura (números)'
+        }
+        // Verificar caracteres válidos para una dirección
+        if (!/^[A-Za-z0-9áéíóúÁÉÍÓÚüÜñÑ\s,.'-]+$/.test(value)) {
+          return 'La dirección contiene caracteres no permitidos'
+        }
         return ''
       
       case 'telefono':
-        if (value.trim() && !/^\d{10,12}$/.test(value.replace(/\s/g, ''))) {
-          return 'El teléfono debe contener entre 10 y 12 dígitos'
+        if (!value.trim()) {
+          return '' // Campo opcional
+        }
+        // Verificar que solo contenga dígitos, espacios y algunos caracteres permitidos
+        if (/[^\d\s+-]/.test(value)) {
+          return 'El teléfono solo debe contener números y caracteres como + o -'
+        }
+        if (!/^\+?[\d-\s]{10,15}$/.test(value.replace(/\s/g, ''))) {
+          return 'Ingrese un número de teléfono válido (10-15 dígitos)'
         }
         return ''
       
@@ -214,6 +247,9 @@ const AltaUsuarioForm = () => {
       
       setSuccessMessage(`¡Alumno ${formData.nombre} ${formData.apellido} registrado exitosamente!`)
       
+      // Mostrar popup de confirmación
+      setShowPopup(true)
+      
       // Limpiar formulario
       setFormData({
         nombre: '',
@@ -226,11 +262,6 @@ const AltaUsuarioForm = () => {
         telefono: '',
         carreraId: ''
       })
-      
-      // Redirigir después de un tiempo
-      setTimeout(() => {
-        router.push('/dashboard/administrativo')
-      }, 3000)
       
     } catch (error) {
       console.error('Error al registrar alumno:', error)
@@ -277,6 +308,8 @@ const AltaUsuarioForm = () => {
                     name="nombre"
                     value={formData.nombre}
                     onChange={handleInputChange}
+                    pattern="[A-Za-záéíóúÁÉÍÓÚüÜñÑ\s'-]+"
+                    title="Solo puede contener letras y espacios, sin números"
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       errors.nombre ? 'border-red-300 bg-red-50' : 'border-gray-300'
                     }`}
@@ -295,6 +328,8 @@ const AltaUsuarioForm = () => {
                     name="apellido"
                     value={formData.apellido}
                     onChange={handleInputChange}
+                    pattern="[A-Za-záéíóúÁÉÍÓÚüÜñÑ\s'-]+"
+                    title="Solo puede contener letras y espacios, sin números"
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       errors.apellido ? 'border-red-300 bg-red-50' : 'border-gray-300'
                     }`}
@@ -315,6 +350,9 @@ const AltaUsuarioForm = () => {
                     name="dni"
                     value={formData.dni}
                     onChange={handleInputChange}
+                    pattern="[0-9]{7,8}"
+                    inputMode="numeric"
+                    title="El DNI solo debe contener entre 7 y 8 dígitos numéricos"
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       errors.dni ? 'border-red-300 bg-red-50' : 'border-gray-300'
                     }`}
@@ -412,6 +450,8 @@ const AltaUsuarioForm = () => {
                     name="telefono"
                     value={formData.telefono}
                     onChange={handleInputChange}
+                    pattern="[\d\s+\-]+"
+                    title="El teléfono solo debe contener números, espacios y los símbolos + o -"
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       errors.telefono ? 'border-red-300 bg-red-50' : 'border-gray-300'
                     }`}
@@ -500,6 +540,20 @@ const AltaUsuarioForm = () => {
               </Button>
             </div>
           </form>
+          
+          {/* Popup de confirmación */}
+          <ConfirmationPopup
+            isOpen={showPopup}
+            onClose={() => {
+              setShowPopup(false)
+              // Redirigir después de cerrar el popup
+              router.push('/dashboard/administrativo')
+            }}
+            title="¡Alumno Registrado con Éxito!"
+            message={`El alumno ha sido registrado correctamente en la carrera seleccionada.`}
+            passwordUsed={passwordUsed}
+            userType="alumno"
+          />
         </CardContent>
       </Card>
     </div>
