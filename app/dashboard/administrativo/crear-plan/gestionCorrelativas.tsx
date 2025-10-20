@@ -40,6 +40,7 @@ interface GestionCorrelativasProps {
   materias: MateriaPlan[];
   onContinuar: () => void;
   onAnterior: () => void;
+  onRemoveMateria?: (id: number) => Promise<void>;
   loading?: boolean;
 }
 
@@ -48,12 +49,16 @@ export default function GestionCorrelativas({
   materias,
   onContinuar,
   onAnterior,
+  onRemoveMateria,
   loading = false
 }: GestionCorrelativasProps) {
   // Estado para errores y carga
   const [error, setError] = useState<string | null>(null);
   const [loadingCorrelativas, setLoadingCorrelativas] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  
+  // Verificar si hay materias asociadas
+  const hayMateriasAsociadas = materias && materias.length > 0;
   
   // Estado para correlatividades
   const [correlativasCursado, setCorrelativasCursado] = useState<{[key: number]: Correlativa[]}>({});
@@ -121,6 +126,28 @@ export default function GestionCorrelativas({
         setSuccessMessage(null);
       }
     }, 3000);
+  };
+  
+  // Función para manejar la eliminación de una materia del plan
+  const handleEliminarMateria = async (materiaId: number) => {
+    if (!onRemoveMateria) return;
+    
+    // Confirmar antes de eliminar
+    const confirmar = window.confirm('¿Estás seguro de que deseas eliminar esta materia del plan? Se eliminarán también todas sus correlatividades asociadas.');
+    if (!confirmar) return;
+    
+    setLoadingCorrelativas(true);
+    setError(null);
+    
+    try {
+      await onRemoveMateria(materiaId);
+      mostrarMensajeTemporal('Materia eliminada correctamente del plan');
+    } catch (err) {
+      console.error('Error al eliminar materia:', err);
+      mostrarMensajeTemporal('Error al eliminar la materia del plan', true);
+    } finally {
+      setLoadingCorrelativas(false);
+    }
   };
   
   // Función para agregar una correlativa de cursado
@@ -310,9 +337,23 @@ export default function GestionCorrelativas({
         </div>
       )}
       
+      {/* Mensaje de advertencia cuando no hay materias */}
+      {!hayMateriasAsociadas && (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded mb-6 flex items-start">
+          <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+          <div>
+            <p className="font-semibold">No hay materias asociadas al plan</p>
+            <p className="text-sm mt-1">Debes volver al paso anterior y asociar al menos una materia antes de continuar.</p>
+          </div>
+        </div>
+      )}
+      
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-gray-200 rounded-md mb-6">
-          <thead className="bg-gray-50">
+        {hayMateriasAsociadas ? (
+          <table className="min-w-full bg-white border border-gray-200 rounded-md mb-6">
+            <thead className="bg-gray-50">
             <tr>
               <th className="py-2 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b">
                 Materia
@@ -502,8 +543,9 @@ export default function GestionCorrelativas({
                 </td>
                 <td className="py-3 px-4 text-sm text-center">
                   <button
-                    className="text-red-600 hover:text-red-800 text-sm font-medium"
-                    disabled={loadingCorrelativas}
+                    onClick={() => handleEliminarMateria(materia.id)}
+                    disabled={loadingCorrelativas || !onRemoveMateria}
+                    className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Eliminar materia del plan"
                     aria-label={`Eliminar ${materia.materias.nombre} del plan de estudios`}
                   >
@@ -514,6 +556,15 @@ export default function GestionCorrelativas({
             ))}
           </tbody>
         </table>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 text-center mb-6">
+            <svg className="w-16 h-16 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            <p className="font-medium text-gray-700 text-lg mb-1">No hay materias asociadas al plan</p>
+            <p className="text-sm text-gray-500 mb-4">Vuelve al paso anterior para asociar materias al plan de estudios</p>
+          </div>
+        )}
       </div>
       
       <div className="flex justify-between pt-6 border-t border-gray-200">
@@ -534,7 +585,8 @@ export default function GestionCorrelativas({
             variant="default"
             onClick={onContinuar}
             className="px-6 py-2"
-            disabled={loadingCorrelativas || loading}
+            disabled={!hayMateriasAsociadas || loadingCorrelativas || loading}
+            title={!hayMateriasAsociadas ? 'Debes asociar al menos una materia antes de continuar' : ''}
           >
             {loadingCorrelativas || loading ? 'Procesando...' : 'Continuar'}
           </Button>

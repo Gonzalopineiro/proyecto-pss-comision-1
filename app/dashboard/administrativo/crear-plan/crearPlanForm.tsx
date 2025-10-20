@@ -459,6 +459,7 @@ export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
               materias={materiasAsociadas}
               onContinuar={handleNextStep}
               onAnterior={handleAnterior}
+              onRemoveMateria={handleRemoveMateria}
               loading={loading}
             />
           </div>
