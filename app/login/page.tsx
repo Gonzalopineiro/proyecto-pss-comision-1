@@ -8,20 +8,18 @@ import { Button } from '@/components/ui/button'
 import { AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
   const searchParams = useSearchParams()
   const redirectedFrom = searchParams.get('redirectedFrom')
   const redirectTo = searchParams.get('redirectTo') // Añadimos soporte para el parámetro redirectTo
   
-  // Mostrar un mensaje si el usuario fue redirigido por falta de autenticación
-  useEffect(() => {
-    if (redirectedFrom) {
-      setError('Debes iniciar sesión para acceder a esta sección')
-    }
-  }, [redirectedFrom])
+  // Inicializar el error solo si hay redirectedFrom, para evitar el flash
+  const [error, setError] = useState<string | null>(
+    redirectedFrom ? 'Debes iniciar sesión para acceder a esta sección' : null
+  )
+  const [isLoading, setIsLoading] = useState(false)
   
   const handleSubmit = async (formData: FormData) => {
+    // Limpiamos el error antes de iniciar el loading
     setError(null)
     setIsLoading(true)
     
@@ -32,22 +30,14 @@ export default function LoginPage() {
       formData.append('redirectTo', redirectedFrom)
     }
     
-    try {
-      // No actualizamos el estado a false automáticamente porque
-      // queremos mantenerlo en true mientras ocurre la redirección
-      const result = await login(formData)
-      
-      // Solo si hay un error explícito, actualizamos los estados
-      if (result && 'error' in result) {
-        setError(result.error)
-        setIsLoading(false)
-      }
-      // Si no hay error, mantenemos isLoading=true ya que estamos por redirigir
-    } catch (err) {
-      setError('Ha ocurrido un error al intentar iniciar sesión')
+    // Llamamos directamente a login sin try-catch para que Next.js maneje la redirección
+    const result = await login(formData)
+    
+    // Si llegamos aquí, significa que hubo un error (porque redirect() nunca retorna)
+    if (result && 'error' in result) {
+      setError(result.error)
       setIsLoading(false)
     }
-    // Eliminamos el finally que siempre ponía isLoading en false
   }
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
