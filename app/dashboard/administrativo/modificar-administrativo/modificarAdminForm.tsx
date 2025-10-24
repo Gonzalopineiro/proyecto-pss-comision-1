@@ -138,6 +138,16 @@ export default function ModificarAdminForm({ initialData }: { initialData: Admin
       })
       const json = await res.json()
       if (json.success) {
+        try {
+          // Notify the grid page to show the confirmation popup after redirect
+          const payload = JSON.stringify({ 
+            type: 'modified', 
+            name: `${initialData.nombre} ${initialData.apellido}` 
+          })
+          localStorage.setItem('adminSuccess', payload)
+        } catch (e) {
+          // ignore storage errors
+        }
         router.push('/dashboard/administrativo/grillas/administrativos')
       } else {
         setError(json.error || 'Error al actualizar')

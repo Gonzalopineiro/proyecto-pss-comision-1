@@ -2,9 +2,11 @@
 
 import React, { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import ConfirmDialog from '@/components/ui/confirm-dialog'
+import ConfirmationPopup from '@/components/ui/confirmation-popup'
 
 interface Administrativo {
   id: string
@@ -24,6 +26,35 @@ export default function AdministrativosGrid({ initialData }: { initialData: Admi
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [toDelete, setToDelete] = useState<Administrativo | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [showConfirmationPopup, setShowConfirmationPopup] = useState(false)
+  const [adminName, setAdminName] = useState<string | null>(null)
+  const [successType, setSuccessType] = useState<'deleted' | 'modified' | null>(null)
+  const router = useRouter()
+
+  // On mount, check if another page set a success message (e.g. after editing an admin)
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem('adminSuccess')
+      if (raw) {
+        try {
+          const payload = JSON.parse(raw)
+          if (payload && typeof payload === 'object') {
+            setAdminName(payload.name || null)
+            setSuccessType(payload.type || 'modified')
+            setShowConfirmationPopup(true)
+          }
+        } catch (e) {
+          // not JSON, treat as plain name
+          setAdminName(String(raw))
+          setSuccessType('modified')
+          setShowConfirmationPopup(true)
+        }
+        localStorage.removeItem('adminSuccess')
+      }
+    } catch (e) {
+      // ignore (server or blocked storage)
+    }
+  }, [])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -63,6 +94,7 @@ export default function AdministrativosGrid({ initialData }: { initialData: Admi
     setLoadingDelete(true)
     setDeletingId(toDelete.id)
     try {
+      const deleted = toDelete
       const res = await fetch('/api/administrativos/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -71,9 +103,13 @@ export default function AdministrativosGrid({ initialData }: { initialData: Admi
 
       const json = await res.json()
       if (json.success) {
-        setData((prev) => prev.filter((p) => p.id !== toDelete.id))
+        setData((prev) => prev.filter((p) => p.id !== deleted.id))
         setConfirmOpen(false)
         setToDelete(null)
+        // Mostrar el popup de confirmación
+        setAdminName(`${deleted.nombre} ${deleted.apellido}`)
+        setSuccessType('deleted')
+        setShowConfirmationPopup(true)
       } else {
         alert('No se pudo eliminar: ' + (json.error || 'Error'))
       }
@@ -103,6 +139,17 @@ export default function AdministrativosGrid({ initialData }: { initialData: Admi
           className="w-full p-2 border rounded bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-700"
         />
       </div>
+
+      {/* Popup de confirmación para eliminación y modificación */}
+      <ConfirmationPopup
+        isOpen={showConfirmationPopup}
+        onClose={() => {
+          setShowConfirmationPopup(false)
+          router.push('/dashboard/administrativo/grillas/administrativos')
+        }}
+        title={successType === 'modified' ? '¡Administrador Modificado!' : '¡Administrador Eliminado!'}
+        message={adminName ? `${successType === 'modified' ? 'El administrador' : 'Se eliminó al administrador'} ${adminName} ${successType === 'modified' ? 'ha sido modificado correctamente.' : 'del sistema.'}` : ''}
+      />
 
       <div className="overflow-x-auto">
         <table className="w-full table-auto border-collapse">
