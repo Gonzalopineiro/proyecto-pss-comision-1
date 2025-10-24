@@ -12,7 +12,7 @@ export default async function CrearMesaPage() {
             <nav className="mb-6 text-sm text-slate-600 dark:text-slate-400">
               <ol className="flex items-center space-x-2">
                 <li>
-                  <a href="/dashboard/docente" className="hover:text-slate-900 dark:hover:text-white">
+                  <a href="/dashboard/alumno" className="hover:text-slate-900 dark:hover:text-white">
                     Inicio
                   </a>
                 </li>
@@ -20,7 +20,7 @@ export default async function CrearMesaPage() {
                   <svg className="w-4 h-4 mx-2" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                   </svg>
-                  <a href="/dashboard/docente/mesas-examen" className="hover:text-slate-900 dark:hover:text-white">
+                  <a href="/dashboard/alumno/mesas-examen" className="hover:text-slate-900 dark:hover:text-white">
                     Mesas de Examen
                   </a>
                 </li>
@@ -28,7 +28,7 @@ export default async function CrearMesaPage() {
                   <svg className="w-4 h-4 mx-2" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                   </svg>
-                  <span className="text-slate-900 dark:text-white font-medium">Crear Mesa de Examen</span>
+                  <span className="text-slate-900 dark:text-white font-medium">Crear Mesa de Examen (Vista Temporal)</span>
                 </li>
               </ol>
             </nav>
