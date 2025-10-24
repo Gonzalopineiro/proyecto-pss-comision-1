@@ -300,7 +300,7 @@ export default function CrearMesaForm() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push('/dashboard/docente/mesas-examen')}
+            onClick={() => router.push('/dashboard/docente')}
             disabled={loading}
             className="sm:order-1"
           >
@@ -321,7 +321,7 @@ export default function CrearMesaForm() {
         isOpen={showSuccessPopup}
         onClose={() => {
           setShowSuccessPopup(false);
-          router.push('/dashboard/docente/mesas-examen');
+          router.push('/dashboard/docente');
         }}
         title="¡Mesa Creada con Éxito!"
         message={mesaCreada ? 
