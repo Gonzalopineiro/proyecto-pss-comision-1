@@ -3,6 +3,7 @@ import Link from 'next/link'
 import Sidebar from '@/components/dashboard/sidebar'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import AltaDocenteForm from './altaDocenteForm'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function RegistrarDocente(){
@@ -46,7 +47,7 @@ export default async function RegistrarDocente(){
               </div>
               
               {/* Formulario de alta de docente */}
-              <h1>*Formulario Alta docente</h1>
+              <AltaDocenteForm />
             </div>
           </div>
         </main>
