@@ -127,7 +127,7 @@ export async function login(formData: FormData): Promise<LoginResult> {
   // Determinar a qué dashboard redirigir según el rol
   let redirectTo = '/login' // Valor por defecto en caso de error
   
-  if (profileData?.role === 'admin') {
+  if (profileData?.role === 'admin' || profileData?.role === 'super') {
     redirectTo = '/dashboard/administrativo'
   } else if (profileData?.role === 'user') {
     redirectTo = '/dashboard/alumno'

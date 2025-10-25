@@ -33,7 +33,7 @@ export async function registrarAlumno(formData: AlumnoFormData) {
       .eq('id', userData.user.id)
       .single()
     
-    if (!currentUserProfile || currentUserProfile.role !== 'admin') {
+    if (!currentUserProfile || (currentUserProfile.role !== 'admin' && currentUserProfile.role !== 'super')) {
       return { success: false, error: 'No tienes permisos para realizar esta acción' }
     }
     

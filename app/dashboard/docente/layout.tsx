@@ -21,8 +21,8 @@ export default async function DocenteLayout({
     .eq('id', data.user.id)
     .single()
   
-  // Redirigir a la página de dashboard general si no es docente
-  if (profileError || !profileData || profileData.role !== 'docente') {
+  // Redirigir a la página de login si no es docente ni super
+  if (profileError || !profileData || (profileData.role !== 'docente' && profileData.role !== 'super')) {
     redirect('/login')
   }
 

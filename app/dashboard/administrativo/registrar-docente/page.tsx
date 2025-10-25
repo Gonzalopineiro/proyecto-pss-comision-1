@@ -24,7 +24,7 @@ export default async function RegistrarDocente(){
     .eq('id', userData.user.id)
     .single()
   
-  if (error || !profile || profile.role !== 'admin') {
+  if (error || !profile || (profile.role !== 'admin' && profile.role !== 'super')) {
     redirect('/dashboard')
   }
 

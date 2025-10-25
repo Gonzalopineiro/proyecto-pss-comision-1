@@ -41,41 +41,105 @@ export async function obtenerAdministrativo(id: string) {
 // Eliminar un administrativo
 export async function eliminarAdministrativo(id: string, email: string) {
   const supabase = await createClient()
-  
+
   try {
-    // Primero, encontrar el ID de usuario en la tabla profiles
-    const { data: profileData } = await supabase
+    // Verificar que el usuario que realiza la petición tenga rol 'super'
+    const { data: userSession, error: sessionError } = await supabase.auth.getUser()
+    if (sessionError || !userSession?.user) {
+      return { success: false, error: 'No hay sesión activa' }
+    }
+
+    const { data: callerProfile, error: callerProfileError } = await supabase
       .from('profiles')
-      .select('id')
-      .eq('email', email)
+      .select('role')
+      .eq('id', userSession.user.id)
       .single()
-    
-    // Eliminar el registro de la tabla administrativos
+
+    if (callerProfileError) {
+      console.error('Error al obtener perfil del usuario que realiza la acción:', callerProfileError)
+      return { success: false, error: 'No se pudo verificar permisos' }
+    }
+
+    if (!callerProfile || callerProfile.role !== 'super') {
+      return { success: false, error: 'Permisos insuficientes: sólo usuarios con rol super pueden eliminar administrativos' }
+    }
+    // Primero, eliminar de la tabla administrativos
     const { error: adminError } = await supabase
       .from('administrativos')
       .delete()
       .eq('id', id)
     
     if (adminError) {
-      return { success: false, error: `Error al eliminar administrativo: ${adminError.message}` }
+      throw new Error(`Error al eliminar administrativo: ${adminError}`)
+    }
+
+    // Eliminar de la tabla Roles
+    const { error: rolesError } = await supabase
+      .from('Roles')
+      .delete()
+      .eq('email', email)
+    
+    if (rolesError) {
+      console.error('Error al eliminar de Roles:', rolesError)
+    }
+
+    // Buscar y eliminar el usuario de auth usando el email
+    try {
+      const authResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users`,
+        {
+          method: 'GET',
+          headers: {
+            'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}`
+          }
+        }
+      )
+
+      if (authResponse.ok) {
+        const users = await authResponse.json()
+        const user = users.users?.find((u: any) => u.email === email)
+        
+        if (user?.id) {
+          // Eliminar el usuario de auth
+          const deleteResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users/${user.id}`,
+            {
+              method: 'DELETE',
+              headers: {
+                'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+                'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}`
+              }
+            }
+          )
+
+          if (!deleteResponse.ok) {
+            const errorText = await deleteResponse.text()
+            console.error('Error al eliminar usuario de auth:', errorText)
+          } else {
+            console.log('Usuario eliminado correctamente de auth.users')
+          }
+        } else {
+          console.log('No se encontró el usuario en auth.users')
+        }
+      }
+    } catch (error) {
+      console.error('Error al buscar/eliminar usuario de auth:', error)
+    }
+
+    // Eliminar de la tabla profiles
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('email', email)
+    
+    if (profileError) {
+      console.error('Error al eliminar perfil:', profileError)
     }
     
-    // Si encontramos el perfil, intentamos eliminar el usuario de auth
-    if (profileData?.id) {
-      // Eliminar el registro de la tabla profiles
-      await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', profileData.id)
-      
-      // Eliminar el usuario de auth
-      // Nota: esto podría requerir permisos administrativos especiales
-      await supabase.auth.admin.deleteUser(profileData.id)
-    }
-    
-    // Revalidar la ruta para actualizar la lista
-    revalidatePath('/dashboard/administrativo')
-    return { success: true }
+  // Revalidar la ruta para actualizar la lista
+  revalidatePath('/dashboard/administrativo')
+  return { success: true }
     
   } catch (error: any) {
     console.error('Error al eliminar administrativo:', error)

@@ -21,8 +21,8 @@ export default async function AdministrativoLayout({
     .eq('id', data.user.id)
     .single()
   
-  // Redirigir a la página de dashboard general si no es administrador
-  if (profileError || !profileData || profileData.role !== 'admin') {
+  // Redirigir a la página de login si no es admin ni super
+  if (profileError || !profileData || (profileData.role !== 'admin' && profileData.role !== 'super')) {
     redirect('/login')
   }
 

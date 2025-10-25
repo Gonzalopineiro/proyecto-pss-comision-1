@@ -21,8 +21,8 @@ export default async function EstudianteLayout({
     .eq('id', data.user.id)
     .single()
   
-  // Redirigir a la página de dashboard general si no es alumno
-  if (profileError || !profileData || profileData.role !== 'user') {
+  // Redirigir a la página de login si no es alumno (user) ni super
+  if (profileError || !profileData || (profileData.role !== 'user' && profileData.role !== 'super')) {
     redirect('/login')
   }
 

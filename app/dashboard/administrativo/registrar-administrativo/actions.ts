@@ -33,7 +33,7 @@ export async function registrarAdministrativo(formData: AdminFormData) {
       .eq('id', userData.user.id)
       .single()
       console.log('Perfil del usuario actual:', currentUserProfile) // Para depuración
-    if (!currentUserProfile || currentUserProfile.role !== 'admin') {
+    if (!currentUserProfile || (currentUserProfile.role !== 'admin' && currentUserProfile.role !== 'super')) {
       return { success: false, error: 'No tienes permisos para realizar esta acción' }
     }
     
@@ -292,8 +292,8 @@ export async function verificarPermisosAdmin() {
     return { autorizado: false, mensaje: 'No se pudo verificar los permisos' }
   }
   
-  // Verificar si el usuario tiene rol de admin
-  if (profile.role !== 'admin') {
+  // Verificar si el usuario tiene rol de admin o super
+  if (profile.role !== 'admin' && profile.role !== 'super') {
     return { autorizado: false, mensaje: 'No tienes permisos de administrador' }
   }
   
