@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import ConfirmDialog from '@/components/ui/confirm-dialog'
 import ConfirmationPopup from '@/components/ui/confirmation-popup'
+import { useUserRole } from '@/utils/hooks'
 
 interface Administrativo {
   id: string
@@ -18,6 +19,7 @@ interface Administrativo {
 }
 
 export default function AdministrativosGrid({ initialData }: { initialData: Administrativo[] }) {
+  const { role } = useUserRole()
   const [data, setData] = useState<Administrativo[]>(initialData || [])
   const [query, setQuery] = useState('')
     const [currentPage, setCurrentPage] = useState(1)
@@ -127,7 +129,7 @@ export default function AdministrativosGrid({ initialData }: { initialData: Admi
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Administrativos</h2>
         <Link href="/dashboard/administrativo/registrar-administrativo">
-          <Button>Nuevo</Button>
+          <Button>Regitrar Administrativo</Button>
         </Link>
       </div>
 
@@ -176,9 +178,11 @@ export default function AdministrativosGrid({ initialData }: { initialData: Admi
                     <Link href={`/dashboard/administrativo/modificar-administrativo?id=${a.id}`} className="">
                       <Button size="sm" variant="outline">Modificar</Button>
                     </Link>
-                    <Button size="sm" variant="destructive" onClick={() => handleDelete(a)} disabled={loadingDelete && deletingId === a.id}>
-                      {loadingDelete && deletingId === a.id ? 'Eliminando...' : 'Eliminar'}
-                    </Button>
+                    {role === 'super' && (
+                      <Button size="sm" variant="destructive" onClick={() => handleDelete(a)} disabled={loadingDelete && deletingId === a.id}>
+                        {loadingDelete && deletingId === a.id ? 'Eliminando...' : 'Eliminar'}
+                      </Button>
+                    )}
                   </div>
                 </td>
               </tr>
