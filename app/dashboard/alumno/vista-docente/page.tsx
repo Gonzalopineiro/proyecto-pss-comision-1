@@ -1,15 +1,13 @@
 import Sidebar from '@/components/dashboard/sidebar'
-import PanelDocente from './PanelDocente'
+import PanelDocenteTemporal from '../PanelDocenteTemporal'
 
-export default async function DocentePage() {
-  // La verificación de autenticación y rol ya se realiza en el layout
-  
+export default async function VistaDocenteTemporal() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <div className="flex">
         <Sidebar />
         <main className="flex-1 p-8">
-          <PanelDocente />
+          <PanelDocenteTemporal />
         </main>
       </div>
     </div>

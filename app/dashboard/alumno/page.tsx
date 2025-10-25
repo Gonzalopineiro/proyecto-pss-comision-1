@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import React from 'react'
+import Link from 'next/link'
 import Sidebar from '@/components/dashboard/sidebar'
 
 export default async function AlumnoDashboard() {
@@ -58,6 +59,22 @@ export default async function AlumnoDashboard() {
                                     Revisa tu historial académico y calificaciones
                                 </p>
                             </div>
+                        </div>
+
+                        {/* Enlace temporal al panel de docente */}
+                        <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                                🧪 Vista de Testing - Panel de Docente
+                            </h3>
+                            <p className="text-blue-700 dark:text-blue-300 text-sm mb-3">
+                                Mientras no tengas acceso al dashboard de docente, puedes probar la funcionalidad aquí:
+                            </p>
+                            <Link 
+                                href="/dashboard/alumno/vista-docente"
+                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                            >
+                                Ver Panel de Docente (Temporal)
+                            </Link>
                         </div>
                     </div>
                 </main>
