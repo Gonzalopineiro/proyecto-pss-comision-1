@@ -28,11 +28,16 @@ export default async function GrillaAlumnos(){
     redirect('/dashboard')
   }
 
-  // Obtener los datos de alumnos
+  // Obtener los datos de alumnos de la tabla usuarios
   const { data: alumnos, error: alumnosError } = await supabase
-    .from('alumnos')
+    .from('usuarios')
     .select('*')
     .order('apellido', { ascending: true })
+
+  // Debug: Imprimir los datos en consola del servidor
+  console.log('🔍 Datos de alumnos:', alumnos)
+  console.log('❌ Error de alumnos:', alumnosError)
+  console.log('📊 Cantidad de alumnos:', alumnos?.length || 0)
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">

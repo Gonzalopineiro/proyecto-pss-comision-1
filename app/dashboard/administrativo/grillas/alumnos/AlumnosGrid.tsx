@@ -16,10 +16,17 @@ interface Alumno {
   dni?: number | null
   legajo?: number | null
   email?: string | null
-  carrera?: string | null
+  carrera_id?: number | null
+  direccion?: string | null
+  telefono?: string | null
+  nacimiento?: string | null
 }
 
 export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) {
+  // Debug: Imprimir los datos recibidos
+  console.log('🔍 AlumnosGrid recibió initialData:', initialData)
+  console.log('📊 Cantidad de alumnos recibidos:', initialData?.length || 0)
+  
   const { role } = useUserRole()
   const [data, setData] = useState<Alumno[]>(initialData || [])
   const [query, setQuery] = useState('')
@@ -186,13 +193,13 @@ export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) 
                 </td>
                 <td className="py-3">{a.dni ?? '-'}</td>
                 <td className="py-3">{a.legajo ?? '-'}</td>
-                <td className="py-3">{a.carrera ?? '-'}</td>
+                <td className="py-3">{a.carrera_id ?? '-'}</td>
                 <td className="py-3">
                   <div className="flex items-center gap-2">
                     <Link href={`/dashboard/administrativo/modificar-alumno?id=${a.id}`} className="">
                       <Button size="sm" variant="outline">✏️ Modificar</Button>
                     </Link>
-                    {role === 'administrador' && (
+                    {(role === 'admin' || role === 'super') && (
                       <Button size="sm" variant="destructive" onClick={() => handleDelete(a)} disabled={loadingDelete && deletingId === a.id}>
                         🗑️ {loadingDelete && deletingId === a.id ? 'Eliminando...' : 'Eliminar'}
                       </Button>
@@ -204,7 +211,12 @@ export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) 
 
             {paginated.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-6 text-center text-gray-500">No se encontraron alumnos</td>
+                <td colSpan={5} className="py-6 text-center text-gray-500">
+                  <div>No se encontraron alumnos</div>
+                  <div className="text-xs mt-2">
+                    Debug: Total de datos: {data.length} | Filtrados: {filtered.length} | Página actual: {currentPage}
+                  </div>
+                </td>
               </tr>
             )}
           </tbody>
