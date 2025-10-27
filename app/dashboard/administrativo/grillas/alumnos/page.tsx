@@ -4,6 +4,7 @@ import Sidebar from '@/components/dashboard/sidebar'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/utils/supabase/server'
+import AlumnosGrid from './AlumnosGrid'
 
 export default async function GrillaAlumnos(){
   // Verificar permisos
@@ -27,6 +28,12 @@ export default async function GrillaAlumnos(){
     redirect('/dashboard')
   }
 
+  // Obtener los datos de alumnos
+  const { data: alumnos, error: alumnosError } = await supabase
+    .from('alumnos')
+    .select('*')
+    .order('apellido', { ascending: true })
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <div className="flex">
@@ -45,8 +52,8 @@ export default async function GrillaAlumnos(){
                 </Link>
               </div>
               
-              {/* Compponente Grilla alumnos */}
-              <h1>*Componente Grilla alumnos</h1>
+              {/* Componente Grilla alumnos */}
+              <AlumnosGrid initialData={alumnos || []} />
             </div>
           </div>
         </main>
