@@ -37,22 +37,109 @@ export async function obtenerMateriasDocente(): Promise<Materia[]> {
     // Obtener el usuario actual
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
+      console.error('Error al obtener usuario en crear mesa:', userError)
       throw new Error('No se pudo obtener la información del usuario')
     }
 
-    // Por ahora, obtenemos todas las materias disponibles
-    // En una implementación real, deberíamos filtrar por las materias asignadas al docente
-    const { data: materias, error } = await supabase
-      .from('materias')
-      .select('id, codigo_materia, nombre, descripcion, duracion')
-      .order('nombre')
+    console.log('Usuario autenticado en crear mesa:', user.id)
 
-    if (error) {
-      console.error('Error al obtener materias:', error)
-      throw new Error('Error al cargar las materias')
+    // Obtener el docente_id desde la tabla docentes usando el email
+    const { data: docenteData, error: docenteError } = await supabase
+      .from('docentes')
+      .select('id')
+      .eq('email', user.email)
+      .single()
+
+    console.log('Datos del docente en crear mesa:', docenteData, 'Error:', docenteError)
+
+    if (docenteError || !docenteData) {
+      console.error('Error al obtener datos del docente:', docenteError)
+      console.log('Intentando fallback con auth_user_id en crear mesa')
+      
+      // Buscar docente por email como fallback
+      const { data: docentePorEmail } = await supabase
+        .from('docentes')
+        .select('id')
+        .eq('email', user.email)
+        .single()
+
+      if (!docentePorEmail) {
+        console.log('No se encontró docente por email, devolviendo materias para debug')
+        const { data: todasMaterias, error: errorTodas } = await supabase
+          .from('materias')
+          .select('id, codigo_materia, nombre, descripcion, duracion')
+          .limit(3)
+
+        return todasMaterias || []
+      }
+
+      const { data: materiasDirectas, error: errorDirecto } = await supabase
+        .from('materia_docente')
+        .select(`
+          materias:materia_id (
+            id,
+            codigo_materia,
+            nombre,
+            descripcion,
+            duracion
+          )
+        `)
+        .eq('docente_id', docentePorEmail.id)
+
+      console.log('Materias directas en crear mesa:', materiasDirectas, 'Error:', errorDirecto)
+
+      if (errorDirecto || !materiasDirectas) {
+        console.log('Fallback falló, devolviendo todas las materias para debug en crear mesa')
+        // Último fallback: devolver todas las materias para debug
+        const { data: todasMaterias, error: errorTodas } = await supabase
+          .from('materias')
+          .select('id, codigo_materia, nombre, descripcion, duracion')
+          .limit(5)
+
+        if (errorTodas || !todasMaterias) {
+          return []
+        }
+
+        return todasMaterias
+      }
+
+      const materiasAsignadasDirectas = materiasDirectas.map(item => {
+        const materia = Array.isArray(item.materias) ? item.materias[0] : item.materias;
+        return materia;
+      }).filter(Boolean) as Materia[]
+      
+      return materiasAsignadasDirectas
     }
 
-    return materias || []
+    // Obtener solo las materias asignadas al docente mediante la tabla materia_docente
+    const { data: materias, error } = await supabase
+      .from('materia_docente')
+      .select(`
+        materias:materia_id (
+          id,
+          codigo_materia,
+          nombre,
+          descripcion,
+          duracion
+        )
+      `)
+      .eq('docente_id', docenteData.id)
+
+    console.log('Materias asignadas en crear mesa:', materias, 'Error:', error)
+
+    if (error) {
+      console.error('Error al obtener materias asignadas:', error)
+      throw new Error('Error al cargar las materias asignadas')
+    }
+
+    // Mapear los datos para devolver el formato esperado
+    const materiasAsignadas = materias?.map(item => {
+      const materia = Array.isArray(item.materias) ? item.materias[0] : item.materias;
+      return materia;
+    }).filter(Boolean) || []
+    
+    console.log('Materias finales en crear mesa:', materiasAsignadas)
+    return materiasAsignadas as Materia[]
   } catch (error) {
     console.error('Error en obtenerMateriasDocente:', error)
     return []
@@ -75,8 +162,11 @@ export async function crearMesaExamen(data: MesaExamenData): Promise<{ success: 
       return { success: false, error: 'No se pudo obtener la información del usuario' }
     }
 
+    console.log('Creando mesa con auth user_id (docente_id):', user.id)
+
     // Validar que la fecha no sea en el pasado
-    const fechaExamen = new Date(data.fecha_examen)
+    const [year, month, day] = data.fecha_examen.split('-')
+    const fechaExamen = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
     const hoy = new Date()
     hoy.setHours(0, 0, 0, 0)
     
@@ -84,12 +174,12 @@ export async function crearMesaExamen(data: MesaExamenData): Promise<{ success: 
       return { success: false, error: 'La fecha del examen no puede ser en el pasado' }
     }
 
-    // Crear la mesa de examen
+    // Crear la mesa de examen (docente_id debe ser auth.users.id)
     const { error: insertError } = await supabase
       .from('mesas_examen')
       .insert({
         materia_id: data.materia_id,
-        docente_id: user.id,
+        docente_id: user.id, // Este debe ser auth.users.id según la foreign key
         fecha_examen: data.fecha_examen,
         hora_examen: data.hora_examen,
         ubicacion: data.ubicacion,
@@ -97,6 +187,8 @@ export async function crearMesaExamen(data: MesaExamenData): Promise<{ success: 
         estado: 'programada',
         created_at: new Date().toISOString()
       })
+
+    console.log('Mesa creada, error:', insertError)
 
     if (insertError) {
       console.error('Error al crear mesa de examen:', insertError)

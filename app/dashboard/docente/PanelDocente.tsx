@@ -2,13 +2,13 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  BookOpen, 
-  Users, 
-  Calendar, 
-  Plus, 
-  Settings, 
-  Star, 
+import {
+  BookOpen,
+  Users,
+  Calendar,
+  Plus,
+  Settings,
+  Star,
   FileText,
   Edit,
   Trash2,
@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-import { 
+import {
   obtenerMateriasDocente,
   obtenerMesasExamenDocente,
   eliminarMesaExamen,
@@ -43,7 +43,7 @@ export default function PanelDocente() {
           obtenerMateriasDocente(),
           obtenerMesasExamenDocente()
         ]);
-        
+
         setMaterias(materiasData);
         setMesas(mesasData);
       } catch (error) {
@@ -52,14 +52,14 @@ export default function PanelDocente() {
         setLoading(false);
       }
     }
-    
+
     fetchData();
   }, []);
 
   // Manejar eliminación de mesa
   const handleDeleteMesa = async () => {
     if (!mesaToDelete) return;
-    
+
     try {
       const result = await eliminarMesaExamen(mesaToDelete.id);
       if (result.success) {
@@ -77,7 +77,11 @@ export default function PanelDocente() {
 
   // Formatear fecha
   const formatearFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString('es-ES', {
+    // Usar fecha local para evitar problemas de zona horaria
+    const [year, month, day] = fecha.split('-');
+    const fechaLocal = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    
+    return fechaLocal.toLocaleDateString('es-ES', {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
@@ -245,7 +249,7 @@ export default function PanelDocente() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => {}}
+                            onClick={() => { }}
                             className="h-7 w-7 p-0"
                           >
                             <Edit className="h-3 w-3" />
@@ -265,7 +269,7 @@ export default function PanelDocente() {
                       </div>
                     </div>
                   ))}
-                  
+
                   {mesas.length > 4 && (
                     <Link href="/dashboard/docente/mesas-examen">
                       <Button variant="ghost" size="sm" className="w-full mt-3">
