@@ -12,7 +12,8 @@ import {
   FileText,
   Edit,
   Trash2,
-  Clock
+  Clock,
+  LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -33,6 +34,30 @@ export default function PanelDocente() {
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [mesaToDelete, setMesaToDelete] = useState<MesaExamen | null>(null);
+
+  // Función para cerrar sesión
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      // La ruta de logout maneja la redirección automáticamente
+      // pero agregamos una redirección de respaldo por si acaso
+      if (response.redirected) {
+        window.location.href = response.url;
+      } else {
+        router.push('/login');
+      }
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      // Redirigir al login aunque haya error
+      router.push('/login');
+    }
+  };
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -100,12 +125,25 @@ export default function PanelDocente() {
     <div className="max-w-7xl mx-auto p-6 space-y-8">
       {/* Encabezado */}
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-          Panel de Docente
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400">
-          Gestiona tus materias, estudiantes y evaluaciones
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+              Panel de Docente
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400">
+              Gestiona tus materias, estudiantes y evaluaciones
+            </p>
+          </div>
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
+          >
+            <LogOut className="h-4 w-4" />
+            Cerrar Sesión
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
