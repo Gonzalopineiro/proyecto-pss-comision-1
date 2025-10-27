@@ -4,6 +4,8 @@ import Sidebar from '@/components/dashboard/sidebar'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/utils/supabase/server'
+import { obtenerDocentesConMaterias } from './actions'
+import DocentesView from './DocentesGrid'
 
 export default async function GrillaDocentes(){
   // Verificar permisos
@@ -27,6 +29,8 @@ export default async function GrillaDocentes(){
     redirect('/dashboard')
   }
 
+  const docentes = await obtenerDocentesConMaterias()
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <div className="flex">
@@ -44,9 +48,9 @@ export default async function GrillaDocentes(){
                   <Button variant="outline">Volver al panel administrativo</Button>
                 </Link>
               </div>
-              
-              {/* Compponente Grilla docentes */}
-              <h1>*Componente Grilla docentes</h1>
+
+              {/* Componente Grilla docentes */}
+              <DocentesView docentes={docentes} />
             </div>
           </div>
         </main>
