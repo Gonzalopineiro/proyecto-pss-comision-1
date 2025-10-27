@@ -1,30 +1,88 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/utils/supabase/server'
-import React from 'react'
+"use client";
+import { useRouter } from 'next/navigation'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Sidebar from '@/components/dashboard/sidebar'
 import { Button } from '@/components/ui/button'
-import { ChevronRight, Users, User, Book, Briefcase, PanelLeft, Library, FileCheck } from 'lucide-react'
+import { ChevronRight, Users, User, Book, Briefcase, PanelLeft, Library, FileCheck, LogOut } from 'lucide-react'
+import { createClient } from '@/utils/supabase/client'
 
-export default async function AdministrativoDashboard() {
+export default function AdministrativoDashboard() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+
+  // Función para cerrar sesión
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      // La ruta de logout maneja la redirección automáticamente
+      // pero agregamos una redirección de respaldo por si acaso
+      if (response.redirected) {
+        window.location.href = response.url;
+      } else {
+        router.push('/login');
+      }
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      // Redirigir al login aunque haya error
+      router.push('/login');
+    }
+  };
+
   // Verificar autenticación
-  const supabase = await createClient()
-  const { data, error } = await supabase.auth.getUser()
-  if (error || !data?.user) {
-    redirect('/login')
+  useEffect(() => {
+    async function checkAuth() {
+      const supabase = createClient()
+      const { data, error } = await supabase.auth.getUser()
+      
+      if (error || !data?.user) {
+        router.push('/login')
+        return
+      }
+      
+      setLoading(false)
+    }
+    
+    checkAuth()
+  }, [router])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
   
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <div className="flex">
-        <Sidebar />
         <main className="flex-1 p-8">
           <div className="max-w-6xl mx-auto">
             <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow mb-8">
-              <h1 className="text-2xl font-bold">Panel Administrativo</h1>
-              <p className="text-gray-600 dark:text-gray-300 mt-2">
-                Gestión de usuarios, carreras, materias y planes de estudio
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold">Panel Administrativo</h1>
+                  <p className="text-gray-600 dark:text-gray-300 mt-2">
+                    Gestión de usuarios, carreras, materias y planes de estudio
+                  </p>
+                </div>
+                <Button
+                  onClick={handleLogout}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Cerrar Sesión
+                </Button>
+              </div>
             </div>
             
             <h2 className="text-xl font-semibold mb-4">Gestión Académica</h2>
