@@ -30,38 +30,75 @@ export default async function PerfilPage() {
   let profile = null
   let searchError = null
 
-  // Buscar en la tabla correcta según el rol
+  // Primero obtener el legajo del usuario desde la tabla Roles usando su email
+  console.log('🔍 Obteniendo legajo para email:', user.email)
+  const { data: rolesData, error: rolesError } = await supabase
+    .from('Roles')
+    .select('legajo')
+    .eq('email', user.email)
+    .single()
+
+  if (rolesError || !rolesData) {
+    console.error('Error al obtener legajo desde Roles:', rolesError)
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+          <h2 className="text-lg font-semibold text-red-800 dark:text-red-200">
+            Usuario No Registrado Correctamente
+          </h2>
+          <p className="text-red-700 dark:text-red-300 mt-2">
+            No se encontró un legajo asociado a tu email en el sistema.
+          </p>
+          <p className="text-red-600 dark:text-red-400 mt-2 text-sm">
+            Esto indica que tu usuario no fue registrado correctamente usando el formulario correspondiente.
+          </p>
+          <div className="mt-4 p-3 bg-red-100 dark:bg-red-800 rounded">
+            <p className="text-sm text-red-800 dark:text-red-200">
+              <strong>Solución:</strong> Contacta al administrador para que te registre correctamente como {userRole === 'user' ? 'estudiante' : userRole === 'docente' ? 'docente' : 'administrativo'}.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const userLegajo = rolesData.legajo
+  console.log('🔍 Legajo del usuario:', userLegajo)
+
+  // Buscar en la tabla correcta según el rol usando el legajo
   switch (userRole) {
     case 'user': // Estudiantes
       const { data: estudiante, error: estudianteError } = await supabase
         .from('usuarios')
         .select('id, nombre, apellido, email, telefono, direccion, dni, legajo, nacimiento')
-        .eq('email', user.email)
+        .eq('legajo', userLegajo)
         .single()
       
       profile = estudiante
       searchError = estudianteError
-      console.log('🔍 Búsqueda en usuarios (estudiantes):', { encontrado: !!profile, error: searchError })
+      console.log('🔍 Búsqueda en usuarios (estudiantes) por legajo:', { legajo: userLegajo, encontrado: !!profile, error: searchError })
       break
 
     case 'admin':
     case 'super': // Administrativos
+      console.log('🔍 Buscando administrativo con legajo:', userLegajo)
+      
       const { data: admin, error: adminError } = await supabase
         .from('administrativos')
-        .select('id, nombre, apellido, email, telefono, direccion, dni')
-        .eq('email', user.email)
+        .select('id, nombre, apellido, email, telefono, direccion, dni, legajo')
+        .eq('legajo', userLegajo)
         .single()
       
       profile = admin
       searchError = adminError
-      console.log('🔍 Búsqueda en administrativos:', { encontrado: !!profile, error: searchError })
+      console.log('🔍 Búsqueda en administrativos por legajo:', { legajo: userLegajo, encontrado: !!profile, error: searchError })
       break
 
     case 'docente': // Docentes
       const { data: docente, error: docenteError } = await supabase
         .from('docentes')
-        .select('id, nombre, apellido, email, telefono, direccion_completa, dni')
-        .eq('email', user.email)
+        .select('id, nombre, apellido, email, telefono, direccion_completa, dni, legajo')
+        .eq('legajo', userLegajo)
         .single()
       
       // Mapear direccion_completa a direccion para compatibilidad con el componente
@@ -70,7 +107,7 @@ export default async function PerfilPage() {
         direccion: docente.direccion_completa
       } : null
       searchError = docenteError
-      console.log('🔍 Búsqueda en docentes:', { encontrado: !!profile, error: searchError })
+      console.log('🔍 Búsqueda en docentes por legajo:', { legajo: userLegajo, encontrado: !!profile, error: searchError })
       break
 
     default:
@@ -89,6 +126,37 @@ export default async function PerfilPage() {
   // Si hay error al buscar, mostrar error
   if (searchError) {
     console.error('Error en búsqueda:', searchError)
+    
+    // Mensaje especial si el usuario no está en la tabla correcta
+    if (searchError.code === 'USER_NOT_IN_ADMIN_TABLE') {
+      return (
+        <div className="p-6">
+          <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+            <h2 className="text-lg font-semibold text-red-800 dark:text-red-200">
+              Usuario No Registrado Correctamente
+            </h2>
+            <p className="text-red-700 dark:text-red-300 mt-2">
+              Tu cuenta tiene permisos de <strong>{userRole}</strong>, pero no estás registrado en la tabla de administrativos.
+            </p>
+            <p className="text-red-600 dark:text-red-400 mt-2 text-sm">
+              Esto puede suceder si tu cuenta fue creada manualmente o hay un problema en el proceso de registro.
+            </p>
+            <div className="mt-4 p-3 bg-red-100 dark:bg-red-800 rounded">
+              <p className="text-sm text-red-800 dark:text-red-200">
+                <strong>Solución:</strong> Contacta al administrador del sistema para que te registre correctamente como administrativo usando el formulario "Registrar Administrativo".
+              </p>
+            </div>
+            <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                <strong>Debug:</strong> Auth ID: {user.id} | Email: {user.email} | Rol: {userRole}
+              </p>
+            </div>
+          </div>
+        </div>
+      )
+    }
+    
+    // Error general
     return (
       <div className="p-6">
         <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">

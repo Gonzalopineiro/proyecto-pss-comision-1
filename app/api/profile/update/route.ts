@@ -36,6 +36,24 @@ export async function POST(request: Request) {
       tableName = 'docentes'
     }
 
+    // Primero obtener el legajo del usuario actual usando la tabla Roles
+    const { data: rolesData, error: rolesError } = await supabase
+      .from('Roles')
+      .select('legajo')
+      .eq('email', user.email)
+      .single()
+
+    if (rolesError || !rolesData) {
+      console.error('Error al obtener legajo desde Roles:', rolesError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Usuario no encontrado en el sistema de roles. Contacta al administrador.' 
+      }, { status: 404 })
+    }
+
+    const userLegajo = rolesData.legajo
+    console.log('🔧 Legajo del usuario desde Roles:', userLegajo)
+
     // Preparar datos para actualizar (solo campos no vacíos)
     const updateData: any = {}
 
@@ -57,11 +75,11 @@ export async function POST(request: Request) {
       updateData.updated_at = new Date().toISOString()
     }
 
-    // Actualizar SOLO los datos del usuario autenticado en la tabla correcta
+    // Actualizar SOLO los datos del usuario autenticado usando su legajo
     const { data, error } = await supabase
       .from(tableName)
       .update(updateData)
-      .eq('email', user.email)
+      .eq('legajo', userLegajo)
       .select()
 
     if (error) {
