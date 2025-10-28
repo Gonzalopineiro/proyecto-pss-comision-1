@@ -13,14 +13,15 @@ export interface CarreraData {
   plan_de_estudio_id: number
 }
 
-// Interfaz para el tipo de dato que retorna la nueva función obtenerCarreras
-export type CarreraConInscriptos = {
+export type CarreraCompleta = {
   id: number;
   nombre: string;
   codigo: string;
   departamento: string | null;
+  duracion: string | null;
   inscriptos: number;
 };
+
 
 
 /**
@@ -184,22 +185,22 @@ export async function verificarCodigoExistente(codigo: string): Promise<boolean>
 }
 
 /**
- * Obtiene todas las carreras desde la vista que incluye el número de inscriptos
+ * Obtiene todas las carreras desde la vista definitiva 'vista_grilla_carreras'
  * 
- * @returns {Promise<CarreraConInscriptos[] | null>} - Lista de carreras o null en caso de error
+ * @returns {Promise<CarreraCompleta[] | null>} - Lista de carreras o null en caso de error
  */
-export async function obtenerCarreras(): Promise<CarreraConInscriptos[] | null> {
+export async function obtenerCarreras(): Promise<CarreraCompleta[] | null> {
   try {
     const supabase = await createClient()
     
-    // Se consulta la vista 'carreras_con_inscriptos' para obtener el conteo de estudiantes
+    // Consultamos la nueva y única vista 'vista_grilla_carreras'
     const { data, error } = await supabase
-      .from('carreras_con_inscriptos')
-      .select('id, nombre, codigo, departamento, inscriptos')
+      .from('vista_grilla_carreras')
+      .select('id, nombre, codigo, departamento, duracion, inscriptos')
       .order('nombre', { ascending: true })
     
     if (error) {
-      console.error('Error al obtener carreras:', error)
+      console.error('Error al obtener carreras desde la vista:', error)
       return null
     }
     
@@ -323,7 +324,7 @@ export async function eliminarCarrera(
     
     // 1. Verificar si la carrera tiene estudiantes activos usando la vista
     const { data: carrera, error: chequeoError } = await supabase
-      .from('carreras_con_inscriptos')
+      .from('vista_grilla_carreras')
       .select('inscriptos')
       .eq('id', carreraId)
       .single();
@@ -334,19 +335,19 @@ export async function eliminarCarrera(
     }
 
     // 2. Aplicar el criterio de aceptación
-    if (carrera.inscriptos > 0) {
+    if (carrera && carrera.inscriptos > 0) {
       return { error: 'No se puede eliminar la carrera porque tiene estudiantes activos.' };
     }
     
-    // 3. Si no hay inscriptos, proceder con la eliminación
-    const { error } = await supabase
+    // 3. Si no hay inscriptos, proceder con la eliminación desde la tabla original 'carreras'
+    const { error: deleteError } = await supabase
       .from('carreras')
       .delete()
       .eq('id', carreraId)
     
-    if (error) {
-      console.error('Error al eliminar la carrera:', error)
-      return { error: `Error al eliminar la carrera: ${error.message}` }
+    if (deleteError) {
+      console.error('Error al eliminar la carrera:', deleteError)
+      return { error: `Error al eliminar la carrera: ${deleteError.message}` }
     }
     
     revalidatePath('/dashboard/administrativo')
