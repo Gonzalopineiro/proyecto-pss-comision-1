@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 interface MateriaData {
+  id?: number
   codigo_materia: string
   nombre: string
   descripcion: string
@@ -96,4 +97,36 @@ export async function obtenerMaterias() {
   }
   
   return data || []
+}
+
+/**
+ * Busca una única materia por su código exacto.
+ * 
+ * @param {string} codigoMateria - El código de la materia a buscar (ej: "MAT102")
+ * @returns {Promise<MateriaData | null>} - Los datos de la materia encontrada o null si no existe.
+ */
+export async function buscarMateriaPorCodigo(codigoMateria: string): Promise<MateriaData | null> {
+  try {
+    const supabase = await createClient();
+    
+    const { data, error } = await supabase
+      .from('materias')
+      .select('*')
+      .eq('codigo_materia', codigoMateria)
+      .single(); // Usamos .single() porque esperamos un único resultado o ninguno
+
+    if (error) {
+      // Si el error es 'PGRST116', significa que no se encontró ninguna fila, lo cual no es un error real.
+      if (error.code !== 'PGRST116') {
+        console.error('Error al buscar materia por código:', error);
+      }
+      return null;
+    }
+    
+    return data;
+
+  } catch (e) {
+    console.error('Error inesperado al buscar materia:', e);
+    return null;
+  }
 }

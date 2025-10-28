@@ -360,7 +360,8 @@ export async function eliminarCarrera(
 }
 
 /**
- * Obtiene los detalles completos de una carrera, incluyendo su plan de estudios y las materias del plan.
+ * Obtiene los detalles completos de una carrera, incluyendo su plan de estudios y las materias del plan,
+ * de forma explícita para garantizar la obtención de datos.
  * 
  * @param {number} carreraId - ID de la carrera
  * @returns {Promise<Object | null>} - Datos completos de la carrera o null si no se encuentra.
@@ -369,19 +370,10 @@ export async function obtenerDetallesCompletosCarrera(carreraId: number) {
   try {
     const supabase = await createClient();
 
+    // --- PASO 1: Obtener la carrera y su plan_de_estudio_id ---
     const { data: carrera, error: errorCarrera } = await supabase
       .from('carreras')
-      .select(`
-        id,
-        nombre,
-        codigo,
-        departamento,
-        plan_de_estudio: plan_de_estudios (
-          id,
-          nombre,
-          anio_creacion
-        )
-      `)
+      .select('id, nombre, codigo, departamento, plan_de_estudio_id') // Obtenemos el ID del plan directamente
       .eq('id', carreraId)
       .single();
 
@@ -389,34 +381,45 @@ export async function obtenerDetallesCompletosCarrera(carreraId: number) {
       console.error('Error al obtener la carrera:', errorCarrera);
       return null;
     }
-    
-    // --- INICIO DE LA CORRECCIÓN ---
-    // Verificamos si plan_de_estudio es un array y obtenemos el primer elemento.
-    const plan = Array.isArray(carrera.plan_de_estudio) && carrera.plan_de_estudio.length > 0
-      ? carrera.plan_de_estudio[0]
-      : null;
 
-    // Si la carrera no tiene un plan de estudios válido, devolvemos la info básica.
-    if (!plan) {
-        return { ...carrera, plan_de_estudio: null, materias_plan: [] };
+    // Si por alguna razón no tiene un ID de plan, devolvemos los datos básicos
+    if (!carrera.plan_de_estudio_id) {
+      return { ...carrera, plan_de_estudio: null, materias_plan: [] };
     }
-    
+
+    // --- PASO 2: Obtener los detalles del plan de estudios usando el ID que obtuvimos ---
+    const { data: planDeEstudio, error: errorPlan } = await supabase
+      .from('plan_de_estudios')
+      .select('id, nombre, anio_creacion')
+      .eq('id', carrera.plan_de_estudio_id)
+      .single();
+
+    if (errorPlan || !planDeEstudio) {
+      console.error('Error al obtener el plan de estudios:', errorPlan);
+      // Devolvemos la carrera pero indicamos que no se encontró el plan
+      return { ...carrera, plan_de_estudio: null, materias_plan: [] };
+    }
+
+    // --- PASO 3: Obtener las materias del plan usando la vista y el ID del plan ---
     const { data: materiasPlan, error: errorMaterias } = await supabase
       .from('vista_materias_plan')
       .select('*')
-      // Usamos el 'id' del objeto 'plan' que extrajimos de forma segura.
-      .eq('plan_id', plan.id)
+      .eq('plan_id', planDeEstudio.id)
       .order('anio', { ascending: true })
       .order('cuatrimestre', { ascending: true });
-    // --- FIN DE LA CORRECCIÓN ---
 
     if (errorMaterias) {
       console.error('Error al obtener las materias del plan:', errorMaterias);
-      return { ...carrera, plan_de_estudio: plan, materias_plan: [] };
+      // Devolvemos lo que tenemos, pero con materias vacías
+      return { ...carrera, plan_de_estudio: planDeEstudio, materias_plan: [] };
     }
 
-    // Devolvemos el objeto de carrera, pero reemplazando el array del plan con el objeto único.
-    return { ...carrera, plan_de_estudio: plan, materias_plan: materiasPlan };
+    // --- PASO 4: Combinar todo en un único objeto y devolverlo ---
+    return {
+      ...carrera,
+      plan_de_estudio: planDeEstudio,
+      materias_plan: materiasPlan || [],
+    };
 
   } catch (e) {
     console.error('Error inesperado al obtener detalles de la carrera:', e);
