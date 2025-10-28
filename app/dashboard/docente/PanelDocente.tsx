@@ -239,6 +239,12 @@ export default function PanelDocente() {
                 <FileText className="h-4 w-4 mr-3" />
                 Actas
               </Button>
+              <Link href="/dashboard/user/perfil">
+                <Button className="w-full justify-start" variant="outline">
+                  <Settings className="h-4 w-4 mr-3" />
+                  Modificar datos personales
+                </Button>
+              </Link>
             </div>
           </div>
 

@@ -42,7 +42,15 @@ export async function POST(request: Request) {
     // Solo actualizar campos que no estén vacíos
     if (email && email.trim()) updateData.email = email.trim()
     if (telefono && telefono.trim()) updateData.telefono = telefono.trim()  
-    if (direccion && direccion.trim()) updateData.direccion = direccion.trim()
+    
+    // El campo de dirección tiene nombres diferentes según la tabla
+    if (direccion && direccion.trim()) {
+      if (tableName === 'docentes') {
+        updateData.direccion_completa = direccion.trim()
+      } else {
+        updateData.direccion = direccion.trim()
+      }
+    }
 
     // Agregar updated_at solo si la tabla la tiene (usuarios la tiene, verificar otros)
     if (tableName === 'usuarios') {

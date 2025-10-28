@@ -60,11 +60,15 @@ export default async function PerfilPage() {
     case 'docente': // Docentes
       const { data: docente, error: docenteError } = await supabase
         .from('docentes')
-        .select('id, nombre, apellido, email, telefono, direccion, dni')
+        .select('id, nombre, apellido, email, telefono, direccion_completa, dni')
         .eq('email', user.email)
         .single()
       
-      profile = docente
+      // Mapear direccion_completa a direccion para compatibilidad con el componente
+      profile = docente ? {
+        ...docente,
+        direccion: docente.direccion_completa
+      } : null
       searchError = docenteError
       console.log('🔍 Búsqueda en docentes:', { encontrado: !!profile, error: searchError })
       break
