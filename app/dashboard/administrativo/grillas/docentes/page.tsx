@@ -1,6 +1,5 @@
 import React from 'react'
 import Link from 'next/link'
-//import Sidebar from '@/components/dashboard/sidebar'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/utils/supabase/server'
@@ -34,7 +33,6 @@ export default async function GrillaDocentes(){
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <div className="flex">
-        {/* <Sidebar /> */}
         <main className="flex-1 p-8">
 
           <div className="max-w-6xl mx-auto mt-6">

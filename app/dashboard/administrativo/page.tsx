@@ -2,7 +2,6 @@
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import Sidebar from '@/components/dashboard/sidebar'
 import { Button } from '@/components/ui/button'
 import { ChevronRight, Users, User, Book, Briefcase, PanelLeft, Library, FileCheck, LogOut } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
