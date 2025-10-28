@@ -13,6 +13,7 @@ interface MateriaAsignada {
   asignado: string  // Fecha de asignación
   estudiantes: number
   tieneMesaVigente?: boolean  // Para validar si tiene mesa de examen vigente
+  fechaMesaVigente?: string  // Fecha de la mesa de examen vigente
 }
 
 interface DesasignarMateriaDialogProps {
@@ -20,7 +21,6 @@ interface DesasignarMateriaDialogProps {
   onClose: () => void
   docenteNombre: string
   docenteLegajo: string
-  docenteEstado: string 
   docenteId: string
   materiasAsignadas: MateriaAsignada[]
   onDesasignar: (materiasIds: number[]) => Promise<{ success: boolean; error?: string; mensaje?: string }>
@@ -32,7 +32,6 @@ export default function DesasignarMateriaDialog({
   onClose,
   docenteNombre,
   docenteLegajo,
-  docenteEstado,
   docenteId,
   materiasAsignadas,
   onDesasignar,
@@ -63,10 +62,10 @@ export default function DesasignarMateriaDialog({
   }
 
   const toggleMateria = (materiaId: number) => {
-    // Verificar si la materia tiene mesa de examen vigente
+    // Verificar si la materia tiene mesa de examen vigente asignada a este docente
     const materia = materiasAsignadas.find(m => m.id === materiaId)
     if (materia?.tieneMesaVigente) {
-      setError('No puede eliminarse un docente asignado a una mesa de examen vigente')
+      setError('No puede desasignarse porque el docente está asignado a una mesa de examen vigente de esta materia')
       return
     }
 
@@ -81,12 +80,6 @@ export default function DesasignarMateriaDialog({
   const handleDesasignarClick = () => {
     setError('')
     
-    // Validación: docente debe estar activo
-    if (docenteEstado !== 'Activo') {
-      setError('Solo se permite desasignar docentes activos')
-      return
-    }
-
     // Validación: debe haber al menos una materia seleccionada
     if (materiasSeleccionadas.length === 0) {
       setError('Debe seleccionar al menos una materia para desasignar')
@@ -235,7 +228,7 @@ export default function DesasignarMateriaDialog({
                 {docenteNombre}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Legajo: {docenteLegajo} • Estado: <span className={docenteEstado === 'Activo' ? 'text-green-600' : 'text-red-600'}>{docenteEstado}</span>
+                Legajo: {docenteLegajo}
               </p>
             </div>
           </div>
@@ -302,7 +295,7 @@ export default function DesasignarMateriaDialog({
                       {materia.tieneMesaVigente && (
                         <div className="mt-2 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
                           <AlertTriangle className="h-3 w-3" />
-                          <span>Mesa de examen vigente (15/12/2024)</span>
+                          <span>Mesa de examen vigente{materia.fechaMesaVigente ? ` (${materia.fechaMesaVigente})` : ''}</span>
                         </div>
                       )}
                     </div>

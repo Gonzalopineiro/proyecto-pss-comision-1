@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Grilla } from '@/components/ui/grilla';
 import AsignarMateriaDialog from './AsignarMateriaDialog';
 import DesasignarMateriaDialog from './DesasignarMateriaDialog';
-import { asignarMateriaADocente, obtenerInformacionMaterias } from './actions';
+import ConfirmationPopup from '@/components/ui/confirmation-popup';
+import { asignarMateriaADocente, obtenerInformacionMaterias, desasignarMateriasDocente } from './actions';
 
 interface MateriaAsignadaDetalle {
   id: number
@@ -15,6 +17,7 @@ interface MateriaAsignadaDetalle {
   asignado: string
   estudiantes: number
   tieneMesaVigente?: boolean
+  fechaMesaVigente?: string
 }
 
 interface Docente {
@@ -35,9 +38,11 @@ interface DocentesViewProps {
 export default function DocentesView({ docentes }: DocentesViewProps) {
   const [isAsignarDialogOpen, setIsAsignarDialogOpen] = useState(false);
   const [isDesasignarDialogOpen, setIsDesasignarDialogOpen] = useState(false);
+  const [isModificarPopupOpen, setIsModificarPopupOpen] = useState(false);
   const [docenteSeleccionado, setDocenteSeleccionado] = useState<Docente | null>(null);
   const [materiasDocente, setMateriasDocente] = useState<MateriaAsignadaDetalle[]>([]);
   const [cargandoMaterias, setCargandoMaterias] = useState(false);
+  const router = useRouter();
 
   // Validar que docentes no sea undefined o null
   if (!docentes || !Array.isArray(docentes)) {
@@ -53,17 +58,16 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
       };
     }
 
-    // Llamar a la función del servidor que tú implementarás
+    // Llamar a la función del servidor
     const result = await asignarMateriaADocente(
       docenteSeleccionado.id,
       materiaId,
       materiaNombre
     );
 
-    // Si fue exitoso, podrías recargar los datos o actualizar el estado
+    // Si fue exitoso, recargar los datos
     if (result.success) {
-      // Aquí podrías hacer un refresh de la página o actualizar el estado
-      // window.location.reload(); // O usar un enfoque más elegante
+      router.refresh();
     }
 
     return result;
@@ -87,19 +91,32 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
     setCargandoMaterias(false);
   };
 
-  // Función placeholder para desasignar materias (tú la implementarás)
-  const handleDesasignarMaterias = async (materiasIds: number[]) => {
-    // TODO: Implementar lógica de desasignación en actions.ts
-    console.log('Desasignando materias:', {
-      docenteId: docenteSeleccionado?.id,
-      materiasIds
-    });
+  const abrirPopupModificar = (docente: Docente) => {
+    setDocenteSeleccionado(docente);
+    setIsModificarPopupOpen(true);
+  };
 
-    // Simular respuesta exitosa
-    return {
-      success: true,
-      mensaje: 'Materia(s) desasignada(s) exitosamente'
-    };
+  // Función para desasignar materias
+  const handleDesasignarMaterias = async (materiasIds: number[]) => {
+    if (!docenteSeleccionado?.id) {
+      return {
+        success: false,
+        error: 'No se pudo identificar el docente'
+      };
+    }
+
+    // Llamar a la función del servidor
+    const result = await desasignarMateriasDocente(
+      docenteSeleccionado.id,
+      materiasIds
+    );
+
+    // Si fue exitoso, recargar los datos
+    if (result.success) {
+      router.refresh();
+    }
+
+    return result;
   };
   
   // Mapea a solo lo que necesitas para la grilla
@@ -186,7 +203,10 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
           header: 'ACCIONES',
           accessor: (row) => (
             <div className="flex gap-3">
-              <button className="text-blue-600 hover:text-blue-800 font-medium">
+              <button 
+                onClick={() => abrirPopupModificar(row)}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
                 Modificar
               </button>
               <button className="text-red-600 hover:text-red-800 font-medium">
@@ -197,7 +217,10 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
         }
       ]}
       actions={
-        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium">
+        <button 
+          onClick={() => router.push('/dashboard/administrativo/registrar-docente')}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium"
+        >
           + Agregar Docente
         </button>
       }
@@ -224,11 +247,20 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
         }}
         docenteNombre={`${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido}`}
         docenteLegajo={docenteSeleccionado.legajo}
-        docenteEstado="Activo"  // TODO: Obtener el estado real del docente
         docenteId={docenteSeleccionado.id}
         materiasAsignadas={materiasDocente}
         onDesasignar={handleDesasignarMaterias}
         cargandoMaterias={cargandoMaterias}
+      />
+    )}
+
+    {/* Popup de confirmación para modificar */}
+    {docenteSeleccionado && (
+      <ConfirmationPopup
+        isOpen={isModificarPopupOpen}
+        onClose={() => setIsModificarPopupOpen(false)}
+        title="Modificar Docente"
+        message={`Has presionado el botón modificar para el docente ${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido} (Legajo: ${docenteSeleccionado.legajo})`}
       />
     )}
     </>
