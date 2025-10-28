@@ -21,9 +21,10 @@ interface DesasignarMateriaDialogProps {
   docenteNombre: string
   docenteLegajo: string
   docenteEstado: string 
-  docenteId: number
+  docenteId: string
   materiasAsignadas: MateriaAsignada[]
   onDesasignar: (materiasIds: number[]) => Promise<{ success: boolean; error?: string; mensaje?: string }>
+  cargandoMaterias?: boolean
 }
 
 export default function DesasignarMateriaDialog({
@@ -34,7 +35,8 @@ export default function DesasignarMateriaDialog({
   docenteEstado,
   docenteId,
   materiasAsignadas,
-  onDesasignar
+  onDesasignar,
+  cargandoMaterias = false
 }: DesasignarMateriaDialogProps) {
   const [materiasSeleccionadas, setMateriasSeleccionadas] = useState<number[]>([])
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false)
@@ -241,7 +243,11 @@ export default function DesasignarMateriaDialog({
 
         {/* Lista de materias */}
         <div className="flex-1 overflow-y-auto p-6">
-          {materiasAsignadas.length === 0 ? (
+          {cargandoMaterias ? (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <p className="text-sm">Cargando materias asignadas...</p>
+            </div>
+          ) : materiasAsignadas.length === 0 ? (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               Este docente no tiene materias asignadas
             </div>
@@ -333,7 +339,7 @@ export default function DesasignarMateriaDialog({
               </Button>
               <Button 
                 onClick={handleDesasignarClick}
-                disabled={loading || materiasSeleccionadas.length === 0}
+                disabled={loading || cargandoMaterias || materiasSeleccionadas.length === 0}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Desasignar Seleccionadas

@@ -8,7 +8,7 @@ interface AsignarMateriaDialogProps {
   isOpen: boolean
   onClose: () => void
   docenteNombre: string
-  docenteId: number
+  docenteId: string
   onAsignar: (materiaId: string, materiaNombre: string) => Promise<{ success: boolean; error?: string }>
 }
 
@@ -23,6 +23,7 @@ export default function AsignarMateriaDialog({
   const [materiaNombre, setMaterialNombre] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [mensaje, setMensaje] = useState('')
 
   if (!isOpen) return null
 
@@ -37,6 +38,7 @@ export default function AsignarMateriaDialog({
       setMateriaId('')
       setMaterialNombre('')
       setError('')
+      setMensaje('')
       onClose()
     }
   }
@@ -58,11 +60,16 @@ export default function AsignarMateriaDialog({
       const result = await onAsignar(materiaId.trim(), materiaNombre.trim())
 
       if (result.success) {
-        // Limpiar y cerrar
+        // Mostrar mensaje de éxito
+        setMensaje('Materia asignada exitosamente')
         setMateriaId('')
         setMaterialNombre('')
         setError('')
-        onClose()
+        
+        // Esperar un momento para mostrar el mensaje y luego recargar
+        setTimeout(() => {
+          window.location.reload()
+        }, 1500)
       } else {
         // Mostrar error del servidor
         setError(result.error || 'Error al asignar la materia')
@@ -163,6 +170,16 @@ export default function AsignarMateriaDialog({
               <p className="text-sm text-red-600 dark:text-red-400 flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <span>{error}</span>
+              </p>
+            </div>
+          )}
+
+          {/* Mensaje de éxito */}
+          {mensaje && (
+            <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <p className="text-sm text-green-600 dark:text-green-400 flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>{mensaje}</span>
               </p>
             </div>
           )}

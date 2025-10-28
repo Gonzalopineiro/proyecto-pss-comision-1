@@ -24,17 +24,11 @@ export async function obtenerDocentesConMaterias() {
     .order('apellido', { ascending: true })
   
   if (error) {
-    console.error('Error al obtener docentes con materias:', error)
     return []
   }
   
-  console.log('=== obtenerDocentesConMaterias ===')
-  console.log('Data raw:', JSON.stringify(data?.[0], null, 2)) // Ver el primer docente
-  
   // Transformar los datos para incluir un array de nombres de materias
   const docentesConMaterias = data?.map(docente => {
-    console.log(`Docente ${docente.nombre}:`)
-    console.log('  materia_docente:', docente.materia_docente)
     
     return {
       ...docente,
@@ -42,87 +36,82 @@ export async function obtenerDocentesConMaterias() {
       materia_docente_completo: docente.materia_docente // Guardar datos completos para usar después
     }
   }) || []
-  
-  console.log('Primer docente transformado:', JSON.stringify(docentesConMaterias[0], null, 2))
-  
+   
   return docentesConMaterias
 }
 
 // Función para asignar una materia a un docente
 export async function asignarMateriaADocente(
-  docenteId: number,
-  materiaId: string,
-  materiaNombre: string
+  docenteUuid: string,
+  codigoMateria: string,
+  nombreMateria: string
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
 
   try {
-    // TODO: Implementar validación
-    // 1. Verificar que exista una materia con ese ID y nombre
-    // const { data: materia, error: errorMateria } = await supabase
-    //   .from('materias')
-    //   .select('id, nombre, codigo_materia')
-    //   .eq('codigo_materia', materiaId)
-    //   .eq('nombre', materiaNombre)
-    //   .single()
-    //
-    // if (errorMateria || !materia) {
-    //   return { 
-    //     success: false, 
-    //     error: 'El ID y el Nombre no corresponden a una materia existente' 
-    //   }
-    // }
+    // 1. Verificar que exista una materia con ese código y nombre
+    const { data: materia, error: errorMateria } = await supabase
+      .from('materias')
+      .select('id, nombre, codigo_materia')
+      .eq('codigo_materia', codigoMateria)
+      .eq('nombre', nombreMateria)
+      .single()
+    
+    if (errorMateria || !materia) {
+      return { 
+        success: false, 
+        error: 'El ID y el Nombre no corresponden a una materia existente' 
+      }
+    }
 
     // 2. Verificar cuántos docentes tiene asignada esa materia
-    // const { data: docentesAsignados, error: errorCount } = await supabase
-    //   .from('materia_docente')
-    //   .select('docente_id')
-    //   .eq('materia_id', materia.id)
-    //
-    // if (errorCount) {
-    //   return { success: false, error: 'Error al verificar docentes asignados' }
-    // }
-    //
-    // if (docentesAsignados && docentesAsignados.length >= 2) {
-    //   return { 
-    //     success: false, 
-    //     error: 'El cupo de docentes para esta materia está lleno' 
-    //   }
-    // }
+    const { data: docentesAsignados, error: errorCount } = await supabase
+      .from('materia_docente')
+      .select('docente_id')
+      .eq('materia_id', materia.id)
+    
+    if (errorCount) {
+      return { success: false, error: 'Error al verificar docentes asignados' }
+    }
+    
+    if (docentesAsignados && docentesAsignados.length >= 2) {
+      return { 
+        success: false, 
+        error: 'El cupo de docentes para esta materia está lleno' 
+      }
+    }
 
     // 3. Verificar que el docente no esté ya asignado a esta materia
-    // const { data: asignacionExistente } = await supabase
-    //   .from('materia_docente')
-    //   .select('*')
-    //   .eq('materia_id', materia.id)
-    //   .eq('docente_id', docenteId)
-    //   .single()
-    //
-    // if (asignacionExistente) {
-    //   return { 
-    //     success: false, 
-    //     error: 'El docente ya está asignado a esta materia' 
-    //   }
-    // }
+    const { data: asignacionExistente } = await supabase
+      .from('materia_docente')
+      .select('*')
+      .eq('materia_id', materia.id)
+      .eq('docente_id', docenteUuid)
+      .maybeSingle()
+    
+    if (asignacionExistente) {
+      return { 
+        success: false, 
+        error: 'El docente ya está asignado a esta materia' 
+      }
+    }
 
     // 4. Insertar la asignación
-    // const { error: errorInsert } = await supabase
-    //   .from('materia_docente')
-    //   .insert({
-    //     docente_id: docenteId,
-    //     materia_id: materia.id
-    //   })
-    //
-    // if (errorInsert) {
-    //   return { success: false, error: 'Error al asignar la materia' }
-    // }
-
-    // Revalidar la ruta para actualizar la grilla
-    // revalidatePath('/dashboard/administrativo/grillas/docentes')
+    const { error: errorInsert } = await supabase
+      .from('materia_docente')
+      .insert({
+        docente_id: docenteUuid,
+        materia_id: materia.id
+      })
+    
+    if (errorInsert) {
+      console.error('Error al insertar asignación:', errorInsert)
+      return { success: false, error: 'Error al asignar la materia' }
+    }
 
     return { success: true }
   } catch (error: any) {
-    console.error('Error en asignarMateriaADocente:', error)
+    console.error('Error inesperado:', error)
     return { 
       success: false, 
       error: error.message || 'Error inesperado al asignar la materia' 
@@ -144,131 +133,76 @@ export interface MateriaAsignadaDetalle {
 
 // Función para enriquecer la información de las materias de un docente
 export async function obtenerInformacionMaterias(
-  docenteId: number
+  docenteId: string
 ): Promise<MateriaAsignadaDetalle[]> {
-  const supabase = await createClient()
+  const supabase = await createClient();
 
   try {
-    console.log('=== obtenerInformacionMaterias ===')
-    console.log('docenteId:', docenteId)
-
-    // Consultar directamente materia_docente para este docente
-    const { data: materiasDocente, error } = await supabase
+    // Consulta combinada en una sola llamada
+    const { data, error } = await supabase
       .from('materia_docente')
       .select(`
-        materia_id,
         created_at,
         materias (
           id,
           nombre,
-          codigo_materia
+          codigo_materia,
+          plan_materia (
+            anio,
+            plan_id,
+            plan_de_estudios (
+              id,
+              carreras (
+                nombre
+              )
+            )
+          ),
+          mesas_examen (
+            fecha_examen
+          )
         )
       `)
-      .eq('docente_id', docenteId)
-
-    console.log('Materias obtenidas de BD:', materiasDocente)
+      .eq('docente_id', docenteId);
 
     if (error) {
-      console.error('Error al obtener materia_docente:', error)
-      return []
+      return [];
     }
 
-    if (!materiasDocente || materiasDocente.length === 0) {
-      console.log('No hay materias para este docente')
-      return []
-    }
+    if (!data) return [];
 
-    // Extraer IDs de materias
-    const materiasIds = materiasDocente
-      .map((item: any) => {
-        return item.materias?.id || item.materia_id
-      })
-      .filter(Boolean)
+    const hoy = new Date();
 
-    console.log('IDs de materias extraídos:', materiasIds)
+    const materiasConDetalles: MateriaAsignadaDetalle[] = data.map((item: any) => {
+      const materia = item.materias;
+      if (!materia) return null;
 
-    if (materiasIds.length === 0) {
-      return []
-    }
+      // Acceso seguro a relaciones anidadas
+      const planMateria = materia.plan_materia?.[0];
+      const carrera = planMateria?.plan_de_estudios?.carreras?.[0];
 
-    // Obtener plan_materia para todas las materias en una sola query
-    const { data: planesMateria } = await supabase
-      .from('plan-materia')
-      .select('materia_id, anio, plan_id')
-      .in('materia_id', materiasIds)
+      // Filtrar mesas vigentes
+      const tieneMesaVigente = materia.mesas_examen?.some(
+        (m: any) => new Date(m.fecha_examen) >= hoy
+      );
 
-    console.log('Planes materia obtenidos:', planesMateria)
+      return {
+        id: materia.id,
+        codigo: materia.codigo_materia,
+        nombre: materia.nombre,
+        carrera: carrera?.nombre || 'Sin asignar',
+        año: planMateria ? `${planMateria.anio}° Año` : 'N/A',
+        asignado: new Date(item.created_at).toLocaleDateString('es-AR'),
+        estudiantes: 0,
+        tieneMesaVigente: !!tieneMesaVigente
+      };
+    }).filter(Boolean) as MateriaAsignadaDetalle[];
 
-    // Obtener IDs únicos de planes
-    const planesIds = planesMateria?.map(pm => pm.plan_id).filter(Boolean) || []
-    const planesIdsUnicos = [...new Set(planesIds)]
-
-    // Obtener carreras para todos los planes en una sola query
-    const { data: carreras } = await supabase
-      .from('carreras')
-      .select('plan_de_estudio_id, nombre')
-      .in('plan_de_estudio_id', planesIdsUnicos)
-
-    console.log('Carreras obtenidas:', carreras)
-
-    // Crear mapas para lookup rápido O(1)
-    const planMateriaMap = new Map(
-      planesMateria?.map(pm => [pm.materia_id, pm]) || []
-    )
-    const carreraMap = new Map(
-      carreras?.map(c => [c.plan_de_estudio_id, c.nombre]) || []
-    )
-
-    // Obtener fecha actual para verificar mesas vigentes
-    const fechaActual = new Date().toISOString()
-
-    // Obtener mesas vigentes en una sola consulta
-    const { data: mesasVigentes } = await supabase
-      .from('mesas_examen')
-      .select('materia_id')
-      .eq('docente_id', docenteId)
-      .in('materia_id', materiasIds)
-      .gte('fecha_examen', fechaActual)
-
-    // Crear un Set con los IDs de materias que tienen mesas vigentes
-    const materiasConMesaVigente = new Set(
-      mesasVigentes?.map(m => m.materia_id) || []
-    )
-
-    // Transformar los datos
-    const materiasConDetalles = materiasDocente
-      .map((item: any) => {
-        const materia = item.materias
-        
-        if (!materia) {
-          return null
-        }
-
-        // Obtener información del plan
-        const planInfo = planMateriaMap.get(materia.id)
-        const nombreCarrera = planInfo ? (carreraMap.get(planInfo.plan_id) || 'Sin asignar') : 'Sin asignar'
-        const anio = planInfo?.anio ? `${planInfo.anio}° Año` : 'N/A'
-
-        return {
-          id: materia.id,
-          codigo: materia.codigo_materia || 'N/A',
-          nombre: materia.nombre,
-          carrera: nombreCarrera,
-          año: anio,
-          asignado: new Date(item.created_at).toLocaleDateString('es-AR'),
-          estudiantes: 0, // Por el momento en 0
-          tieneMesaVigente: materiasConMesaVigente.has(materia.id) || false
-        } as MateriaAsignadaDetalle
-      })
-      .filter((m): m is MateriaAsignadaDetalle => m !== null)
-
-    console.log('Materias con detalles:', materiasConDetalles)
-    return materiasConDetalles
-  } catch (error: any) {
-    console.error('Error en obtenerInformacionMaterias:', error)
-    return []
+    return materiasConDetalles;
+  } catch (err) {
+    return [];
   }
 }
+
 
 // Función para desasignar materias de un docente
 export async function desasignarMateriasDocente(
@@ -348,7 +282,6 @@ export async function desasignarMateriasDocente(
       mensaje: `${materiasIds.length} materia(s) desasignada(s) exitosamente`
     }
   } catch (error: any) {
-    console.error('Error en desasignarMateriasDocente:', error)
     return { 
       success: false, 
       error: error.message || 'Error inesperado al desasignar materias' 

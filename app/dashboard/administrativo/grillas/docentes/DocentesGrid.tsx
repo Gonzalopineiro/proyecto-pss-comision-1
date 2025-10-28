@@ -18,7 +18,7 @@ interface MateriaAsignadaDetalle {
 }
 
 interface Docente {
-  id: number;
+  id: string; // UUID del docente
   nombre: string;
   apellido: string;
   dni: string;
@@ -63,7 +63,6 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
     // Si fue exitoso, podrías recargar los datos o actualizar el estado
     if (result.success) {
       // Aquí podrías hacer un refresh de la página o actualizar el estado
-      console.log('Materia asignada exitosamente');
       // window.location.reload(); // O usar un enfoque más elegante
     }
 
@@ -80,13 +79,9 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
     setCargandoMaterias(true);
     setIsDesasignarDialogOpen(true);
     
-    console.log('=== abrirDialogoDesasignar ===')
-    console.log('Docente seleccionado:', docente)
-    
     // Obtener la información de las materias directamente del servidor
     const materias = await obtenerInformacionMaterias(docente.id);
     
-    console.log('Materias procesadas:', materias)
     setMateriasDocente(materias);
     
     setCargandoMaterias(false);
@@ -124,15 +119,15 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
       title="Gestión de Docentes"
       subtitle="Administra y gestiona la información de los docentes"
       data={docentesGrilla}
-      searchKeys={['nombre', 'legajo']}
-      searchPlaceholder="Buscar por nombre o legajo..."
+      searchKeys={['nombre', 'apellido', 'legajo']}
+      searchPlaceholder="Buscar por nombre, apellido o legajo..."
       filters={[]}
       columns={[
         {
           header: 'NOMBRE',
           accessor: (row) => (
             <div>
-              <div className="font-medium text-gray-900">{row.nombre}</div>
+              <div className="font-medium text-gray-900">{row.apellido} {row.nombre}</div>
               <div className="text-gray-500 text-xs">{row.email}</div>
             </div>
           )
@@ -214,7 +209,7 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
         isOpen={isAsignarDialogOpen}
         onClose={() => setIsAsignarDialogOpen(false)}
         docenteNombre={`${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido}`}
-        docenteId={docenteSeleccionado.id || 0}
+        docenteId={docenteSeleccionado.id}
         onAsignar={handleAsignarMateria}
       />
     )}
@@ -223,13 +218,17 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
     {docenteSeleccionado && (
       <DesasignarMateriaDialog
         isOpen={isDesasignarDialogOpen}
-        onClose={() => setIsDesasignarDialogOpen(false)}
+        onClose={() => {
+          setIsDesasignarDialogOpen(false);
+          setMateriasDocente([]); // Limpiar los datos al cerrar/cancelar
+        }}
         docenteNombre={`${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido}`}
         docenteLegajo={docenteSeleccionado.legajo}
         docenteEstado="Activo"  // TODO: Obtener el estado real del docente
         docenteId={docenteSeleccionado.id}
         materiasAsignadas={materiasDocente}
         onDesasignar={handleDesasignarMaterias}
+        cargandoMaterias={cargandoMaterias}
       />
     )}
     </>
