@@ -270,3 +270,51 @@ export async function obtenerMateriasDePlan(planId: number) {
     return null
   }
 }
+
+/**
+ * Desasocia una materia de un plan de estudios.
+ * 
+ * @param {number} planMateriaId - El ID de la relación en la tabla 'plan_materia'
+ * @returns {Promise<{ success: boolean } | { error: string }>}
+ */
+export async function desasociarMateriaDePlan(
+  planMateriaId: number
+): Promise<{ success: boolean } | { error: string }> {
+  try {
+    const supabase = await createClient();
+    
+    // Antes de eliminar, necesitamos verificar si la materia tiene alumnos inscriptos
+    const { data: materiaPlan, error: fetchError } = await supabase
+      .from('vista_materias_plan')
+      .select('estudiantes_activos')
+      .eq('plan_materia_id', planMateriaId)
+      .single();
+
+    if (fetchError || !materiaPlan) {
+      return { error: 'No se encontró la materia en el plan.' };
+    }
+
+    // Regla de negocio: No se puede eliminar si hay estudiantes.
+    if (materiaPlan.estudiantes_activos > 0) {
+      return { error: 'No se puede eliminar una materia con estudiantes activos.' };
+    }
+    
+    // Si no hay estudiantes, proceder a eliminar la asociación.
+    const { error: deleteError } = await supabase
+      .from('plan_materia')
+      .delete()
+      .eq('id', planMateriaId);
+
+    if (deleteError) {
+      console.error('Error al desasociar la materia:', deleteError);
+      return { error: `Error al desasociar la materia: ${deleteError.message}` };
+    }
+
+    revalidatePath('/dashboard/administrativo'); // Revalida para refrescar los datos
+    return { success: true };
+
+  } catch (e) {
+    console.error('Error inesperado al desasociar materia:', e);
+    return { error: 'Error inesperado al desasociar materia del plan.' };
+  }
+}

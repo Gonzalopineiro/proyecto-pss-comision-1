@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,18 +44,23 @@ export function CarreraActions({ carrera, onCarreraEliminada }: CarreraActionsPr
   return (
     <>
       <div className="flex gap-2 justify-end">
-        <Button variant="outline" size="sm" >
-          <Edit className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline" size="sm"
-          onClick={() => setIsAlertOpen(true)}
-          disabled={tieneInscriptos}
-          title={tieneInscriptos ? 'No se puede eliminar con estudiantes activos' : 'Eliminar carrera'}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
+                {/* 2. Envuelve el botón de Editar con el componente Link */}
+                <Link href={`/dashboard/administrativo/carreras/${carrera.id}`}>
+                    <Button variant="outline" size="sm">
+                        <Edit className="h-4 w-4" />
+                    </Button>
+                </Link>
+                
+                {/* El botón de eliminar se queda como está */}
+                <Button
+                    variant="outline" size="sm"
+                    onClick={() => setIsAlertOpen(true)}
+                    disabled={tieneInscriptos}
+                    title={tieneInscriptos ? 'No se puede eliminar con estudiantes activos' : 'Eliminar carrera'}
+                >
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+            </div>
 
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>

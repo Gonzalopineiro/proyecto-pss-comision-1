@@ -358,3 +358,108 @@ export async function eliminarCarrera(
     return { error: 'Error inesperado al eliminar la carrera' }
   }
 }
+
+/**
+ * Obtiene los detalles completos de una carrera, incluyendo su plan de estudios y las materias del plan.
+ * 
+ * @param {number} carreraId - ID de la carrera
+ * @returns {Promise<Object | null>} - Datos completos de la carrera o null si no se encuentra.
+ */
+export async function obtenerDetallesCompletosCarrera(carreraId: number) {
+  try {
+    const supabase = await createClient();
+
+    const { data: carrera, error: errorCarrera } = await supabase
+      .from('carreras')
+      .select(`
+        id,
+        nombre,
+        codigo,
+        departamento,
+        plan_de_estudio: plan_de_estudios (
+          id,
+          nombre,
+          anio_creacion
+        )
+      `)
+      .eq('id', carreraId)
+      .single();
+
+    if (errorCarrera || !carrera) {
+      console.error('Error al obtener la carrera:', errorCarrera);
+      return null;
+    }
+    
+    // --- INICIO DE LA CORRECCIÓN ---
+    // Verificamos si plan_de_estudio es un array y obtenemos el primer elemento.
+    const plan = Array.isArray(carrera.plan_de_estudio) && carrera.plan_de_estudio.length > 0
+      ? carrera.plan_de_estudio[0]
+      : null;
+
+    // Si la carrera no tiene un plan de estudios válido, devolvemos la info básica.
+    if (!plan) {
+        return { ...carrera, plan_de_estudio: null, materias_plan: [] };
+    }
+    
+    const { data: materiasPlan, error: errorMaterias } = await supabase
+      .from('vista_materias_plan')
+      .select('*')
+      // Usamos el 'id' del objeto 'plan' que extrajimos de forma segura.
+      .eq('plan_id', plan.id)
+      .order('anio', { ascending: true })
+      .order('cuatrimestre', { ascending: true });
+    // --- FIN DE LA CORRECCIÓN ---
+
+    if (errorMaterias) {
+      console.error('Error al obtener las materias del plan:', errorMaterias);
+      return { ...carrera, plan_de_estudio: plan, materias_plan: [] };
+    }
+
+    // Devolvemos el objeto de carrera, pero reemplazando el array del plan con el objeto único.
+    return { ...carrera, plan_de_estudio: plan, materias_plan: materiasPlan };
+
+  } catch (e) {
+    console.error('Error inesperado al obtener detalles de la carrera:', e);
+    return null;
+  }
+}
+
+
+/**
+ * Actualiza los datos de una carrera existente.
+ * 
+ * @param {number} carreraId - ID de la carrera a actualizar
+ * @param {{ departamento?: string; descripcion?: string }} data - Datos a actualizar
+ * @returns {Promise<{ success: boolean } | { error: string }>} - Resultado de la operación
+ */
+export async function actualizarCarrera(
+  carreraId: number,
+  data: { departamento?: string; descripcion?: string }
+): Promise<{ success: boolean } | { error: string }> {
+  try {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+      .from('carreras')
+      .update({
+        departamento: data.departamento,
+        // Asumiendo que tu tabla 'carreras' tiene una columna 'descripcion'
+        // Si no la tiene, puedes eliminar la línea siguiente.
+        // descripcion: data.descripcion 
+      })
+      .eq('id', carreraId);
+
+    if (error) {
+      console.error('Error al actualizar la carrera:', error);
+      return { error: `Error al actualizar la carrera: ${error.message}` };
+    }
+
+    revalidatePath(`/dashboard/administrativo/carreras`);
+    revalidatePath(`/dashboard/administrativo/carreras/${carreraId}`);
+    return { success: true };
+
+  } catch (e) {
+    console.error('Error inesperado al actualizar la carrera:', e);
+    return { error: 'Error inesperado al actualizar la carrera' };
+  }
+}

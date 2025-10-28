@@ -1,5 +1,5 @@
 'use client';
-
+import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { obtenerCarreras, type CarreraCompleta } from '@/app/dashboard/administrativo/crear-carrera/actions';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
