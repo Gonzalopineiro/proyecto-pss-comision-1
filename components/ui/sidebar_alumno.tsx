@@ -51,7 +51,7 @@ export default function Sidebar(){
             <span>Certificados</span>
           </Link>
 
-          <Link href="/dashboard/alumno/perfil" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-slate-800/60">
+          <Link href="/dashboard/user/perfil" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-slate-800/60">
             <div className="p-2 bg-slate-800 rounded-md"><User className="w-5 h-5 text-white" /></div>
             <span>Mi Perfil</span>
           </Link>

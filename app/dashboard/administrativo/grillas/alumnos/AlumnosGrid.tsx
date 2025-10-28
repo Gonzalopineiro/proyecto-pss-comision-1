@@ -346,6 +346,7 @@ export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) 
         }}
         onSave={handleSaveEdit}
         loading={loadingEdit}
+        userType="estudiante"
       />
     </Card>
   )

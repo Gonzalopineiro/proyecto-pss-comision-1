@@ -21,7 +21,7 @@ interface DesasignarMateriaDialogProps {
   docenteNombre: string
   docenteLegajo: string
   docenteEstado: string 
-  docenteId: number
+  docenteId: string // UUID
   materiasAsignadas: MateriaAsignada[]
   onDesasignar: (materiasIds: number[]) => Promise<{ success: boolean; error?: string; mensaje?: string }>
 }

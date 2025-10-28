@@ -8,7 +8,7 @@ interface AsignarMateriaDialogProps {
   isOpen: boolean
   onClose: () => void
   docenteNombre: string
-  docenteId: number
+  docenteId: string // UUID
   onAsignar: (materiaId: string, materiaNombre: string) => Promise<{ success: boolean; error?: string }>
 }
 

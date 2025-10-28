@@ -30,6 +30,11 @@ export async function obtenerDocentesConMaterias() {
   
   console.log('=== obtenerDocentesConMaterias ===')
   console.log('Data raw:', JSON.stringify(data?.[0], null, 2)) // Ver el primer docente
+  console.log('Campos disponibles en primer docente:', data?.[0] ? Object.keys(data[0]) : 'No hay datos')
+  if (data?.[0]) {
+    console.log('Telefono:', data[0].telefono)
+    console.log('Direccion completa:', data[0].direccion_completa)
+  }
   
   // Transformar los datos para incluir un array de nombres de materias
   const docentesConMaterias = data?.map(docente => {
@@ -50,7 +55,7 @@ export async function obtenerDocentesConMaterias() {
 
 // Función para asignar una materia a un docente
 export async function asignarMateriaADocente(
-  docenteId: number,
+  docenteId: string, // UUID
   materiaId: string,
   materiaNombre: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -144,7 +149,7 @@ export interface MateriaAsignadaDetalle {
 
 // Función para enriquecer la información de las materias de un docente
 export async function obtenerInformacionMaterias(
-  docenteId: number
+  docenteId: string // UUID
 ): Promise<MateriaAsignadaDetalle[]> {
   const supabase = await createClient()
 

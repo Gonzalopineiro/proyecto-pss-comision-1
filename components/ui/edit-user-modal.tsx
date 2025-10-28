@@ -19,6 +19,7 @@ interface EditUserModalProps {
   onClose: () => void
   onSave: (data: { email: string; telefono: string; direccion: string }) => void
   loading?: boolean
+  userType?: 'estudiante' | 'administrativo' | 'docente'
 }
 
 export default function EditUserModal({
@@ -26,7 +27,8 @@ export default function EditUserModal({
   user,
   onClose,
   onSave,
-  loading = false
+  loading = false,
+  userType = 'estudiante'
 }: EditUserModalProps) {
   const [formData, setFormData] = useState({
     email: '',
@@ -35,9 +37,26 @@ export default function EditUserModal({
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  const getUserTypeDisplayName = (type: string) => {
+    switch (type) {
+      case 'estudiante':
+        return 'Estudiante'
+      case 'administrativo':
+        return 'Administrativo'
+      case 'docente':
+        return 'Docente'
+      default:
+        return 'Estudiante'
+    }
+  }
+
   // Inicializar formulario cuando se abre el modal
   useEffect(() => {
     if (isOpen && user) {
+      console.log('📋 EditUserModal - Usuario recibido:', user)
+      console.log('📋 EditUserModal - Email:', user.email)
+      console.log('📋 EditUserModal - Telefono:', user.telefono)
+      console.log('📋 EditUserModal - Direccion:', user.direccion)
       setFormData({
         email: user.email || '',
         telefono: user.telefono || '',
@@ -142,7 +161,7 @@ export default function EditUserModal({
             </div>
             <div>
               <Label className="text-gray-500 dark:text-gray-400">Tipo de Usuario</Label>
-              <p className="font-medium text-gray-900 dark:text-white">Estudiante</p>
+              <p className="font-medium text-gray-900 dark:text-white">{getUserTypeDisplayName(userType)}</p>
             </div>
           </div>
         </div>

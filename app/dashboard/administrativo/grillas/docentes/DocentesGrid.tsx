@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Grilla } from '@/components/ui/grilla';
 import AsignarMateriaDialog from './AsignarMateriaDialog';
 import DesasignarMateriaDialog from './DesasignarMateriaDialog';
+import EditUserModal from '@/components/ui/edit-user-modal';
 import { asignarMateriaADocente, obtenerInformacionMaterias } from './actions';
 
 interface MateriaAsignadaDetalle {
@@ -18,13 +19,15 @@ interface MateriaAsignadaDetalle {
 }
 
 interface Docente {
-  id: number;
+  id: string; // UUID en la base de datos
   nombre: string;
   apellido: string;
   dni: string;
   legajo: string;
   materias: string[];
   email: string;
+  telefono?: string | null;
+  direccion_completa?: string | null;
   materia_docente_completo?: any[]; // Datos completos de materia_docente
 }
 
@@ -33,11 +36,17 @@ interface DocentesViewProps {
 }
 
 export default function DocentesView({ docentes }: DocentesViewProps) {
+  console.log('🎯 DOCENTES VIEW CARGADO - Total docentes:', docentes?.length)
+  console.log('🎯 Primer docente completo:', docentes?.[0])
+  
   const [isAsignarDialogOpen, setIsAsignarDialogOpen] = useState(false);
   const [isDesasignarDialogOpen, setIsDesasignarDialogOpen] = useState(false);
   const [docenteSeleccionado, setDocenteSeleccionado] = useState<Docente | null>(null);
   const [materiasDocente, setMateriasDocente] = useState<MateriaAsignadaDetalle[]>([]);
   const [cargandoMaterias, setCargandoMaterias] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [docenteToEdit, setDocenteToEdit] = useState<Docente | null>(null);
+  const [loadingEdit, setLoadingEdit] = useState(false);
 
   // Validar que docentes no sea undefined o null
   if (!docentes || !Array.isArray(docentes)) {
@@ -106,6 +115,53 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
       mensaje: 'Materia(s) desasignada(s) exitosamente'
     };
   };
+
+  // Funciones para editar docente
+  function handleEdit(docente: Docente) {
+    console.log('🔧 Debug - handleEdit docente:', docente)
+    console.log('🔧 Debug - Telefono:', docente.telefono)
+    console.log('🔧 Debug - Direccion completa:', docente.direccion_completa)
+    setDocenteToEdit(docente)
+    setEditModalOpen(true)
+  }
+
+  async function handleSaveEdit(editData: { email: string; telefono: string; direccion: string }) {
+    if (!docenteToEdit) return
+
+    setLoadingEdit(true)
+    try {
+      const res = await fetch('/api/docentes/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: docenteToEdit.id,
+          email: editData.email,
+          telefono: editData.telefono,
+          direccion: editData.direccion
+        })
+      })
+
+      const json = await res.json()
+      if (json.success) {
+        // Cerrar modal
+        setEditModalOpen(false)
+        setDocenteToEdit(null)
+        
+        // Mostrar mensaje de éxito - podrías agregar un estado de confirmación aquí
+        alert(`Docente ${docenteToEdit.nombre} ${docenteToEdit.apellido} actualizado correctamente`)
+        
+        // Refrescar la página para mostrar los cambios
+        window.location.reload()
+      } else {
+        alert('No se pudo actualizar: ' + (json.error || 'Error'))
+      }
+    } catch (err) {
+      console.error('Error al actualizar docente:', err)
+      alert('Error al actualizar docente')
+    } finally {
+      setLoadingEdit(false)
+    }
+  }
   
   // Mapea a solo lo que necesitas para la grilla
   const docentesGrilla: Docente[] = docentes.map(d => ({
@@ -115,6 +171,8 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
     dni: d.dni,
     legajo: d.legajo,
     email: d.email,
+    telefono: d.telefono,
+    direccion_completa: d.direccion_completa,
     materias: d.materias || []
   }))
   
@@ -191,8 +249,12 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
           header: 'ACCIONES',
           accessor: (row) => (
             <div className="flex gap-3">
-              <button className="text-blue-600 hover:text-blue-800 font-medium">
-                Modificar
+              <button 
+                className="text-blue-600 hover:text-blue-800 font-medium"
+                onClick={() => handleEdit(row)}
+                disabled={loadingEdit}
+              >
+                ✏️ Modificar
               </button>
               <button className="text-red-600 hover:text-red-800 font-medium">
                 Eliminar
@@ -214,7 +276,7 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
         isOpen={isAsignarDialogOpen}
         onClose={() => setIsAsignarDialogOpen(false)}
         docenteNombre={`${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido}`}
-        docenteId={docenteSeleccionado.id || 0}
+        docenteId={docenteSeleccionado.id}
         onAsignar={handleAsignarMateria}
       />
     )}
@@ -232,6 +294,26 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
         onDesasignar={handleDesasignarMaterias}
       />
     )}
+
+    {/* Modal de edición */}
+    <EditUserModal
+      isOpen={editModalOpen}
+      user={docenteToEdit ? {
+        id: docenteToEdit.id, // Ya es string (UUID)
+        nombre: docenteToEdit.nombre,
+        apellido: docenteToEdit.apellido,
+        email: docenteToEdit.email,
+        telefono: docenteToEdit.telefono || '',
+        direccion: docenteToEdit.direccion_completa || ''
+      } : null}
+      onClose={() => {
+        setEditModalOpen(false)
+        setDocenteToEdit(null)
+      }}
+      onSave={handleSaveEdit}
+      loading={loadingEdit}
+      userType="docente"
+    />
     </>
   );
 }
