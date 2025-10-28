@@ -1,8 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import React from 'react'
-import Link from 'next/link'
-import Sidebar from '@/components/dashboard/sidebar'
 
 export default async function AlumnoDashboard() {
     // Verificar autenticación
@@ -27,7 +25,7 @@ export default async function AlumnoDashboard() {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
             <div className="flex">
-                {/* <Sidebar /> aca iria el side bar del alumno ver sprint siguiente */}
+                {/* aca iria el side bar del alumno ver sprint siguiente */}
                 <main className="flex-1 p-8">
                     <div className="max-w-4xl mx-auto">
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow mb-6">
