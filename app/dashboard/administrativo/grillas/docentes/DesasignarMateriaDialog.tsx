@@ -150,7 +150,7 @@ export default function DesasignarMateriaDialog({
                 <p className="text-sm text-red-600 dark:text-red-400 flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <span>
-                    <strong>Advertencia:</strong> El docente quedará sin materias asignadas y perderá el rol de docente.
+                    <strong>Advertencia:</strong> El docente quedará sin materias asignadas y será eliminado del sistema. Deberá darse de alta nuevamente para volver a ser docente.
                   </span>
                 </p>
               </div>

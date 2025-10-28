@@ -139,7 +139,30 @@ export async function obtenerInformacionMaterias(
   const supabase = await createClient();
 
   try {
-    // Consulta combinada en una sola llamada
+    // 1. Obtener el email del docente primero
+    const { data: docenteInfo, error: errorDocenteInfo } = await supabase
+      .from('docentes')
+      .select('email')
+      .eq('id', docenteId)
+      .single();
+
+    if (errorDocenteInfo || !docenteInfo) {
+      console.error('Error al obtener info del docente:', errorDocenteInfo);
+      return [];
+    }
+
+    // 2. Buscar el auth user id del docente usando su email en profiles
+    const { data: profileDocente } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', docenteInfo.email)
+      .single();
+
+    if (!profileDocente) {
+      console.error('No se encontró el profile para el email:', docenteInfo.email);
+    }
+
+    // 3. Consultar materias asignadas al docente
     const { data, error } = await supabase
       .from('materia_docente')
       .select(`
@@ -163,47 +186,91 @@ export async function obtenerInformacionMaterias(
       .eq('docente_id', docenteId);
 
     if (error) {
+      console.error('Error al obtener materias del docente:', error);
       return [];
     }
 
-    if (!data) return [];
+    if (!data || data.length === 0) return [];
 
-    const hoy = new Date();
+    // 4. Obtener mesas de examen vigentes del docente (solo si tiene profile)
+    const hoy = new Date().toISOString().split('T')[0];
+    let mesasVigentes: any[] = [];
+    
+    if (profileDocente) {
+      const { data: mesas, error: errorMesas } = await supabase
+        .from('mesas_examen')
+        .select('materia_id, fecha_examen, estado')
+        .eq('docente_id', profileDocente.id)
+        .gte('fecha_examen', hoy)
+        .eq('estado', 'programada');
 
-    // Obtener todas las mesas de examen de este docente específico
-    const { data: mesasDocente, error: errorMesas } = await supabase
-      .from('mesas_examen')
-      .select('materia_id, fecha_examen, estado')
-      .eq('docente_id', docenteId)
-      .gte('fecha_examen', hoy.toISOString().split('T')[0])
-      .eq('estado', 'programada');
-
-    const mesasPorMateria = new Map<number, any[]>();
-    if (mesasDocente) {
-      mesasDocente.forEach((mesa) => {
-        if (!mesasPorMateria.has(mesa.materia_id)) {
-          mesasPorMateria.set(mesa.materia_id, []);
-        }
-        mesasPorMateria.get(mesa.materia_id)!.push(mesa);
-      });
+      if (!errorMesas && mesas) {
+        mesasVigentes = mesas;
+      }
     }
 
+    // 5. Crear mapa de mesas por materia
+    const mesasPorMateria = new Map<number, any[]>();
+    mesasVigentes.forEach((mesa: any) => {
+      if (!mesasPorMateria.has(mesa.materia_id)) {
+        mesasPorMateria.set(mesa.materia_id, []);
+      }
+      mesasPorMateria.get(mesa.materia_id)!.push(mesa);
+    });
+
+    // 6. Contar estudiantes por materia (inscripciones en cursadas)
+    const materiasIds = data.map((item: any) => item.materias?.id).filter(Boolean);
+    const estudiantesPorMateria = new Map<number, number>();
+
+    if (materiasIds.length > 0) {
+      // Obtener cursadas activas de las materias del docente
+      const { data: cursadasActivas } = await supabase
+        .from('cursadas')
+        .select(`
+          id,
+          materia_docente!inner (
+            materia_id
+          )
+        `)
+        .eq('estado', 'activa')
+        .in('materia_docente.materia_id', materiasIds);
+
+      if (cursadasActivas && cursadasActivas.length > 0) {
+        const cursadasIds = cursadasActivas.map(c => c.id);
+        
+        // Contar inscripciones aprobadas por cursada
+        const { data: inscripciones } = await supabase
+          .from('inscripciones_cursada')
+          .select('cursada_id')
+          .in('cursada_id', cursadasIds)
+          .eq('estado', 'aprobada');
+
+        if (inscripciones) {
+          // Agrupar por materia_id
+          cursadasActivas.forEach(cursada => {
+            const materiaId = (cursada.materia_docente as any).materia_id;
+            const count = inscripciones.filter(i => i.cursada_id === cursada.id).length;
+            estudiantesPorMateria.set(materiaId, (estudiantesPorMateria.get(materiaId) || 0) + count);
+          });
+        }
+      }
+    }
+
+    // 7. Construir resultado final
     const materiasConDetalles: MateriaAsignadaDetalle[] = data.map((item: any) => {
       const materia = item.materias;
       if (!materia) return null;
 
-      // Acceso seguro a relaciones anidadas
       const planMateria = materia.plan_materia?.[0];
       const carrera = planMateria?.plan_de_estudios?.carreras?.[0];
 
-      // Verificar si ESTE docente tiene mesas vigentes de esta materia
-      const mesasVigentesDocente = mesasPorMateria.get(materia.id) || [];
-      const tieneMesaVigente = mesasVigentesDocente.length > 0;
+      // Verificar si tiene mesas vigentes
+      const mesasVigentesMateria = mesasPorMateria.get(materia.id) || [];
+      const tieneMesaVigente = mesasVigentesMateria.length > 0;
       
-      // Obtener la fecha de la mesa más cercana
       let fechaMesaVigente: string | undefined = undefined;
       if (tieneMesaVigente) {
-        const mesaMasCercana = mesasVigentesDocente.reduce((closest: any, current: any) => {
+        const mesaMasCercana = mesasVigentesMateria.reduce((closest: any, current: any) => {
           const closestDate = new Date(closest.fecha_examen);
           const currentDate = new Date(current.fecha_examen);
           return currentDate < closestDate ? current : closest;
@@ -218,7 +285,7 @@ export async function obtenerInformacionMaterias(
         carrera: carrera?.nombre || 'Sin asignar',
         año: planMateria ? `${planMateria.anio}° Año` : 'N/A',
         asignado: new Date(item.created_at).toLocaleDateString('es-AR'),
-        estudiantes: 0,
+        estudiantes: estudiantesPorMateria.get(materia.id) || 0,
         tieneMesaVigente,
         fechaMesaVigente
       };
@@ -226,6 +293,7 @@ export async function obtenerInformacionMaterias(
 
     return materiasConDetalles;
   } catch (err) {
+    console.error('Error inesperado en obtenerInformacionMaterias:', err);
     return [];
   }
 }
@@ -233,16 +301,16 @@ export async function obtenerInformacionMaterias(
 
 // Función para desasignar materias de un docente
 export async function desasignarMateriasDocente(
-  docenteId: string, // UUID del docente
+  docenteId: string, // UUID del docente en tabla docentes
   materiasIds: number[]
 ): Promise<{ success: boolean; error?: string; mensaje?: string }> {
   const supabase = await createClient()
 
   try {
-    // 1. Verificar que el docente exista
+    // 1. Verificar que el docente exista y obtener su email
     const { data: docente, error: errorDocente } = await supabase
       .from('docentes')
-      .select('id, nombre, apellido')
+      .select('id, nombre, apellido, email')
       .eq('id', docenteId)
       .single()
     
@@ -253,35 +321,54 @@ export async function desasignarMateriasDocente(
       }
     }
 
-    // 2. Verificar que el docente no esté asignado a mesas de examen vigentes de las materias seleccionadas
-    const hoy = new Date().toISOString().split('T')[0] // Formato YYYY-MM-DD
+    // 2. Buscar el auth user id del docente usando su email en profiles
+    const { data: profileDocente } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', docente.email)
+      .single();
+
+    // 3. Verificar mesas de examen vigentes SOLO si encontramos el profile
+    const hoy = new Date().toISOString().split('T')[0];
     
-    for (const materiaId of materiasIds) {
-      const { data: mesasVigentes, error: errorMesas } = await supabase
-        .from('mesas_examen')
-        .select('id, fecha_examen')
-        .eq('materia_id', materiaId)
-        .eq('docente_id', docenteId) // IMPORTANTE: Verificar que sea ESTE docente específico
-        .gte('fecha_examen', hoy)
-        .eq('estado', 'programada')
-      
-      if (errorMesas) {
-        console.error('Error al verificar mesas vigentes:', errorMesas)
-        return { 
-          success: false, 
-          error: 'Error al verificar mesas de examen vigentes' 
+    if (profileDocente) {
+      for (const materiaId of materiasIds) {
+        const { data: mesasVigentes, error: errorMesas } = await supabase
+          .from('mesas_examen')
+          .select('id, fecha_examen, materia_id, estado')
+          .eq('materia_id', materiaId)
+          .eq('docente_id', profileDocente.id)
+          .gte('fecha_examen', hoy)
+          .eq('estado', 'programada')
+        
+        if (errorMesas) {
+          console.error('Error al verificar mesas vigentes:', errorMesas)
+          return { 
+            success: false, 
+            error: 'Error al verificar mesas de examen vigentes' 
+          }
         }
-      }
-      
-      if (mesasVigentes && mesasVigentes.length > 0) {
-        return {
-          success: false,
-          error: 'No puede desasignarse porque el docente está asignado a una mesa de examen vigente de esta materia'
+        
+        if (mesasVigentes && mesasVigentes.length > 0) {
+          // Obtener información de la materia para mensaje descriptivo
+          const { data: materia } = await supabase
+            .from('materias')
+            .select('nombre')
+            .eq('id', materiaId)
+            .single()
+          
+          const nombreMateria = materia?.nombre || 'la materia seleccionada';
+          const fechaMesa = new Date(mesasVigentes[0].fecha_examen).toLocaleDateString('es-AR');
+          
+          return {
+            success: false,
+            error: `No puede desasignar "${nombreMateria}" porque el docente tiene una mesa de examen programada para el ${fechaMesa}`
+          }
         }
       }
     }
 
-    // 3. Eliminar las asignaciones
+    // 4. Eliminar las asignaciones de materia_docente
     const { error: errorDelete } = await supabase
       .from('materia_docente')
       .delete()
@@ -293,7 +380,7 @@ export async function desasignarMateriasDocente(
       return { success: false, error: 'Error al desasignar materias' }
     }
 
-    // 4. Verificar si el docente quedó sin materias
+    // 5. Verificar si el docente quedó sin materias
     const { data: materiasRestantes, error: errorRestantes } = await supabase
       .from('materia_docente')
       .select('id')
@@ -306,7 +393,9 @@ export async function desasignarMateriasDocente(
     let mensajeFinal = `${materiasIds.length} materia(s) desasignada(s) exitosamente`
     
     if (!materiasRestantes || materiasRestantes.length === 0) {
-      // El docente quedó sin materias, eliminarlo completamente de la tabla docentes
+      // El docente quedó sin materias, debe ser eliminado
+      
+      // 5.1. Eliminar de la tabla docentes
       const { error: errorDeleteDocente } = await supabase
         .from('docentes')
         .delete()
@@ -320,17 +409,19 @@ export async function desasignarMateriasDocente(
         }
       }
 
-      // También actualizar el rol en profiles a 'user'
-      const { error: errorRole } = await supabase
-        .from('profiles')
-        .update({ role: 'user' })
-        .eq('id', docenteId)
-      
-      if (errorRole) {
-        console.error('Error al actualizar rol del docente:', errorRole)
+      // 5.2. Actualizar el rol en profiles a 'user' (si existe el profile)
+      if (profileDocente) {
+        const { error: errorRole } = await supabase
+          .from('profiles')
+          .update({ role: 'user' })
+          .eq('id', profileDocente.id)
+        
+        if (errorRole) {
+          console.error('Error al actualizar rol del docente:', errorRole)
+        }
       }
       
-      mensajeFinal += '. El docente ha sido eliminado del sistema al no tener materias asignadas'
+      mensajeFinal += '. El docente ha sido eliminado del sistema al quedar sin materias asignadas'
     }
 
     return { 
@@ -342,6 +433,87 @@ export async function desasignarMateriasDocente(
     return { 
       success: false, 
       error: error.message || 'Error inesperado al desasignar materias' 
+    }
+  }
+}
+
+// Función para eliminar un docente del sistema
+export async function eliminarDocente(
+  docenteId: string
+): Promise<{ success: boolean; error?: string; mensaje?: string }> {
+  const supabase = await createClient()
+
+  try {
+    // 1. Verificar que el docente exista y obtener su email
+    const { data: docente, error: errorDocente } = await supabase
+      .from('docentes')
+      .select('id, nombre, apellido, email')
+      .eq('id', docenteId)
+      .single()
+    
+    if (errorDocente || !docente) {
+      return { 
+        success: false, 
+        error: 'El docente no existe en el sistema' 
+      }
+    }
+
+    // 2. Buscar el auth user id del docente usando su email en profiles
+    const { data: profileDocente } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', docente.email)
+      .single();
+
+    // 3. Eliminar todas las asignaciones de materia_docente
+    const { error: errorDeleteAsignaciones } = await supabase
+      .from('materia_docente')
+      .delete()
+      .eq('docente_id', docenteId)
+    
+    if (errorDeleteAsignaciones) {
+      console.error('Error al eliminar asignaciones:', errorDeleteAsignaciones)
+      return { 
+        success: false, 
+        error: 'Error al eliminar las asignaciones del docente' 
+      }
+    }
+
+    // 4. Eliminar de la tabla docentes
+    const { error: errorDeleteDocente } = await supabase
+      .from('docentes')
+      .delete()
+      .eq('id', docenteId)
+    
+    if (errorDeleteDocente) {
+      console.error('Error al eliminar el docente:', errorDeleteDocente)
+      return { 
+        success: false, 
+        error: 'Error al eliminar el registro del docente' 
+      }
+    }
+
+    // 5. Actualizar el rol en profiles a 'user' (si existe el profile)
+    if (profileDocente) {
+      const { error: errorRole } = await supabase
+        .from('profiles')
+        .update({ role: 'user' })
+        .eq('id', profileDocente.id)
+      
+      if (errorRole) {
+        console.error('Error al actualizar rol del docente:', errorRole)
+      }
+    }
+
+    return { 
+      success: true,
+      mensaje: `El docente ${docente.nombre} ${docente.apellido} ha sido eliminado del sistema exitosamente`
+    }
+  } catch (error: any) {
+    console.error('Error inesperado en eliminarDocente:', error)
+    return { 
+      success: false, 
+      error: error.message || 'Error inesperado al eliminar el docente' 
     }
   }
 }

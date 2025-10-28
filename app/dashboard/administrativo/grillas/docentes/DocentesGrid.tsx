@@ -6,7 +6,8 @@ import { Grilla } from '@/components/ui/grilla';
 import AsignarMateriaDialog from './AsignarMateriaDialog';
 import DesasignarMateriaDialog from './DesasignarMateriaDialog';
 import ConfirmationPopup from '@/components/ui/confirmation-popup';
-import { asignarMateriaADocente, obtenerInformacionMaterias, desasignarMateriasDocente } from './actions';
+import ConfirmDialog from '@/components/ui/confirm-dialog';
+import { asignarMateriaADocente, obtenerInformacionMaterias, desasignarMateriasDocente, eliminarDocente } from './actions';
 
 interface MateriaAsignadaDetalle {
   id: number
@@ -39,9 +40,12 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
   const [isAsignarDialogOpen, setIsAsignarDialogOpen] = useState(false);
   const [isDesasignarDialogOpen, setIsDesasignarDialogOpen] = useState(false);
   const [isModificarPopupOpen, setIsModificarPopupOpen] = useState(false);
+  const [isEliminarPopupOpen, setIsEliminarPopupOpen] = useState(false);
   const [docenteSeleccionado, setDocenteSeleccionado] = useState<Docente | null>(null);
   const [materiasDocente, setMateriasDocente] = useState<MateriaAsignadaDetalle[]>([]);
   const [cargandoMaterias, setCargandoMaterias] = useState(false);
+  const [eliminandoDocente, setEliminandoDocente] = useState(false);
+  const [errorEliminar, setErrorEliminar] = useState('');
   const router = useRouter();
 
   // Validar que docentes no sea undefined o null
@@ -78,6 +82,43 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
     setIsAsignarDialogOpen(true);
   };
 
+  const abrirPopupModificar = (docente: Docente) => {
+    setDocenteSeleccionado(docente);
+    setIsModificarPopupOpen(true);
+  };
+
+  const abrirPopupEliminar = (docente: Docente) => {
+    setDocenteSeleccionado(docente);
+    setErrorEliminar('');
+    setIsEliminarPopupOpen(true);
+  };
+
+  const handleEliminarDocente = async () => {
+    if (!docenteSeleccionado?.id) {
+      setErrorEliminar('No se pudo identificar el docente');
+      return;
+    }
+
+    setEliminandoDocente(true);
+    setErrorEliminar('');
+
+    try {
+      const result = await eliminarDocente(docenteSeleccionado.id);
+
+      if (result.success) {
+        // Cerrar el popup y recargar la página
+        setIsEliminarPopupOpen(false);
+        router.refresh();
+      } else {
+        setErrorEliminar(result.error || 'Error al eliminar el docente');
+      }
+    } catch (error: any) {
+      setErrorEliminar(error.message || 'Error inesperado al eliminar el docente');
+    } finally {
+      setEliminandoDocente(false);
+    }
+  };
+
   const abrirDialogoDesasignar = async (docente: Docente) => {
     setDocenteSeleccionado(docente);
     setCargandoMaterias(true);
@@ -91,12 +132,7 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
     setCargandoMaterias(false);
   };
 
-  const abrirPopupModificar = (docente: Docente) => {
-    setDocenteSeleccionado(docente);
-    setIsModificarPopupOpen(true);
-  };
-
-  // Función para desasignar materias
+  // Función placeholder para desasignar materias (tú la implementarás)
   const handleDesasignarMaterias = async (materiasIds: number[]) => {
     if (!docenteSeleccionado?.id) {
       return {
@@ -209,7 +245,10 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
               >
                 Modificar
               </button>
-              <button className="text-red-600 hover:text-red-800 font-medium">
+              <button 
+                onClick={() => abrirPopupEliminar(row)}
+                className="text-red-600 hover:text-red-800 font-medium"
+              >
                 Eliminar
               </button>
             </div>
@@ -261,6 +300,24 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
         onClose={() => setIsModificarPopupOpen(false)}
         title="Modificar Docente"
         message={`Has presionado el botón modificar para el docente ${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido} (Legajo: ${docenteSeleccionado.legajo})`}
+      />
+    )}
+
+    {/* Diálogo de confirmación para eliminar */}
+    {docenteSeleccionado && (
+      <ConfirmDialog
+        isOpen={isEliminarPopupOpen}
+        title="Eliminar Docente"
+        message={`¿Está seguro que desea eliminar al docente ${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido} (Legajo: ${docenteSeleccionado.legajo})? Esta acción no se puede deshacer y eliminará todas sus asignaciones de materias.`}
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        loading={eliminandoDocente}
+        error={errorEliminar}
+        onClose={() => {
+          setIsEliminarPopupOpen(false);
+          setErrorEliminar('');
+        }}
+        onConfirm={handleEliminarDocente}
       />
     )}
     </>
