@@ -145,16 +145,8 @@ const AltaUsuarioForm = () => {
         if (!value.trim()) {
           return 'Este campo es obligatorio'
         }
-        if (value.trim().length < 10) {
-          return 'La dirección debe ser más específica'
-        }
-        // Verificar que contenga al menos un número (para la altura de la calle)
-        if (!/\d/.test(value)) {
-          return 'La dirección debe incluir altura (números)'
-        }
-        // Verificar caracteres válidos para una dirección
-        if (!/^[A-Za-z0-9áéíóúÁÉÍÓÚüÜñÑ\s,.'-]+$/.test(value)) {
-          return 'La dirección contiene caracteres no permitidos'
+        if (value.trim().length < 5) {
+          return 'La dirección debe tener al menos 5 caracteres'
         }
         return ''
       
@@ -539,21 +531,23 @@ const AltaUsuarioForm = () => {
                 {isSubmitting ? 'Registrando...' : 'Registrar Alumno'}
               </Button>
             </div>
+
+            {/* Popup de confirmación - Movido aquí para mayor visibilidad */}
+            <div className="mt-4">
+              <ConfirmationPopup
+                isOpen={showPopup}
+                onClose={() => {
+                  setShowPopup(false)
+                  // Redirigir después de cerrar el popup
+                  router.push('/dashboard/administrativo')
+                }}
+                title="¡Alumno Registrado con Éxito!"
+                message={`El alumno ha sido registrado correctamente en la carrera seleccionada.`}
+                passwordUsed={passwordUsed}
+                userType="alumno"
+              />
+            </div>
           </form>
-          
-          {/* Popup de confirmación */}
-          <ConfirmationPopup
-            isOpen={showPopup}
-            onClose={() => {
-              setShowPopup(false)
-              // Redirigir después de cerrar el popup
-              router.push('/dashboard/administrativo')
-            }}
-            title="¡Alumno Registrado con Éxito!"
-            message={`El alumno ha sido registrado correctamente en la carrera seleccionada.`}
-            passwordUsed={passwordUsed}
-            userType="alumno"
-          />
         </CardContent>
       </Card>
     </div>
