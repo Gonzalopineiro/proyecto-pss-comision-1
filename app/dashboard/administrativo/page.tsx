@@ -209,7 +209,9 @@ export default function AdministrativoDashboard() {
                     <ChevronRight className="w-5 h-5 text-gray-400" />
                   </div>
                   <div className="mt-4 flex items-center justify-between">
-                    <Button variant="outline" size="sm" disabled title="Próximamente">Ver Grilla de Materias</Button>
+                    <Link href="/dashboard/administrativo/crear-materia">
+                      <Button variant="outline" size="sm">Registrar Materia</Button>
+                    </Link>
                     <span className="text-sm text-gray-500">156 registros</span>
                   </div>
                 </div>
