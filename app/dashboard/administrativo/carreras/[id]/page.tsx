@@ -7,7 +7,8 @@ import {
     actualizarCarrera, 
     obtenerDepartamentos,
     buscarMateriasDisponibles,
-    actualizarPlanDeEstudios 
+    actualizarPlanDeEstudios,
+    obtenerMateriasDisponiblesParaPlan 
 } from '@/app/dashboard/administrativo/crear-carrera/actions';
 
 // Importa los componentes UI que necesites
@@ -165,16 +166,29 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: 
     const [busquedaMateria, setBusquedaMateria] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [materiasDisponibles, setMateriasDisponibles] = useState<MateriaDisponible[]>([]);
+    const [isLoadingDisponibles, setIsLoadingDisponibles] = useState(true); // Estado de carga inicial
 
-    // ... (Las funciones handleBuscarMateria, handleAgregarMateria, handleEliminarMateria no cambian) ...
+    // --- CAMBIO PRINCIPAL: Cargar todas las materias disponibles al inicio ---
+    useEffect(() => {
+        async function cargarMateriasDisponibles() {
+            setIsLoadingDisponibles(true);
+            const resultados = await obtenerMateriasDisponiblesParaPlan(plan.id);
+            setMateriasDisponibles(resultados);
+            setIsLoadingDisponibles(false);
+        }
+        
+        cargarMateriasDisponibles();
+    }, [plan.id]); // Se ejecuta cuando el componente se monta
+
     const handleBuscarMateria = async () => {
-        if (busquedaMateria.trim().length < 3) {
-            toast.info('Ingrese al menos 3 caracteres para buscar.');
+        // La búsqueda sigue funcionando, pero ahora filtra la lista que ya tenemos o hace una nueva llamada
+        if (busquedaMateria.trim().length < 2) {
+            toast.info('Ingrese al menos 2 caracteres para buscar.');
             return;
         }
         setIsSearching(true);
         const resultados = await buscarMateriasDisponibles(plan.id, busquedaMateria);
-        setMateriasDisponibles(resultados);
+        setMateriasDisponibles(resultados); // La búsqueda reemplaza la lista inicial con sus resultados
         setIsSearching(false);
     };
 
@@ -192,36 +206,32 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: 
             cuatrimestre: 1,
             codigo_materia: materia.codigo_materia,
             nombre_materia: materia.nombre,
-            descripcion_materia: materia.descripcion,
+            // Usamos la descripción de la tabla `materias`
+            descripcion_materia: materia.descripcion || '',
             estudiantes_activos: 0,
         };
 
         setMateriasPlan(prev => [...prev, nuevaMateria]);
-        setMateriasDisponibles([]);
-        setBusquedaMateria('');
-        toast.success(`${materia.nombre} fue agregada al plan. Guarde los cambios para confirmar.`);
+        // Importante: quitamos la materia agregada de la lista de disponibles para no poder agregarla 2 veces
+        setMateriasDisponibles(prev => prev.filter(m => m.id !== materia.id));
+        toast.success(`${materia.nombre} fue agregada al plan.`);
     };
 
+    // El resto de funciones (handleEliminarMateria, handleGuardarCambios, etc.) no necesitan cambios
     const handleEliminarMateria = (idMateriaAEliminar: number | undefined, nombreMateria: string) => {
         setMateriasPlan(prev => prev.filter(m => {
-            if (idMateriaAEliminar) {
-                return m.plan_materia_id !== idMateriaAEliminar;
-            }
+            if (idMateriaAEliminar) return m.plan_materia_id !== idMateriaAEliminar;
             return m.nombre_materia !== nombreMateria;
         }));
-        toast.info(`${nombreMateria} fue quitada del plan. Guarde los cambios para confirmar.`);
+        toast.info(`${nombreMateria} fue quitada del plan.`);
+        // Opcional: podrías volver a agregar la materia a la lista de disponibles si lo deseas
     };
 
     const handleGuardarCambios = async () => {
         setIsSaving(true);
-        
         const materiasAAgregar = materiasPlan
             .filter(m => m.plan_materia_id === undefined)
-            .map(m => ({
-                materia_id: m.materia_id,
-                anio: m.anio,
-                cuatrimestre: m.cuatrimestre,
-            }));
+            .map(m => ({ materia_id: m.materia_id, anio: m.anio, cuatrimestre: m.cuatrimestre }));
 
         const idsMateriasActuales = new Set(materiasPlan.map(m => m.plan_materia_id).filter(Boolean));
         const planMateriaIdsAEliminar = materiasIniciales
@@ -236,7 +246,6 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: 
         
         const result = await actualizarPlanDeEstudios(plan.id, materiasAAgregar, planMateriaIdsAEliminar);
 
-        // --- CORRECCIÓN 1 ---
         if ('error' in result && result.error) {
             toast.error(result.error);
         } else {
@@ -247,7 +256,7 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: 
     };
 
     const materiasAgrupadas = materiasPlan.reduce((acc, materia) => {
-        const anio = materia.anio || 1; // Usar 1 como default si el año es 0 o null
+        const anio = materia.anio || 1;
         if (!acc[anio]) acc[anio] = [];
         acc[anio].push(materia);
         return acc;
@@ -255,9 +264,9 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: 
 
     return (
         <div>
+            {/* El header y la columna izquierda no cambian */}
             <div className="flex justify-between items-center mb-6">
-                 {/* ... (código del header sin cambios) ... */}
-                 <div>
+                <div>
                     <h1 className="text-3xl font-bold">Modificar Plan de Estudios</h1>
                     <p className="text-gray-500 mt-1">{plan.nombre}</p>
                 </div>
@@ -274,16 +283,15 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: 
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Columna Principal: Materias del Plan */}
                 <div className="lg:col-span-2 space-y-6">
+                    {/* La card de "Materias del Plan Actual" no cambia */}
                     <Card>
                         <CardHeader><CardTitle>Materias del Plan Actual</CardTitle></CardHeader>
                         <CardContent>
-                            {Object.keys(materiasAgrupadas).sort((a,b) => Number(a) - Number(b)).map(anio => (
+                            {Object.keys(materiasAgrupadas).length > 0 ? Object.keys(materiasAgrupadas).sort((a,b) => Number(a) - Number(b)).map(anio => (
                                 <div key={anio} className="mb-6">
                                     <h3 className="font-bold text-lg mb-2 border-b pb-2">{`Año ${anio}`}</h3>
                                     <div className="space-y-3">
-                                        {/* --- CORRECCIÓN 2 --- */}
                                         {materiasAgrupadas[Number(anio)].map((m: MateriaPlan) => (
                                             <div key={m.plan_materia_id || m.materia_id} className="p-3 border rounded-md flex justify-between items-center hover:bg-gray-50">
                                                 <div>
@@ -299,21 +307,19 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: 
                                         ))}
                                     </div>
                                 </div>
-                            ))}
-                            {materiasPlan.length === 0 && <p className="text-center text-gray-500 py-4">No hay materias en este plan.</p>}
+                            )) : <p className="text-center text-gray-500 py-4">No hay materias en este plan.</p>}
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Columna Derecha: Herramientas */}
+                {/* Columna Derecha: Herramientas (CON CAMBIOS EN EL RENDERIZADO) */}
                 <div className="space-y-6">
-                     {/* ... (código de la columna derecha sin cambios) ... */}
                      <Card>
                         <CardHeader><CardTitle>Agregar Materias</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex gap-2">
                                 <Input 
-                                    placeholder="Buscar por ID o Nombre" 
+                                    placeholder="Filtrar materias por nombre..." 
                                     value={busquedaMateria}
                                     onChange={(e) => setBusquedaMateria(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && handleBuscarMateria()}
@@ -323,18 +329,26 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: 
                                 </Button>
                             </div>
                             <p className="text-sm font-semibold">Materias Disponibles</p>
-                            <div className="space-y-2 max-h-48 overflow-y-auto">
-                               {materiasDisponibles.length > 0 ? (
+                            {/* --- ÁREA DE RENDERIZADO MODIFICADA --- */}
+                            <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                               {isLoadingDisponibles ? (
+                                   <div className="text-center py-4">
+                                       <Loader2 className="h-5 w-5 animate-spin mx-auto text-gray-400"/>
+                                       <p className="text-sm text-gray-500 mt-2">Cargando materias...</p>
+                                   </div>
+                               ) : materiasDisponibles.length > 0 ? (
                                     materiasDisponibles.map(m => (
                                         <div key={m.id} className="p-2 border rounded flex justify-between items-center text-sm">
-                                            <span>{m.codigo_materia} - {m.nombre}</span>
-                                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleAgregarMateria(m)}>
+                                            <span className="flex-grow pr-2">{m.codigo_materia} - {m.nombre}</span>
+                                            <Button size="icon" variant="ghost" className="h-7 w-7 flex-shrink-0" onClick={() => handleAgregarMateria(m)}>
                                                 <Plus className="h-4 w-4 text-green-600"/>
                                             </Button>
                                         </div>
                                     ))
                                 ) : (
-                                    <p className="text-xs text-gray-500 text-center py-2">No se encontraron materias o no hay búsqueda activa.</p>
+                                    <p className="text-xs text-gray-500 text-center py-2">
+                                        No hay más materias disponibles para agregar.
+                                    </p>
                                 )}
                             </div>
                         </CardContent>
@@ -343,11 +357,7 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: 
                         <CardHeader><CardTitle>Gestión de Correlatividades</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-sm text-gray-500">Funcionalidad en desarrollo.</p>
-                             <Select disabled>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar materia..." />
-                                </SelectTrigger>
-                            </Select>
+                             <Select disabled><SelectTrigger><SelectValue placeholder="Seleccionar materia..." /></SelectTrigger></Select>
                             <div className="flex gap-2">
                                 <Button className="w-full" disabled>Agregar Correlativa</Button>
                                 <Button className="w-full" variant="outline" disabled>Quitar Correlativa</Button>

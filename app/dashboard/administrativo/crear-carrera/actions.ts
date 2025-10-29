@@ -518,7 +518,6 @@ export async function actualizarPlanDeEstudios(
   planMateriaIdsAEliminar: number[]
 ): Promise<{ success: boolean } | { error: string }> {
     try {
-        // --- CORRECCIÓN 3 ---
         const supabase = await createClient();
 
         if (planMateriaIdsAEliminar.length > 0) {
@@ -564,5 +563,55 @@ export async function actualizarPlanDeEstudios(
     } catch (e: any) {
         console.error('Error al actualizar el plan de estudios:', e);
         return { error: `Error en el servidor: ${e.message}` };
+    }
+}
+
+/**
+ * Obtiene todas las materias disponibles que no están en un plan de estudios específico.
+ * 
+ * @param {number} planId - El ID del plan de estudios para excluir las materias que ya contiene.
+ * @returns {Promise<Array<{id: number, codigo_materia: string, nombre: string, descripcion: string | null}>>}
+ */
+export async function obtenerMateriasDisponiblesParaPlan(planId: number) {
+    try {
+        const supabase = await createClient();
+
+        // Paso 1: Obtener los IDs de todas las materias que YA están en el plan actual.
+        const { data: materiasEnPlan, error: errorExistentes } = await supabase
+            .from('plan_materia')
+            .select('materia_id')
+            .eq('plan_id', planId);
+
+        if (errorExistentes) {
+            console.error("Error al obtener las materias existentes en el plan:", errorExistentes);
+            return []; // Devolver vacío en caso de error
+        }
+
+        // Creamos un array solo con los IDs para usarlo en el filtro.
+        const idsExcluir = materiasEnPlan.map(m => m.materia_id);
+
+        // Paso 2: Obtener todas las materias de la tabla 'materias' EXCLUYENDO las que ya están en el plan.
+        const query = supabase
+            .from('materias')
+            .select('id, codigo_materia, nombre, descripcion') // Seleccionamos solo los campos necesarios.
+            .order('nombre', { ascending: true }); // Las ordenamos alfabéticamente.
+        
+        // Si hay materias para excluir, aplicamos el filtro.
+        if (idsExcluir.length > 0) {
+            query.not('id', 'in', `(${idsExcluir.join(',')})`);
+        }
+
+        const { data: materiasDisponibles, error: errorBusqueda } = await query;
+
+        if (errorBusqueda) {
+            console.error("Error al buscar materias disponibles:", errorBusqueda);
+            return [];
+        }
+
+        return materiasDisponibles;
+
+    } catch (e) {
+        console.error('Error inesperado al buscar materias disponibles:', e);
+        return [];
     }
 }
