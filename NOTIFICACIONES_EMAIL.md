@@ -62,11 +62,27 @@ Sistema automático que notifica a los docentes cuando han transcurrido 2 semana
 
 ## 🚀 **Uso del Sistema**
 
-### **Ejecución Manual:**
+### **Ejecución Manual (Recomendado):**
+
+```
+# Página de testing interactiva
+http://localhost:3000/notificaciones-mail
+```
+
+### **Ejecución por Comando:**
 
 ```bash
-# Ejecutar verificación una vez
+# Ejecutar verificación desde terminal
 curl -X POST http://localhost:3000/api/check-notifications
+```
+
+### **Ejecución desde Navegador:**
+
+```javascript
+# En la consola del navegador (F12)
+fetch('/api/check-notifications', { method: 'POST' })
+  .then(r => r.json())
+  .then(console.log)
 ```
 
 ### **Automatización (Producción):**
@@ -132,15 +148,29 @@ await sgMail.send(msg);
 
 ### **Verificar Funcionamiento:**
 
+#### **Opción 1 - Página de Testing (Más Fácil):**
+
+```
+1. Ir a: http://localhost:3000/test-notifications-simple
+2. Hacer clic en "📧 Probar Notificaciones"
+3. Ver resultado en pantalla + logs en consola del navegador (F12)
+4. Ver emails simulados en la terminal del servidor
+```
+
+#### **Opción 2 - Comando curl:**
+
 ```bash
-# Ver si se ejecuta
+# Ejecutar desde terminal (nueva ventana)
 curl -X POST http://localhost:3000/api/check-notifications
 
 # Resultado esperado:
 {
   "success": true,
-  "mesasNotificadas": 2
+  "mesasNotificadas": 2,
+  "timestamp": "2025-10-29T..."
 }
+
+# Logs aparecen en la terminal donde corre npm run dev
 ```
 
 ## 🎯 **Flujo Completo de Ejemplo**

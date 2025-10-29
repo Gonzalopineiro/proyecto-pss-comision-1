@@ -507,3 +507,91 @@ export async function obtenerMateriasDisponiblesParaPlan(planId: number) {
         return [];
     }
 }
+
+export async function obtenerCorrelatividades(planId: number, materiaId: number) {
+  try {
+    const supabase = await createClient();
+    const { data: cursadoRows, error: errC } = await supabase
+      .from('correlatividades_cursado')
+      .select('correlativa_id')
+      .eq('plan_id', planId)
+      .eq('materia_id', materiaId);
+
+    const { data: finalRows, error: errF } = await supabase
+      .from('correlatividades_final')
+      .select('correlativa_id')
+      .eq('plan_id', planId)
+      .eq('materia_id', materiaId);
+
+    if (errC) {
+      console.error('Error al obtener correlativas cursado:', errC);
+    }
+    if (errF) {
+      console.error('Error al obtener correlativas final:', errF);
+    }
+
+    const idsCursado = (cursadoRows || []).map((r: any) => r.correlativa_id);
+    const idsFinal = (finalRows || []).map((r: any) => r.correlativa_id);
+    const allIds = Array.from(new Set([...idsCursado, ...idsFinal]));
+
+    let materiasMap: Record<number, any> = {};
+    if (allIds.length > 0) {
+      const { data: materias, error: errM } = await supabase
+        .from('materias')
+        .select('id, codigo_materia, nombre')
+        .in('id', allIds);
+      if (errM) {
+        console.error('Error al obtener datos de materias correlativas:', errM);
+      } else {
+        materiasMap = Object.fromEntries((materias || []).map((m: any) => [m.id, m]));
+      }
+    }
+
+    return {
+      cursado: (cursadoRows || []).map((r: any) => ({ correlativa_id: r.correlativa_id, materia: materiasMap[r.correlativa_id] || null })),
+      final: (finalRows || []).map((r: any) => ({ correlativa_id: r.correlativa_id, materia: materiasMap[r.correlativa_id] || null }))
+    };
+  } catch (e) {
+    console.error('Error inesperado al obtener correlatividades:', e);
+    return { cursado: [], final: [] };
+  }
+}
+
+export async function agregarCorrelativa(planId: number, materiaId: number, correlativaId: number, tipo: 'cursado' | 'final') {
+  try {
+    const supabase = await createClient();
+    const table = tipo === 'cursado' ? 'correlatividades_cursado' : 'correlatividades_final';
+    const { data, error } = await supabase
+      .from(table)
+      .insert({ plan_id: planId, materia_id: materiaId, correlativa_id: correlativaId });
+
+    if (error) {
+      console.error('Error al insertar correlativa:', error);
+      return { error: error.message || 'Error al agregar correlativa' };
+    }
+    return { success: true };
+  } catch (e: any) {
+    console.error('Error inesperado al agregar correlativa:', e);
+    return { error: e.message || 'Error inesperado' };
+  }
+}
+
+export async function quitarCorrelativa(planId: number, materiaId: number, correlativaId: number, tipo: 'cursado' | 'final') {
+  try {
+    const supabase = await createClient();
+    const table = tipo === 'cursado' ? 'correlatividades_cursado' : 'correlatividades_final';
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .match({ plan_id: planId, materia_id: materiaId, correlativa_id: correlativaId });
+
+    if (error) {
+      console.error('Error al eliminar correlativa:', error);
+      return { error: error.message || 'Error al eliminar correlativa' };
+    }
+    return { success: true };
+  } catch (e: any) {
+    console.error('Error inesperado al quitar correlativa:', e);
+    return { error: e.message || 'Error inesperado' };
+  }
+}
