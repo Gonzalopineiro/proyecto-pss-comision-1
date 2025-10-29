@@ -2,8 +2,14 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import ConfirmDialog from "@/components/ui/confirm-dialog";
-import { inscribirseEnMesa, MesaDisponible } from "./actions";
+import { Loader2 } from "lucide-react";
+import { 
+  inscribirseEnMesa, 
+  MesaDisponible, 
+  verificarCorrelativasFinales,
+  VerificacionCorrelativasFinales 
+} from "./actions";
+import CorrelativasFinalesModal from "./CorrelativasFinalesModal";
 
 interface Alumno {
   nombre: string;
@@ -24,14 +30,24 @@ export default function MesasTable({
 }: MesasTableProps) {
   const [mesas, setMesas] = useState<MesaDisponible[]>(initialMesas);
   const [selectedMesa, setSelectedMesa] = useState<MesaDisponible | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [verificacion, setVerificacion] = useState<VerificacionCorrelativasFinales | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [verificandoCorrelativas, setVerificandoCorrelativas] = useState(false);
+  const [inscribiendo, setInscribiendo] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   const totalPages = Math.ceil(mesas.length / ITEMS_PER_PAGE);
   const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIdx = startIdx + ITEMS_PER_PAGE;
   const currentMesas = mesas.slice(startIdx, endIdx);
+
+  const cerrarModal = () => {
+    setModalOpen(false);
+    setSelectedMesa(null);
+    setVerificacion(null);
+    setVerificandoCorrelativas(false);
+    setInscribiendo(false);
+  };
 
   function generarComprobante(mesa: MesaDisponible) {
     const fecha = new Date(mesa.fecha_examen).toLocaleDateString("es-AR");
@@ -54,44 +70,54 @@ export default function MesasTable({
     }
   }
 
-  function handleInscribirse(mesa: MesaDisponible) {
+  const manejarInscripcion = async (mesa: MesaDisponible) => {
+    console.log('🎯 INICIANDO manejarInscripcion para mesa:', mesa.id, 'materia:', mesa.materias?.nombre);
+    setVerificandoCorrelativas(true);
     setSelectedMesa(mesa);
-    setConfirmOpen(true);
-  }
-
-  async function doInscripcion() {
-    if (!selectedMesa) return;
-    setLoading(true);
+    
     try {
-      const formData = new FormData();
-      formData.append("mesaId", selectedMesa.id);
-      await inscribirseEnMesa(formData);
+      const materiaId = parseInt(mesa.materia_id);
+      console.log('📋 ID de materia obtenido:', materiaId);
+      
+      console.log('🔬 Verificando correlativas finales...');
+      const verificacionResult = await verificarCorrelativasFinales(materiaId);
+      console.log('📊 Resultado de verificación finales:', verificacionResult);
+      setVerificacion(verificacionResult);
+      setModalOpen(true);
+    } catch (error: any) {
+      console.error('❌ Error verificando correlativas finales:', error);
+      alert(error.message || 'Error al verificar correlativas para el final');
+      cerrarModal();
+    } finally {
+      setVerificandoCorrelativas(false);
+    }
+  };
 
+  const procederConInscripcion = async () => {
+    if (!selectedMesa || !verificacion) return;
+    
+    setInscribiendo(true);
+    try {
+      const materiaId = parseInt(selectedMesa.materia_id);
+      
+      await inscribirseEnMesa(selectedMesa.id, materiaId);
+      
+      // Actualizar el estado local
       setMesas((prev) =>
         prev.map((m) =>
           m.id === selectedMesa.id ? { ...m, ya_inscripto: true } : m
         )
       );
-      setConfirmOpen(false);
-      setSelectedMesa(null);
-    } catch (err) {
-      console.error(err);
-      alert("Error al inscribirse");
+      
+      alert('¡Inscripción exitosa al examen final!');
+      cerrarModal();
+    } catch (error: any) {
+      console.error('❌ Error en inscripción:', error);
+      alert(error.message || 'Error al inscribirse en el examen');
     } finally {
-      setLoading(false);
+      setInscribiendo(false);
     }
-  }
-
-  function getMesaMessage(mesa: MesaDisponible | null) {
-    if (!mesa) return "";
-    const fecha = new Date(mesa.fecha_examen).toLocaleDateString("es-AR");
-    return (
-      `¿Deseas inscribirte en el examen de ${mesa.materias?.nombre}?\n\n` +
-      `• Fecha: ${fecha}\n` +
-      `• Horario: ${mesa.hora_examen}\n` +
-      `• Ubicación: ${mesa.ubicacion}`
-    );
-  }
+  };
 
   return (
     <>
@@ -133,21 +159,32 @@ export default function MesasTable({
                     {mesa.ubicacion}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                    <Button
-                      size="sm"
-                      disabled={mesa.ya_inscripto}
-                      onClick={() => handleInscribirse(mesa)}
-                    >
-                      {mesa.ya_inscripto ? "Ya estás inscripto" : "Inscribirse"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={!mesa.ya_inscripto} // solo si está inscripto
-                      onClick={() => generarComprobante(mesa)}
-                    >
-                      Comprobante
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        disabled={mesa.ya_inscripto || verificandoCorrelativas}
+                        onClick={() => manejarInscripcion(mesa)}
+                      >
+                        {verificandoCorrelativas && selectedMesa?.id === mesa.id ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Verificando...
+                          </>
+                        ) : mesa.ya_inscripto ? (
+                          "Ya estás inscripto"
+                        ) : (
+                          "Inscribirse"
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!mesa.ya_inscripto}
+                        onClick={() => generarComprobante(mesa)}
+                      >
+                        Comprobante
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -191,18 +228,18 @@ export default function MesasTable({
         </div>
       </div>
 
-      <ConfirmDialog
-        isOpen={confirmOpen}
-        onClose={() => {
-          setConfirmOpen(false);
-          setSelectedMesa(null);
-        }}
-        title="Confirmar inscripción"
-        message={getMesaMessage(selectedMesa)}
-        onConfirm={doInscripcion}
-        confirmLabel="Sí, inscribirme"
-        cancelLabel="Cancelar"
-        loading={loading}
+      <CorrelativasFinalesModal
+        isOpen={modalOpen}
+        onClose={cerrarModal}
+        verificacion={verificacion}
+        mesaInfo={selectedMesa ? {
+          materia_nombre: selectedMesa.materias?.nombre || 'Materia desconocida',
+          fecha_examen: selectedMesa.fecha_examen,
+          hora_examen: selectedMesa.hora_examen,
+          ubicacion: selectedMesa.ubicacion
+        } : null}
+        onConfirm={procederConInscripcion}
+        isLoading={inscribiendo}
       />
     </>
   );
