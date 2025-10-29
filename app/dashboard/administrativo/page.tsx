@@ -217,6 +217,24 @@ export default function AdministrativoDashboard() {
                 </div>
               </div>
             </div>
+            
+            <h2 className="text-xl font-semibold mt-10 mb-4">Gestión Personal</h2>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Link href="/dashboard/user/perfil" className="block">
+                <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow hover:shadow-md transition-shadow">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                      <User className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="text-lg font-semibold">Modificar datos personales</div>
+                      <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">Actualiza tu información personal y datos de contacto</div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            </div>
           </div>
         </main>
       </div>

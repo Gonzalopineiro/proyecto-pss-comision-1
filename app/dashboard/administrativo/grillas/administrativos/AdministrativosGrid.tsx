@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import ConfirmDialog from '@/components/ui/confirm-dialog'
 import ConfirmationPopup from '@/components/ui/confirmation-popup'
+import EditUserModal from '@/components/ui/edit-user-modal'
 import { useUserRole } from '@/utils/hooks'
 
 interface Administrativo {
@@ -31,6 +32,9 @@ export default function AdministrativosGrid({ initialData }: { initialData: Admi
   const [showConfirmationPopup, setShowConfirmationPopup] = useState(false)
   const [adminName, setAdminName] = useState<string | null>(null)
   const [successType, setSuccessType] = useState<'deleted' | 'modified' | null>(null)
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [userToEdit, setUserToEdit] = useState<Administrativo | null>(null)
+  const [loadingEdit, setLoadingEdit] = useState(false)
   const router = useRouter()
 
   // On mount, check if another page set a success message (e.g. after editing an admin)
@@ -124,6 +128,55 @@ export default function AdministrativosGrid({ initialData }: { initialData: Admi
     }
   }
 
+  function handleEdit(admin: Administrativo) {
+    setUserToEdit(admin)
+    setEditModalOpen(true)
+  }
+
+  async function handleSaveEdit(editData: { email: string; telefono: string; direccion: string }) {
+    if (!userToEdit) return
+
+    setLoadingEdit(true)
+    try {
+      const res = await fetch('/api/administrativos/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: userToEdit.id,
+          email: editData.email,
+          telefono: editData.telefono,
+          direccion: editData.direccion
+        })
+      })
+
+      const json = await res.json()
+      if (json.success) {
+        // Actualizar los datos en la grilla
+        setData(prev => prev.map(admin => 
+          admin.id === userToEdit.id 
+            ? { ...admin, ...editData }
+            : admin
+        ))
+        
+        // Cerrar modal
+        setEditModalOpen(false)
+        setUserToEdit(null)
+        
+        // Mostrar mensaje de éxito
+        setAdminName(`${userToEdit.nombre} ${userToEdit.apellido}`)
+        setSuccessType('modified')
+        setShowConfirmationPopup(true)
+      } else {
+        alert('No se pudo actualizar: ' + (json.error || 'Error'))
+      }
+    } catch (err) {
+      console.error('Error al actualizar administrativo:', err)
+      alert('Error al actualizar administrativo')
+    } finally {
+      setLoadingEdit(false)
+    }
+  }
+
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
@@ -175,9 +228,14 @@ export default function AdministrativosGrid({ initialData }: { initialData: Admi
                 <td className="py-3">{a.email ?? '-'}</td>
                 <td className="py-3">
                   <div className="flex items-center gap-2">
-                    <Link href={`/dashboard/administrativo/modificar-administrativo?id=${a.id}`} className="">
-                      <Button size="sm" variant="outline">Modificar</Button>
-                    </Link>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => handleEdit(a)}
+                      disabled={loadingEdit}
+                    >
+                      ✏️ Modificar
+                    </Button>
                     {role === 'super' && (
                       <Button size="sm" variant="destructive" onClick={() => handleDelete(a)} disabled={loadingDelete && deletingId === a.id}>
                         {loadingDelete && deletingId === a.id ? 'Eliminando...' : 'Eliminar'}
@@ -236,6 +294,18 @@ export default function AdministrativosGrid({ initialData }: { initialData: Admi
           confirmLabel="Eliminar definitivamente"
           cancelLabel="Cancelar"
           loading={loadingDelete}
+        />
+
+        <EditUserModal
+          isOpen={editModalOpen}
+          user={userToEdit}
+          onClose={() => {
+            setEditModalOpen(false)
+            setUserToEdit(null)
+          }}
+          onSave={handleSaveEdit}
+          loading={loadingEdit}
+          userType="administrativo"
         />
     </Card>
   )

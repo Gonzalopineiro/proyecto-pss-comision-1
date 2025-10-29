@@ -27,6 +27,14 @@ export async function obtenerDocentesConMaterias() {
     return []
   }
   
+  console.log('=== obtenerDocentesConMaterias ===')
+  console.log('Data raw:', JSON.stringify(data?.[0], null, 2)) // Ver el primer docente
+  console.log('Campos disponibles en primer docente:', data?.[0] ? Object.keys(data[0]) : 'No hay datos')
+  if (data?.[0]) {
+    console.log('Telefono:', data[0].telefono)
+    console.log('Direccion completa:', data[0].direccion_completa)
+  }
+  
   // Transformar los datos para incluir un array de nombres de materias
   const docentesConMaterias = data?.map(docente => {
     
