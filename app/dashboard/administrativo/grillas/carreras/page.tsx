@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { obtenerCarreras, type CarreraCompleta } from '@/app/dashboard/administrativo/crear-carrera/actions';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -20,7 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import { CarreraActions } from './carrera-actions'; 
 
 export default function CarrerasPage() {
@@ -117,6 +118,12 @@ export default function CarrerasPage() {
                   <SelectItem value="inactivo">Inactivo</SelectItem>
                 </SelectContent>
               </Select>
+              <Link href="/dashboard/administrativo/crear-carrera" passHref>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Añadir Nueva Carrera
+                </Button>
+              </Link>
             </div>
           </div>
           <div className="text-sm text-gray-500 mt-4">
