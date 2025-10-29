@@ -40,9 +40,6 @@ interface DocentesViewProps {
 }
 
 export default function DocentesView({ docentes }: DocentesViewProps) {
-  console.log('🎯 DOCENTES VIEW CARGADO - Total docentes:', docentes?.length)
-  console.log('🎯 Primer docente completo:', docentes?.[0])
-  
   const [isAsignarDialogOpen, setIsAsignarDialogOpen] = useState(false);
   const [isDesasignarDialogOpen, setIsDesasignarDialogOpen] = useState(false);
   const [isModificarPopupOpen, setIsModificarPopupOpen] = useState(false);
@@ -82,9 +79,11 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
       materiaNombre
     );
 
-    // Si fue exitoso, recargar los datos
+    // Si fue exitoso, mostrar mensaje de éxito
     if (result.success) {
-      router.refresh();
+      setIsAsignarDialogOpen(false);
+      setSuccessMessage(`Materia asignada exitosamente al docente ${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido}`);
+      setShowSuccessPopup(true);
     }
 
     return result;
@@ -119,9 +118,12 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
       const result = await eliminarDocente(docenteSeleccionado.id);
 
       if (result.success) {
-        // Cerrar el popup y recargar la página
+        // Cerrar el popup de eliminación
         setIsEliminarPopupOpen(false);
-        router.refresh();
+        
+        // Mostrar mensaje de éxito
+        setSuccessMessage(result.mensaje || `El docente ${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido} ha sido eliminado exitosamente`);
+        setShowSuccessPopup(true);
       } else {
         setErrorEliminar(result.error || 'Error al eliminar el docente');
       }
@@ -162,7 +164,9 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
 
 
     if (result.success) {
-      router.refresh();
+      setIsDesasignarDialogOpen(false);
+      setSuccessMessage(result.mensaje || `Materias desasignadas exitosamente del docente ${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido}`);
+      setShowSuccessPopup(true);
     }
 
     return result;
@@ -170,9 +174,6 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
 
   // Funciones para editar docente
   function handleEdit(docente: Docente) {
-    console.log('🔧 Debug - handleEdit docente:', docente)
-    console.log('🔧 Debug - Telefono:', docente.telefono)
-    console.log('🔧 Debug - Direccion completa:', docente.direccion_completa)
     setDocenteToEdit(docente)
     setEditModalOpen(true)
   }
@@ -405,7 +406,7 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
       userType="docente"
     />
 
-    {/* Popup de éxito para modificar docente */}
+    {/* Popup de éxito para operaciones exitosas */}
     <ConfirmationPopup
       isOpen={showSuccessPopup}
       onClose={() => {
@@ -413,7 +414,7 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
         // Refrescar la página para mostrar los cambios
         window.location.reload()
       }}
-      title="¡Docente Actualizado con Éxito!"
+      title="¡Operación Exitosa!"
       message={successMessage}
     />
 

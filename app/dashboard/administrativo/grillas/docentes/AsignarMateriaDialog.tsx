@@ -60,16 +60,11 @@ export default function AsignarMateriaDialog({
       const result = await onAsignar(materiaId.trim(), materiaNombre.trim())
 
       if (result.success) {
-        // Mostrar mensaje de éxito
-        setMensaje('Materia asignada exitosamente')
+        // Limpiar el formulario
         setMateriaId('')
         setMaterialNombre('')
         setError('')
-        
-        // Esperar un momento para mostrar el mensaje y luego recargar
-        setTimeout(() => {
-          window.location.reload()
-        }, 1500)
+        // El componente padre se encargará de mostrar el mensaje de éxito y recargar
       } else {
         // Mostrar error del servidor
         setError(result.error || 'Error al asignar la materia')
