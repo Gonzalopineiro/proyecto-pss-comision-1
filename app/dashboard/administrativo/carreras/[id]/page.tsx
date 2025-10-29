@@ -11,23 +11,25 @@ import {
     obtenerMateriasDisponiblesParaPlan 
 } from '@/app/dashboard/administrativo/crear-carrera/actions';
 
-// Importa los componentes UI que necesites
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Edit, Trash2, Plus, Search, Loader2 } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Plus, Search, Loader2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { Separator } from '@/components/ui/separator';
 
-// Tipos de datos para el estado
 type CarreraDetalles = Awaited<ReturnType<typeof obtenerDetallesCompletosCarrera>>;
 type MateriaPlan = NonNullable<CarreraDetalles>['materias_plan'][0] & { plan_materia_id?: number };
 type MateriaDisponible = Awaited<ReturnType<typeof buscarMateriasDisponibles>>[0];
 
-// --- Componente principal de la página ---
+type MateriaPendiente = {
+    materia: MateriaDisponible;
+    anio: string;
+};
+
 export default function ModificarCarreraPage() {
-    // ... (El código de este componente principal no cambia, se mantiene igual) ...
     const params = useParams();
     const router = useRouter();
     const carreraId = Number(params.id);
@@ -36,31 +38,33 @@ export default function ModificarCarreraPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [vistaActual, setVistaActual] = useState<'carrera' | 'plan'>('carrera');
     
-    // Estados para el formulario de Carrera
     const [departamento, setDepartamento] = useState('');
     const [descripcion, setDescripcion] = useState('');
     const [departamentosDisponibles, setDepartamentosDisponibles] = useState<string[]>([]);
 
-    useEffect(() => {
-        if (!carreraId) return;
-
-        async function cargarDatos() {
-            setIsLoading(true);
-            const data = await obtenerDetallesCompletosCarrera(carreraId);
+    const cargarDatosCarrera = async () => {
+        setIsLoading(true);
+        const data = await obtenerDetallesCompletosCarrera(carreraId);
+        
+        if (departamentosDisponibles.length === 0) {
             const deptos = await obtenerDepartamentos();
             setDepartamentosDisponibles(deptos);
-            setCarrera(data);
-            if (data) {
-                setDepartamento(data.departamento || '');
-            }
-            setIsLoading(false);
         }
-        cargarDatos();
+        
+        setCarrera(data);
+        if (data) {
+            setDepartamento(data.departamento || '');
+        }
+        setIsLoading(false);
+    };
+
+    useEffect(() => {
+        if (!carreraId) return;
+        cargarDatosCarrera();
     }, [carreraId]);
     
     const handleGuardarCambiosCarrera = async () => {
         const result = await actualizarCarrera(carreraId, { departamento, descripcion });
-        // --- CORRECCIÓN 1 (APLICADA TAMBIÉN EN EL OTRO COMPONENTE) ---
         if (result && 'error' in result) {
             toast.error(result.error);
         } else {
@@ -78,7 +82,6 @@ export default function ModificarCarreraPage() {
 
     return (
         <div className="container mx-auto py-8">
-            {/* ... (código de la vista 'carrera' se mantiene igual) ... */}
             {vistaActual === 'carrera' && (
                 <div>
                     <div className="flex justify-between items-center mb-6">
@@ -95,7 +98,6 @@ export default function ModificarCarreraPage() {
                     </div>
                     
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Columna Izquierda: Datos de la Carrera */}
                         <div className="space-y-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Nombre de la Carrera</label>
@@ -117,8 +119,6 @@ export default function ModificarCarreraPage() {
                                 </Select>
                             </div>
                         </div>
-
-                        {/* Columna Derecha: Descripción y Plan de Estudios */}
                         <div className="space-y-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Descripción de la Carrera *</label>
@@ -150,81 +150,96 @@ export default function ModificarCarreraPage() {
                     plan={carrera.plan_de_estudio}
                     materiasIniciales={carrera.materias_plan}
                     onVolver={() => setVistaActual('carrera')}
+                    onGuardadoExitoso={cargarDatosCarrera}
                 />
             )}
         </div>
     );
 }
 
-
-// --- Sub-componente para la lógica del Plan de Estudios ---
-function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: any, materiasIniciales: MateriaPlan[], onVolver: () => void }) {
+function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver, onGuardadoExitoso }: { plan: any, materiasIniciales: MateriaPlan[], onVolver: () => void, onGuardadoExitoso: () => Promise<void> }) {
     const [materiasPlan, setMateriasPlan] = useState<MateriaPlan[]>(materiasIniciales);
     const [isSaving, setIsSaving] = useState(false);
-
-    // Estado para "Agregar Materias"
     const [busquedaMateria, setBusquedaMateria] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [materiasDisponibles, setMateriasDisponibles] = useState<MateriaDisponible[]>([]);
-    const [isLoadingDisponibles, setIsLoadingDisponibles] = useState(true); // Estado de carga inicial
+    const [isLoadingDisponibles, setIsLoadingDisponibles] = useState(true);
+    const [materiasPendientes, setMateriasPendientes] = useState<MateriaPendiente[]>([]);
 
-    // --- CAMBIO PRINCIPAL: Cargar todas las materias disponibles al inicio ---
+    const duracionString = plan.duracion || '6';
+    const match = duracionString.match(/\d+/);
+    const maxAnios = match ? parseInt(match[0], 10) : 6;
+    const aniosDisponibles = Array.from({ length: maxAnios }, (_, i) => i + 1);
+
     useEffect(() => {
-        async function cargarMateriasDisponibles() {
-            setIsLoadingDisponibles(true);
-            const resultados = await obtenerMateriasDisponiblesParaPlan(plan.id);
-            setMateriasDisponibles(resultados);
-            setIsLoadingDisponibles(false);
-        }
-        
+        setMateriasPlan(materiasIniciales);
+    }, [materiasIniciales]);
+
+    const cargarMateriasDisponibles = async () => {
+        setIsLoadingDisponibles(true);
+        const resultados = await obtenerMateriasDisponiblesParaPlan(plan.id);
+        setMateriasDisponibles(resultados);
+        setIsLoadingDisponibles(false);
+    };
+    
+    useEffect(() => {
         cargarMateriasDisponibles();
-    }, [plan.id]); // Se ejecuta cuando el componente se monta
+    }, [plan.id]);
 
     const handleBuscarMateria = async () => {
-        // La búsqueda sigue funcionando, pero ahora filtra la lista que ya tenemos o hace una nueva llamada
         if (busquedaMateria.trim().length < 2) {
             toast.info('Ingrese al menos 2 caracteres para buscar.');
             return;
         }
         setIsSearching(true);
         const resultados = await buscarMateriasDisponibles(plan.id, busquedaMateria);
-        setMateriasDisponibles(resultados); // La búsqueda reemplaza la lista inicial con sus resultados
+        setMateriasDisponibles(resultados);
         setIsSearching(false);
     };
 
-    const handleAgregarMateria = (materia: MateriaDisponible) => {
-        if (materiasPlan.some(m => m.materia_id === materia.id)) {
-            toast.warning('Esta materia ya se encuentra en el plan.');
-            return;
-        }
-        
-        const nuevaMateria: MateriaPlan = {
-            plan_materia_id: undefined, 
-            plan_id: plan.id,
-            materia_id: materia.id,
-            anio: 1,
-            cuatrimestre: 1,
-            codigo_materia: materia.codigo_materia,
-            nombre_materia: materia.nombre,
-            // Usamos la descripción de la tabla `materias`
-            descripcion_materia: materia.descripcion || '',
-            estudiantes_activos: 0,
-        };
-
-        setMateriasPlan(prev => [...prev, nuevaMateria]);
-        // Importante: quitamos la materia agregada de la lista de disponibles para no poder agregarla 2 veces
+    const handleMoverAPendientes = (materia: MateriaDisponible) => {
+        setMateriasPendientes(prev => [...prev, { materia: materia, anio: '1' }]);
         setMateriasDisponibles(prev => prev.filter(m => m.id !== materia.id));
-        toast.success(`${materia.nombre} fue agregada al plan.`);
     };
 
-    // El resto de funciones (handleEliminarMateria, handleGuardarCambios, etc.) no necesitan cambios
+    const handleAnioPendienteChange = (materiaId: number, nuevoAnio: string) => {
+        setMateriasPendientes(prev => 
+            prev.map(p => 
+                p.materia.id === materiaId ? { ...p, anio: nuevoAnio } : p
+            )
+        );
+    };
+
+    const handleConfirmarAgregarMateria = (materiaPendiente: MateriaPendiente) => {
+        const nuevaMateria: MateriaPlan = {
+            plan_materia_id: undefined,
+            plan_id: plan.id,
+            materia_id: materiaPendiente.materia.id,
+            anio: Number(materiaPendiente.anio),
+            cuatrimestre: 1,
+            codigo_materia: materiaPendiente.materia.codigo_materia,
+            nombre_materia: materiaPendiente.materia.nombre,
+            descripcion_materia: materiaPendiente.materia.descripcion || '',
+            estudiantes_activos: 0,
+        };
+        
+        setMateriasPlan(prev => [...prev, nuevaMateria].sort((a,b) => (a.anio || 0) - (b.anio || 0)));
+        setMateriasPendientes(prev => prev.filter(p => p.materia.id !== materiaPendiente.materia.id));
+        
+        toast.success(`"${nuevaMateria.nombre_materia}" agregada al Año ${nuevaMateria.anio}.`);
+    };
+
+    const handleCancelarPendiente = (materiaPendiente: MateriaPendiente) => {
+        setMateriasPendientes(prev => prev.filter(p => p.materia.id !== materiaPendiente.materia.id));
+        setMateriasDisponibles(prev => [...prev, materiaPendiente.materia].sort((a,b) => a.nombre.localeCompare(b.nombre)));
+    };
+
     const handleEliminarMateria = (idMateriaAEliminar: number | undefined, nombreMateria: string) => {
         setMateriasPlan(prev => prev.filter(m => {
             if (idMateriaAEliminar) return m.plan_materia_id !== idMateriaAEliminar;
             return m.nombre_materia !== nombreMateria;
         }));
         toast.info(`${nombreMateria} fue quitada del plan.`);
-        // Opcional: podrías volver a agregar la materia a la lista de disponibles si lo deseas
     };
 
     const handleGuardarCambios = async () => {
@@ -250,7 +265,8 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: 
             toast.error(result.error);
         } else {
             toast.success('¡Plan de estudios actualizado con éxito!');
-            onVolver();
+            await onGuardadoExitoso();
+            await cargarMateriasDisponibles();
         }
         setIsSaving(false);
     };
@@ -264,7 +280,6 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: 
 
     return (
         <div>
-            {/* El header y la columna izquierda no cambian */}
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h1 className="text-3xl font-bold">Modificar Plan de Estudios</h1>
@@ -284,7 +299,6 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: 
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">
-                    {/* La card de "Materias del Plan Actual" no cambia */}
                     <Card>
                         <CardHeader><CardTitle>Materias del Plan Actual</CardTitle></CardHeader>
                         <CardContent>
@@ -311,8 +325,6 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: 
                         </CardContent>
                     </Card>
                 </div>
-
-                {/* Columna Derecha: Herramientas (CON CAMBIOS EN EL RENDERIZADO) */}
                 <div className="space-y-6">
                      <Card>
                         <CardHeader><CardTitle>Agregar Materias</CardTitle></CardHeader>
@@ -328,9 +340,39 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: 
                                     {isSearching ? <Loader2 className="h-4 w-4 animate-spin"/> : <Search className="h-4 w-4"/>}
                                 </Button>
                             </div>
+                            
+                            {materiasPendientes.length > 0 && (
+                                <div className="space-y-3 pt-2">
+                                    <h4 className="text-sm font-semibold text-gray-800">Materias por Confirmar</h4>
+                                    {materiasPendientes.map(p => (
+                                        <div key={p.materia.id} className="p-2 border rounded-md bg-yellow-50/50 space-y-2">
+                                            <p className="font-semibold text-sm">{p.materia.nombre}</p>
+                                            <div className="flex items-center gap-2">
+                                                <Select value={p.anio} onValueChange={(nuevoAnio) => handleAnioPendienteChange(p.materia.id, nuevoAnio)}>
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {aniosDisponibles.map(año => (
+                                                            <SelectItem key={año} value={String(año)}>{`${año}º Año`}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => handleCancelarPendiente(p)}>
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                                <Button size="icon" className="h-8 w-8 bg-green-600 hover:bg-green-700" onClick={() => handleConfirmarAgregarMateria(p)}>
+                                                    <Check className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <Separator className="my-4"/>
+                                </div>
+                            )}
+
                             <p className="text-sm font-semibold">Materias Disponibles</p>
-                            {/* --- ÁREA DE RENDERIZADO MODIFICADA --- */}
-                            <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                            <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                                {isLoadingDisponibles ? (
                                    <div className="text-center py-4">
                                        <Loader2 className="h-5 w-5 animate-spin mx-auto text-gray-400"/>
@@ -340,7 +382,7 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver }: { plan: 
                                     materiasDisponibles.map(m => (
                                         <div key={m.id} className="p-2 border rounded flex justify-between items-center text-sm">
                                             <span className="flex-grow pr-2">{m.codigo_materia} - {m.nombre}</span>
-                                            <Button size="icon" variant="ghost" className="h-7 w-7 flex-shrink-0" onClick={() => handleAgregarMateria(m)}>
+                                            <Button size="icon" variant="ghost" className="h-7 w-7 flex-shrink-0" onClick={() => handleMoverAPendientes(m)}>
                                                 <Plus className="h-4 w-4 text-green-600"/>
                                             </Button>
                                         </div>

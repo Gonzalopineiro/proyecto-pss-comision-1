@@ -3,9 +3,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-/**
- * Interfaz para los datos de la carrera
- */
 export interface CarreraData {
   nombre: string
   codigo: string
@@ -22,13 +19,6 @@ export type CarreraCompleta = {
   inscriptos: number;
 };
 
-
-
-/**
- * Obtiene la lista de departamentos disponibles
- * 
- * @returns {Promise<string[]>} - Lista de departamentos disponibles
- */
 export async function obtenerDepartamentos(): Promise<string[]> {
   return [
     'Agronomía',
@@ -51,17 +41,10 @@ export async function obtenerDepartamentos(): Promise<string[]> {
   ]
 }
 
-/**
- * Crea una nueva carrera en la base de datos
- * 
- * @param {CarreraData} data - Datos de la carrera a crear
- * @returns {Promise<{ id: number } | { error: string }>} - ID de la carrera creada o mensaje de error
- */
 export async function crearCarrera(
   data: CarreraData
 ): Promise<{ id: number } | { error: string }> {
   try {
-    // Validar datos obligatorios
     if (!data.nombre || !data.codigo || !data.plan_de_estudio_id) {
       return { 
         error: 'Faltan campos obligatorios: nombre, código y plan de estudio son requeridos' 
@@ -70,7 +53,6 @@ export async function crearCarrera(
 
     const supabase = await createClient()
     
-    // Verificar si ya existe una carrera con el mismo código
     const { data: existente, error: errorVerificacion } = await supabase
       .from('carreras')
       .select('id')
@@ -86,7 +68,6 @@ export async function crearCarrera(
       return { error: 'Ya existe una carrera con el código especificado' }
     }
 
-    // Verificar que el plan de estudio exista
     const { data: planExistente, error: errorPlan } = await supabase
       .from('plan_de_estudios')
       .select('id')
@@ -102,7 +83,6 @@ export async function crearCarrera(
       return { error: 'El plan de estudios seleccionado no existe' }
     }
     
-    // Insertar la nueva carrera
     const { data: nuevaCarrera, error } = await supabase
       .from('carreras')
       .insert({
@@ -119,7 +99,6 @@ export async function crearCarrera(
       return { error: `Error al crear la carrera: ${error.message}` }
     }
     
-    // Revalidar las rutas que podrían mostrar la nueva carrera
     revalidatePath('/dashboard/administrativo')
     
     return { id: nuevaCarrera.id }
@@ -130,12 +109,6 @@ export async function crearCarrera(
   }
 }
 
-/**
- * Verifica si ya existe una carrera con el nombre dado
- * 
- * @param {string} nombre - Nombre de la carrera a verificar
- * @returns {Promise<boolean>} - true si existe, false si no existe
- */
 export async function verificarCarreraExistente(nombre: string): Promise<boolean> {
   try {
     const supabase = await createClient()
@@ -157,12 +130,6 @@ export async function verificarCarreraExistente(nombre: string): Promise<boolean
   }
 }
 
-/**
- * Verifica si ya existe una carrera con el código dado
- * 
- * @param {string} codigo - Código de la carrera a verificar
- * @returns {Promise<boolean>} - true si existe, false si no existe
- */
 export async function verificarCodigoExistente(codigo: string): Promise<boolean> {
   try {
     const supabase = await createClient()
@@ -184,16 +151,10 @@ export async function verificarCodigoExistente(codigo: string): Promise<boolean>
   }
 }
 
-/**
- * Obtiene todas las carreras desde la vista definitiva 'vista_grilla_carreras'
- * 
- * @returns {Promise<CarreraCompleta[] | null>} - Lista de carreras o null en caso de error
- */
 export async function obtenerCarreras(): Promise<CarreraCompleta[] | null> {
   try {
     const supabase = await createClient()
     
-    // Consultamos la nueva y única vista 'vista_grilla_carreras'
     const { data, error } = await supabase
       .from('vista_grilla_carreras')
       .select('id, nombre, codigo, departamento, duracion, inscriptos')
@@ -211,12 +172,6 @@ export async function obtenerCarreras(): Promise<CarreraCompleta[] | null> {
   }
 }
 
-/**
- * Obtiene los detalles de una carrera por su ID
- * 
- * @param {number} carreraId - ID de la carrera
- * @returns {Promise<Object | null>} - Datos de la carrera o null en caso de error
- */
 export async function obtenerCarreraPorId(carreraId: number) {
   try {
     const supabase = await createClient()
@@ -242,11 +197,6 @@ export async function obtenerCarreraPorId(carreraId: number) {
   }
 }
 
-/**
- * Obtiene todos los planes de estudio disponibles
- * 
- * @returns {Promise<Array<Object> | null>} - Lista de planes de estudio o null en caso de error
- */
 export async function obtenerPlanesDeEstudio() {
   try {
     const supabase = await createClient()
@@ -268,22 +218,14 @@ export async function obtenerPlanesDeEstudio() {
   }
 }
 
-/**
- * Genera un código único para la carrera basado en el departamento y un contador
- * 
- * @param {string} departamento - Nombre del departamento
- * @returns {Promise<string>} - Código generado para la carrera
- */
 export async function generarCodigoCarrera(departamento: string): Promise<string> {
-  // Obtener el prefijo del departamento (primeras letras de cada palabra)
   const prefijo = departamento
     .split(' ')
     .map(word => word.charAt(0).toUpperCase())
     .join('')
-    .substring(0, 3); // Tomar máximo 3 letras
+    .substring(0, 3);
   
   try {
-    // Obtener el número de carreras existentes para ese departamento
     const supabase = await createClient()
     const { count, error } = await supabase
       .from('carreras')
@@ -294,7 +236,6 @@ export async function generarCodigoCarrera(departamento: string): Promise<string
       console.error('Error al contar carreras del departamento:', error)
     }
     
-    // Número de carreras + 1, formateado con ceros a la izquierda (001, 002, etc.)
     const contador = String((count || 0) + 1).padStart(3, '0')
     const año = new Date().getFullYear()
     
@@ -302,27 +243,19 @@ export async function generarCodigoCarrera(departamento: string): Promise<string
   } catch (e) {
     console.error('Error al generar código de carrera:', e)
     
-    // En caso de error, crear un código con un número aleatorio
-    const random = Math.floor(100 + Math.random() * 900) // Número aleatorio entre 100 y 999
+    const random = Math.floor(100 + Math.random() * 900)
     const año = new Date().getFullYear()
     
     return `${prefijo}-${año}-${random}`
   }
 }
 
-/**
- * Elimina una carrera por su ID, verificando que no tenga estudiantes activos.
- * 
- * @param {number} carreraId - ID de la carrera a eliminar
- * @returns {Promise<{ success: boolean } | { error: string }>} - Resultado de la operación
- */
 export async function eliminarCarrera(
   carreraId: number
 ): Promise<{ success: boolean } | { error: string }> {
   try {
     const supabase = await createClient()
     
-    // 1. Verificar si la carrera tiene estudiantes activos usando la vista
     const { data: carrera, error: chequeoError } = await supabase
       .from('vista_grilla_carreras')
       .select('inscriptos')
@@ -334,12 +267,10 @@ export async function eliminarCarrera(
       return { error: 'Error al verificar los datos de la carrera.' };
     }
 
-    // 2. Aplicar el criterio de aceptación
     if (carrera && carrera.inscriptos > 0) {
       return { error: 'No se puede eliminar la carrera porque tiene estudiantes activos.' };
     }
     
-    // 3. Si no hay inscriptos, proceder con la eliminación desde la tabla original 'carreras'
     const { error: deleteError } = await supabase
       .from('carreras')
       .delete()
@@ -362,7 +293,6 @@ export async function eliminarCarrera(
 
 export async function obtenerDetallesCompletosCarrera(carreraId: number) {
   try {
-    // --- CORRECCIÓN 3 (APLICADA EN TODAS LAS FUNCIONES NUEVAS) ---
     const supabase = await createClient();
 
     const { data: carrera, error: errorCarrera } = await supabase
@@ -375,7 +305,8 @@ export async function obtenerDetallesCompletosCarrera(carreraId: number) {
         plan_de_estudio: plan_de_estudios (
           id,
           nombre,
-          anio_creacion
+          anio_creacion,
+          duracion
         )
       `)
       .eq('id', carreraId)
@@ -414,14 +345,6 @@ export async function obtenerDetallesCompletosCarrera(carreraId: number) {
   }
 }
 
-
-/**
- * Actualiza los datos de una carrera existente.
- * 
- * @param {number} carreraId - ID de la carrera a actualizar
- * @param {{ departamento?: string; descripcion?: string }} data - Datos a actualizar
- * @returns {Promise<{ success: boolean } | { error: string }>} - Resultado de la operación
- */
 export async function actualizarCarrera(
   carreraId: number,
   data: { departamento?: string; descripcion?: string }
@@ -433,9 +356,6 @@ export async function actualizarCarrera(
       .from('carreras')
       .update({
         departamento: data.departamento,
-        // Asumiendo que tu tabla 'carreras' tiene una columna 'descripcion'
-        // Si no la tiene, puedes eliminar la línea siguiente.
-        // descripcion: data.descripcion 
       })
       .eq('id', carreraId);
 
@@ -454,17 +374,8 @@ export async function actualizarCarrera(
   }
 }
 
-
-/**
- * Busca materias que no están actualmente en un plan de estudios.
- * 
- * @param {number} planId - El ID del plan de estudios para excluir materias.
- * @param {string} terminoBusqueda - El código o nombre de la materia a buscar.
- * @returns {Promise<Array<{id: number, codigo_materia: string, nombre: string, descripcion: string | null}>>}
- */
 export async function buscarMateriasDisponibles(planId: number, terminoBusqueda: string) {
     try {
-        // --- CORRECCIÓN 3 ---
         const supabase = await createClient();
 
         const { data: materiasEnPlan, error: errorExistentes } = await supabase
@@ -484,7 +395,6 @@ export async function buscarMateriasDisponibles(planId: number, terminoBusqueda:
             .select('id, codigo_materia, nombre, descripcion')
             .or(`codigo_materia.ilike.%${terminoBusqueda}%,nombre.ilike.%${terminoBusqueda}%`);
         
-        // Solo aplicar el filtro .not si hay IDs para excluir
         if (idsExcluir.length > 0) {
             query.not('id', 'in', `(${idsExcluir.join(',')})`);
         }
@@ -504,14 +414,6 @@ export async function buscarMateriasDisponibles(planId: number, terminoBusqueda:
     }
 }
 
-/**
- * Actualiza el plan de estudios agregando y eliminando materias.
- * 
- * @param {number} planId - ID del plan de estudios a modificar.
- * @param {Array<{materia_id: number, anio: number, cuatrimestre: number}>} materiasAAgregar - Materias para insertar en plan_materia.
- * @param {number[]} planMateriaIdsAEliminar - IDs de la tabla `plan_materia` para eliminar.
- * @returns {Promise<{ success: boolean } | { error: string }>}
- */
 export async function actualizarPlanDeEstudios(
   planId: number,
   materiasAAgregar: { materia_id: number, anio: number | null, cuatrimestre: number | null }[],
@@ -557,7 +459,7 @@ export async function actualizarPlanDeEstudios(
         }
 
         revalidatePath(`/dashboard/administrativo/carreras`);
-        revalidatePath(`/dashboard/administrativo/carreras/${planId}`); // Asumiendo que la ruta es por planId o carreraId
+        revalidatePath(`/dashboard/administrativo/carreras/${planId}`);
         return { success: true };
 
     } catch (e: any) {
@@ -566,17 +468,10 @@ export async function actualizarPlanDeEstudios(
     }
 }
 
-/**
- * Obtiene todas las materias disponibles que no están en un plan de estudios específico.
- * 
- * @param {number} planId - El ID del plan de estudios para excluir las materias que ya contiene.
- * @returns {Promise<Array<{id: number, codigo_materia: string, nombre: string, descripcion: string | null}>>}
- */
 export async function obtenerMateriasDisponiblesParaPlan(planId: number) {
     try {
         const supabase = await createClient();
 
-        // Paso 1: Obtener los IDs de todas las materias que YA están en el plan actual.
         const { data: materiasEnPlan, error: errorExistentes } = await supabase
             .from('plan_materia')
             .select('materia_id')
@@ -584,19 +479,16 @@ export async function obtenerMateriasDisponiblesParaPlan(planId: number) {
 
         if (errorExistentes) {
             console.error("Error al obtener las materias existentes en el plan:", errorExistentes);
-            return []; // Devolver vacío en caso de error
+            return [];
         }
 
-        // Creamos un array solo con los IDs para usarlo en el filtro.
         const idsExcluir = materiasEnPlan.map(m => m.materia_id);
 
-        // Paso 2: Obtener todas las materias de la tabla 'materias' EXCLUYENDO las que ya están en el plan.
         const query = supabase
             .from('materias')
-            .select('id, codigo_materia, nombre, descripcion') // Seleccionamos solo los campos necesarios.
-            .order('nombre', { ascending: true }); // Las ordenamos alfabéticamente.
+            .select('id, codigo_materia, nombre, descripcion')
+            .order('nombre', { ascending: true });
         
-        // Si hay materias para excluir, aplicamos el filtro.
         if (idsExcluir.length > 0) {
             query.not('id', 'in', `(${idsExcluir.join(',')})`);
         }
