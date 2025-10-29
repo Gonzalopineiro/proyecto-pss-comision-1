@@ -1,94 +1,137 @@
-"use client"
-import { Card } from "@/components/ui/card"
-import React, { useState } from "react"
-import { Button } from "@/components/ui/button"
-import ConfirmDialog from "@/components/ui/confirm-dialog"
-import { inscribirseEnCursada } from "./actions"
+"use client";
+import { Card } from "@/components/ui/card";
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
+import { inscribirseEnCursada } from "./actions";
 
 export type Cursada = {
-  id: number
-  cupo_maximo: number | null
+  id: number;
+  cupo_maximo: number | null;
   horarios: {
     horarios: Array<{
-      dia: string
-      hora_inicio: string
-      hora_fin: string
-      aula: string
-    }>
-  } | null
+      dia: string;
+      hora_inicio: string;
+      hora_fin: string;
+      aula: string;
+    }>;
+  } | null;
   materia_docente: {
     materia: {
-      nombre: string
-      codigo_materia: string
-    }
+      nombre: string;
+      codigo_materia: string;
+    };
     docente: {
-      nombre: string
-      apellido: string
-    }
-  }
+      nombre: string;
+      apellido: string;
+    };
+  };
+};
+
+interface Alumno {
+  nombre: string;
+  legajo: string;
+  mail: string;
 }
 
 interface CursadasTableProps {
-  cursadas: Cursada[]
-  cursadasInscripto: Set<number>
+  cursadas: Cursada[];
+  cursadasInscripto: Set<number>;
+  alumno: Alumno;
 }
 
-const ITEMS_PER_PAGE = 6
+const ITEMS_PER_PAGE = 6;
 
-export default function CursadasTable({ cursadas, cursadasInscripto }: CursadasTableProps) {
-  const [currentPage, setCurrentPage] = useState(1)
-  const [selectedCursada, setSelectedCursada] = useState<Cursada | null>(null)
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
+export default function CursadasTable({
+  cursadas,
+  cursadasInscripto,
+  alumno,
+}: CursadasTableProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedCursada, setSelectedCursada] = useState<Cursada | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const totalPages = Math.ceil(cursadas.length / ITEMS_PER_PAGE)
-  const startIdx = (currentPage - 1) * ITEMS_PER_PAGE
-  const endIdx = startIdx + ITEMS_PER_PAGE
-  const currentCursadas = cursadas.slice(startIdx, endIdx)
+  const totalPages = Math.ceil(cursadas.length / ITEMS_PER_PAGE);
+  const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIdx = startIdx + ITEMS_PER_PAGE;
+  const currentCursadas = cursadas.slice(startIdx, endIdx);
+
+  function generarComprobante(cursada: Cursada, alumno: Alumno) {
+    const horariosText =
+      cursada.horarios?.horarios
+        ?.map((h) => `${h.dia} ${h.hora_inicio}-${h.hora_fin} (${h.aula})`)
+        .join("<br>") || "—";
+
+    const contenido = `
+    <h1>Comprobante de Inscripción</h1>
+    <p><strong>Alumno:</strong> ${alumno.nombre}</p>
+    <p><strong>Legajo:</strong> ${alumno.legajo}</p>
+    <p><strong>Mail:</strong> ${alumno.mail}</p>
+    <p><strong>Materia:</strong> ${cursada.materia_docente.materia.nombre}</p>
+    <p><strong>Código:</strong> ${
+      cursada.materia_docente.materia.codigo_materia
+    }</p>
+    <p><strong>Profesor:</strong> ${cursada.materia_docente.docente.nombre} ${
+      cursada.materia_docente.docente.apellido
+    }</p>
+    <p><strong>Cupo:</strong> ${cursada.cupo_maximo || "Sin límite"}</p>
+    <p><strong>Horarios:</strong><br>${horariosText}</p>
+    <p>Este comprobante certifica su inscripción en la cursada.</p>
+  `;
+    const ventana = window.open("", "_blank", "width=600,height=400");
+    if (ventana) {
+      ventana.document.write(contenido);
+      ventana.document.close();
+      ventana.print();
+    }
+  }
 
   function handleInscribirse(cursada: Cursada) {
-    setSelectedCursada(cursada)
-    setConfirmOpen(true)
+    setSelectedCursada(cursada);
+    setConfirmOpen(true);
   }
 
   async function doInscripcion() {
-    if (!selectedCursada) return
-    setLoading(true)
+    if (!selectedCursada) return;
+    setLoading(true);
     try {
-      const formData = new FormData()
-      formData.append("cursadaId", selectedCursada.id.toString())
-      await inscribirseEnCursada(formData)
+      const formData = new FormData();
+      formData.append("cursadaId", selectedCursada.id.toString());
+      await inscribirseEnCursada(formData);
 
       // Actualizar set de inscripciones
-      cursadasInscripto.add(selectedCursada.id)
+      cursadasInscripto.add(selectedCursada.id);
 
-      setConfirmOpen(false)
-      setSelectedCursada(null)
+      setConfirmOpen(false);
+      setSelectedCursada(null);
     } catch (err) {
-      console.error(err)
-      alert("Error al inscribirse")
+      console.error(err);
+      alert("Error al inscribirse");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   // Mensaje de confirmación
   function getCursadaMessage(cursada: Cursada | null) {
-    if (!cursada) return ""
+    if (!cursada) return "";
     const horariosText = cursada.horarios?.horarios
       ?.map((h) => `• ${h.dia} ${h.hora_inicio}-${h.hora_fin} (${h.aula})`)
-      .join("\n")
-    return `¿Deseas inscribirte en la cursada de ${cursada.materia_docente.materia.nombre}?\n\n` +
-           `• Profesor: ${cursada.materia_docente.docente.nombre} ${cursada.materia_docente.docente.apellido}\n` +
-           `• Cupo: ${cursada.cupo_maximo || "Sin límite"}\n` +
-           (horariosText ? `• Horarios:\n${horariosText}` : "")
+      .join("\n");
+    return (
+      `¿Deseas inscribirte en la cursada de ${cursada.materia_docente.materia.nombre}?\n\n` +
+      `• Profesor: ${cursada.materia_docente.docente.nombre} ${cursada.materia_docente.docente.apellido}\n` +
+      `• Cupo: ${cursada.cupo_maximo || "Sin límite"}\n` +
+      (horariosText ? `• Horarios:\n${horariosText}` : "")
+    );
   }
 
   return (
     <>
       <div className="grid grid-cols-3 gap-6">
         {currentCursadas.map((cursada) => {
-          const yaInscripto = cursadasInscripto.has(cursada.id)
+          const yaInscripto = cursadasInscripto.has(cursada.id);
           return (
             <Card
               key={cursada.id}
@@ -119,7 +162,8 @@ export default function CursadasTable({ cursadas, cursadasInscripto }: CursadasT
                     <br />
                     {cursada.horarios?.horarios
                       ?.map(
-                        (h) => `${h.dia} ${h.hora_inicio}-${h.hora_fin} (${h.aula})`
+                        (h) =>
+                          `${h.dia} ${h.hora_inicio}-${h.hora_fin} (${h.aula})`
                       )
                       .join("\n")}
                   </div>
@@ -133,16 +177,25 @@ export default function CursadasTable({ cursadas, cursadasInscripto }: CursadasT
                 >
                   {yaInscripto ? "Ya estás inscripto" : "Inscribirme"}
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!yaInscripto}
+                  onClick={() => generarComprobante(cursada, alumno)}
+                >
+                  Comprobante
+                </Button>
               </div>
             </Card>
-          )
+          );
         })}
       </div>
 
       {/* Paginación */}
       <div className="mt-6 flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          Mostrando {startIdx + 1} - {Math.min(endIdx, cursadas.length)} de {cursadas.length} cursadas
+          Mostrando {startIdx + 1} - {Math.min(endIdx, cursadas.length)} de{" "}
+          {cursadas.length} cursadas
         </div>
         <div className="flex gap-2">
           <Button
@@ -168,8 +221,8 @@ export default function CursadasTable({ cursadas, cursadasInscripto }: CursadasT
       <ConfirmDialog
         isOpen={confirmOpen}
         onClose={() => {
-          setConfirmOpen(false)
-          setSelectedCursada(null)
+          setConfirmOpen(false);
+          setSelectedCursada(null);
         }}
         title="Confirmar inscripción"
         message={getCursadaMessage(selectedCursada)}
@@ -179,5 +232,5 @@ export default function CursadasTable({ cursadas, cursadasInscripto }: CursadasT
         loading={loading}
       />
     </>
-  )
+  );
 }

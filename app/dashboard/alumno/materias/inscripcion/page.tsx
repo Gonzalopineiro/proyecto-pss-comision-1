@@ -14,6 +14,24 @@ export default async function InscripcionCursadasPage() {
     return <p>No hay sesión activa</p>;
   }
 
+  // Buscar datos completos del alumno en tabla 'usuarios' usando el email
+  const { data: usuarioData, error: usuarioError } = await supabase
+    .from("usuarios")
+    .select("nombre, apellido, legajo, email")
+    .eq("email", user.email)
+    .maybeSingle(); // trae 1 registro o null
+
+  if (usuarioError || !usuarioData) {
+    console.error("No se encontró información del alumno");
+    return <p>No se pudo obtener la información del alumno</p>;
+  }
+
+  const alumno = {
+    nombre: `${usuarioData.nombre} ${usuarioData.apellido}`,
+    legajo: usuarioData.legajo,
+    mail: usuarioData.email,
+  };
+
   // Obtener cursadas activas
   const { data: cursadasData } = await supabase
     .from("cursadas")
@@ -142,6 +160,7 @@ export default async function InscripcionCursadasPage() {
                 <CursadasTable
                   cursadas={cursadas}
                   cursadasInscripto={cursadasInscripto}
+                  alumno={alumno}
                 />
               </div>
             </div>
