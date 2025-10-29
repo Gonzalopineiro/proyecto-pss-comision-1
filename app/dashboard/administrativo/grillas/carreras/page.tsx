@@ -77,14 +77,25 @@ export default function CarrerasPage() {
   }, [todasLasCarreras, searchTerm, estadoFilter, facultadFilter]);
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-800">Lista de Carreras</h1>
-      </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      <div className="flex">
+        <main className="flex-1 p-8">
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="max-w-6xl mx-auto mt-6">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold">Lista de Carreras</h1>
+                  <p className="mt-2 text-gray-600 dark:text-gray-300">Explore y gestione las carreras registradas</p>
+                </div>
+                <Link href="/dashboard/administrativo">
+                  <Button variant="outline">Volver al panel administrativo</Button>
+                </Link>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="relative w-full md:max-w-sm">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
               <Input
@@ -118,12 +129,17 @@ export default function CarrerasPage() {
                   <SelectItem value="inactivo">Inactivo</SelectItem>
                 </SelectContent>
               </Select>
-              <Link href="/dashboard/administrativo/crear-carrera" passHref>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Añadir Nueva Carrera
-                </Button>
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link href="/dashboard/administrativo/crear-carrera" passHref>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Añadir Nueva Carrera
+                  </Button>
+                </Link>
+                <Link href="/dashboard/administrativo/crear-plan" passHref>
+                  <Button variant="outline">Crear Plan de Estudio</Button>
+                </Link>
+              </div>
             </div>
           </div>
           <div className="text-sm text-gray-500 mt-4">
@@ -188,6 +204,10 @@ export default function CarrerasPage() {
           </div>
         </CardContent>
       </Card>
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
