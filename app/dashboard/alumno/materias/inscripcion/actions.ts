@@ -36,6 +36,8 @@ export async function obtenerMateriaIdPorCodigo(codigoMateria: string): Promise<
 export async function verificarCorrelativasCursado(
   materiaId: number
 ): Promise<VerificacionCorrelativas> {
+  console.log('🚀 INICIANDO verificarCorrelativasCursado para materia ID:', materiaId)
+  
   const supabase = await createClient()
   
   try {
@@ -43,24 +45,32 @@ export async function verificarCorrelativasCursado(
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user || !user.email) {
+      console.error('❌ Error de autenticación:', authError)
       throw new Error('No hay sesión activa')
     }
 
+    console.log('👤 Usuario autenticado:', user.email, 'ID:', user.id)
+
     // Opción 1: Intentar usar la función SQL
     try {
+      console.log('🔧 Intentando función SQL verificar_correlativas_simple...')
       const { data, error } = await supabase.rpc('verificar_correlativas_simple', {
         p_email: user.email,
         p_materia_id: materiaId
       })
       
       if (!error && data) {
+        console.log('✅ Función SQL exitosa, resultado:', data)
         return data as VerificacionCorrelativas
+      } else {
+        console.log('⚠️ Función SQL falló, error:', error)
       }
     } catch (sqlError) {
-      console.log('Error con función SQL, usando verificación TypeScript:', sqlError)
+      console.log('❌ Error con función SQL, usando verificación TypeScript:', sqlError)
     }
 
     // Opción 2: Fallback - Verificación en TypeScript
+    console.log('🔄 Usando verificación TypeScript como fallback...')
     return await verificarCorrelativasTypeScript(user.email, user.id, materiaId, supabase)
     
   } catch (error) {
@@ -77,6 +87,11 @@ async function verificarCorrelativasTypeScript(
   supabase: any
 ): Promise<VerificacionCorrelativas> {
   
+  console.log(`🔍 INICIANDO VERIFICACIÓN DE CORRELATIVAS`)
+  console.log(`📧 Email: ${email}`)
+  console.log(`👤 User ID: ${userId}`)
+  console.log(`📚 Materia ID: ${materiaId}`)
+  
   // 1. Obtener el plan de estudios del alumno
   const { data: alumnoData, error: alumnoError } = await supabase
     .from('usuarios')
@@ -90,10 +105,12 @@ async function verificarCorrelativasTypeScript(
     .single()
 
   if (alumnoError || !alumnoData?.carreras) {
+    console.error('❌ Error obteniendo datos del alumno:', alumnoError)
     throw new Error('No se encontró el alumno o su carrera')
   }
 
   const planId = alumnoData.carreras.plan_de_estudio_id
+  console.log(`📋 Plan de estudios ID: ${planId}`)
 
   // 2. Obtener correlativas requeridas para esta materia
   const { data: correlativasRequeridas, error: correlativasError } = await supabase
@@ -110,8 +127,11 @@ async function verificarCorrelativasTypeScript(
     .eq('materia_id', materiaId)
 
   if (correlativasError) {
+    console.error('❌ Error obteniendo correlativas:', correlativasError)
     throw new Error('Error al obtener correlativas requeridas')
   }
+
+  console.log(`📊 Correlativas requeridas encontradas:`, correlativasRequeridas)
 
   // Si no hay correlativas, puede inscribirse
   if (!correlativasRequeridas || correlativasRequeridas.length === 0) {
@@ -125,22 +145,61 @@ async function verificarCorrelativasTypeScript(
   // 3. Verificar qué correlativas ya cumplió el alumno
   const correlativasConEstado = await Promise.all(
     correlativasRequeridas.map(async (correlativa: any) => {
-      // Verificar si tiene inscripciones aprobadas para esta materia
-      const { data: inscripciones } = await supabase
-        .from('inscripciones_cursada')
+      console.log(`🔍 Verificando correlativa: ${correlativa.materias?.nombre} (ID: ${correlativa.correlativa_id})`)
+      
+      // Primero obtener las cursadas de esta materia específica
+      const { data: cursadasMateria, error: cursadasError } = await supabase
+        .from('cursadas')
         .select(`
-          estado,
-          cursadas (
-            materia_docente (
-              materia_id
-            )
+          id,
+          materia_docente!inner (
+            materia_id
           )
         `)
+        .eq('materia_docente.materia_id', correlativa.correlativa_id)
+
+      if (cursadasError) {
+        console.error('Error obteniendo cursadas:', cursadasError)
+        return {
+          materia_id: correlativa.correlativa_id,
+          nombre: correlativa.materias?.nombre || 'Materia desconocida',
+          codigo: correlativa.materias?.codigo_materia || 'Sin código',
+          cumplida: false
+        }
+      }
+
+      console.log(`📚 Cursadas encontradas para materia ${correlativa.correlativa_id}:`, cursadasMateria)
+
+      // Si no hay cursadas de esta materia, no puede estar cumplida
+      if (!cursadasMateria || cursadasMateria.length === 0) {
+        console.log(`❌ No hay cursadas para la materia ${correlativa.materias?.nombre}`)
+        return {
+          materia_id: correlativa.correlativa_id,
+          nombre: correlativa.materias?.nombre || 'Materia desconocida',
+          codigo: correlativa.materias?.codigo_materia || 'Sin código',
+          cumplida: false
+        }
+      }
+
+      // Ahora verificar si el alumno está inscrito en alguna de esas cursadas con estado aprobado
+      const cursadaIds = cursadasMateria.map((c: any) => c.id)
+      
+      const { data: inscripciones, error: inscripcionesError } = await supabase
+        .from('inscripciones_cursada')
+        .select('estado, cursada_id')
         .eq('alumno_id', userId)
-        .eq('cursadas.materia_docente.materia_id', correlativa.correlativa_id) // ❌ Esta sintaxis es incorrecta
+        .in('cursada_id', cursadaIds)
         .in('estado', ['regular', 'aprobada'])
 
+      if (inscripcionesError) {
+        console.error('Error obteniendo inscripciones:', inscripcionesError)
+      }
+
+      console.log(`📝 Inscripciones del alumno en cursadas de ${correlativa.materias?.nombre}:`, inscripciones)
+
       const cumplida = inscripciones && inscripciones.length > 0
+
+      console.log(`${cumplida ? '✅' : '❌'} Correlativa ${correlativa.materias?.nombre}: ${cumplida ? 'CUMPLIDA' : 'NO CUMPLIDA'}`)
 
       return {
         materia_id: correlativa.correlativa_id,

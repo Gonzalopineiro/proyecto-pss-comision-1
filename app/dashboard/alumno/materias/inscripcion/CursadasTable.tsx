@@ -96,17 +96,22 @@ export default function CursadasTable({
   }
 
   const manejarInscripcion = async (cursada: Cursada) => {
+    console.log('🎯 INICIANDO manejarInscripcion para cursada:', cursada.id, 'materia:', cursada.materia_docente.materia.nombre);
     setVerificandoCorrelativas(true);
     setMateriaSeleccionada(cursada);
     
     try {
       // Obtener el ID de la materia desde el código
+      console.log('🔍 Obteniendo ID de materia para código:', cursada.materia_docente.materia.codigo_materia);
       const materiaId = await obtenerMateriaIdPorCodigo(cursada.materia_docente.materia.codigo_materia);
+      console.log('📋 ID de materia obtenido:', materiaId);
       
+      console.log('🔬 Verificando correlativas...');
       const verificacionResult = await verificarCorrelativasCursado(materiaId);
+      console.log('📊 Resultado de verificación:', verificacionResult);
       setVerificacion(verificacionResult);
     } catch (error: any) {
-      console.error('Error verificando correlativas:', error);
+      console.error('❌ Error verificando correlativas:', error);
       // Si hay error, mostrar un alert simple y no abrir el modal
       alert(error.message || 'Error al verificar correlativas');
       cerrarModal();
