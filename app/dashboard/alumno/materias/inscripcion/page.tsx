@@ -1,30 +1,7 @@
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/server";
-import { inscribirseEnCursada } from "./actions";
-
-type Cursada = {
-  id: number;
-  cupo_maximo: number | null;
-  horarios: {
-    horarios: Array<{
-      dia: string;
-      hora_inicio: string;
-      hora_fin: string;
-      aula: string;
-    }>;
-  } | null;
-  materia_docente: {
-    materia: {
-      nombre: string;
-      codigo_materia: string;
-    };
-    docente: {
-      nombre: string;
-      apellido: string;
-    };
-  };
-};
+import SidebarAlumno from "@/components/ui/sidebar_alumno";
+import CursadasTable, { Cursada } from "./CursadasTable";
 
 export default async function InscripcionCursadasPage() {
   const supabase = await createClient();
@@ -125,6 +102,9 @@ export default async function InscripcionCursadasPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <div className="flex">
+        <aside className="w-64">
+          <SidebarAlumno />
+        </aside>
         <main className="flex-1 p-8">
           <div className="max-w-6xl mx-auto mt-6">
             <div className="flex flex-col gap-4">
@@ -157,94 +137,12 @@ export default async function InscripcionCursadasPage() {
                 </div>
               </Card>
 
-              {/* Grid de cursadas */}
+              {/* Componente CursadasTable */}
               <div className="mt-8">
-                <div className="grid grid-cols-3 gap-6">
-                  {cursadas.map((cursada: Cursada) => {
-                    const yaInscripto = cursadasInscripto.has(cursada.id);
-                    return (
-                      <Card
-                        key={cursada.id}
-                        className="p-6 aspect-square flex flex-col hover:border-primary transition-colors cursor-pointer"
-                      >
-                        <div className="flex flex-col h-full">
-                          <div className="mb-4">
-                            <h3 className="text-lg font-semibold">
-                              {cursada.materia_docente.materia.nombre}
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                              Código:{" "}
-                              {
-                                cursada.materia_docente.materia
-                                  .codigo_materia
-                              }
-                            </p>
-                          </div>
-
-                          <div className="flex-grow">
-                            <p className="text-sm mb-2">
-                              <span className="font-medium">Profesor:</span>{" "}
-                              {cursada.materia_docente.docente.nombre}{" "}
-                              {cursada.materia_docente.docente.apellido}
-                            </p>
-                            <p className="text-sm mb-2">
-                              <span className="font-medium">Cupo:</span>{" "}
-                              {cursada.cupo_maximo || "Sin límite"}
-                            </p>
-                            <div className="text-sm whitespace-pre-line">
-                              <span className="font-medium">Horarios:</span>
-                              <br />
-                              {cursada.horarios?.horarios
-                                ?.map(
-                                  (h) =>
-                                    `${h.dia} ${h.hora_inicio}-${h.hora_fin} (${h.aula})`
-                                )
-                                .join("\n")}
-                            </div>
-                          </div>
-
-                          <form action={inscribirseEnCursada}>
-                            <input
-                              type="hidden"
-                              name="cursadaId"
-                              value={cursada.id}
-                            />
-                            <Button
-                              type="submit"
-                              className="mt-4"
-                              size="sm"
-                              disabled={yaInscripto}
-                            >
-                              {yaInscripto
-                                ? "Ya estás inscripto"
-                                : "Inscribirme"}
-                            </Button>
-                          </form>
-                        </div>
-                      </Card>
-                    );
-                  })}
-                </div>
-
-                {/* Paginación */}
-                <div className="mt-6 flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    Mostrando {Math.min(6, cursadas.length)} de{" "}
-                    {cursadas.length} cursadas disponibles
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" disabled>
-                      Anterior
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={cursadas.length <= 6}
-                    >
-                      Siguiente
-                    </Button>
-                  </div>
-                </div>
+                <CursadasTable
+                  cursadas={cursadas}
+                  cursadasInscripto={cursadasInscripto}
+                />
               </div>
             </div>
           </div>

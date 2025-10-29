@@ -190,148 +190,203 @@ export default async function AlumnoDashboard() {
   const examenesInscriptosTyped = examenesInscriptos as InscripcionExamenRow[] | null
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-              <div className="flex">
-                <SidebarAlumno />
-                <main className="flex-1 p-8">
-                  <div className="max-w-6xl mx-auto">
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow mb-8">
-                      <h1 className="text-2xl font-bold">Panel de Estudiante</h1>
-                      <p className="text-gray-600 dark:text-gray-300 mt-2">
-                        Bienvenido a tu portal académico
-                      </p>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+        <div className="flex">
+          <SidebarAlumno />
+          <main className="flex-1 p-8">
+            <div className="max-w-6xl mx-auto">
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow mb-8">
+                <h1 className="text-2xl font-bold">Panel de Estudiante</h1>
+                <p className="text-gray-600 dark:text-gray-300 mt-2">
+                  Bienvenido a tu portal académico
+                </p>
+              </div>
+
+              {/* Progress Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                {/* Progreso Académico */}
+                <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-slate-800 dark:text-slate-200">
+                      Progreso Académico
+                    </h3>
+                    <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-sm text-slate-500 dark:text-slate-400">
+                      Materias Aprobadas
                     </div>
-                    
-                    {/* Progress Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                      {/* Progreso Académico */}
-                      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="font-semibold text-slate-800 dark:text-slate-200">Progreso Académico</h3>
-                          <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div className="space-y-2">
-                          <div className="text-sm text-slate-500 dark:text-slate-400">Materias Aprobadas</div>
-                          <div className="text-lg font-medium">{cantidadMateriasAprobadas}/{totalMateriasEnPlan}</div>
-                          <div className="text-3xl font-bold text-blue-600">{porcentajeCompletado}%</div>
-                          <div className="text-sm text-slate-500 dark:text-slate-400">Completado</div>
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${porcentajeCompletado}%` }}></div>
+                    <div className="text-lg font-medium">
+                      {cantidadMateriasAprobadas}/{totalMateriasEnPlan}
+                    </div>
+                    <div className="text-3xl font-bold text-blue-600">
+                      {porcentajeCompletado}%
+                    </div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">
+                      Completado
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full"
+                        style={{ width: `${porcentajeCompletado}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Promedio General */}
+                <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-slate-800 dark:text-slate-200">
+                      Promedio General
+                    </h3>
+                    <Star className="w-6 h-6 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-3xl font-bold text-green-600">
+                      {promedio}
+                    </div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">
+                      Promedio de exámenes finales
+                    </div>
+                  </div>
+                </div>
+
+                {/* Materias Actuales */}
+                <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-slate-800 dark:text-slate-200">
+                      Materias Actuales
+                    </h3>
+                    <BookOpen className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-3xl font-bold text-purple-600">
+                      {cantidadMateriasActuales}
+                    </div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">
+                      Cursadas activas
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Materias Inscriptas */}
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow hover:shadow-md transition-shadow mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold">Materias Cursando</h2>
+                  <Link href="/dashboard/alumno/materias/inscripcion/">
+                    <Button className="bg-black dark:bg-white dark:text-black text-white hover:bg-gray-800 dark:hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium">
+                      + Inscribirse
+                    </Button>
+                  </Link>
+                </div>
+                <div className="space-y-4">
+                  {materiasActualesTyped && materiasActualesTyped.length > 0 ? (
+                    materiasActualesTyped.map((inscripcion, index) => {
+                      // Acceso correcto a la estructura de datos (tipo local)
+                      const cursada = inscripcion.cursadas as CursadaInfo;
+                      const materiaDocente =
+                        cursada?.materia_docente as MateriaDocente;
+                      const materia = materiaDocente?.materias as MateriaInfo;
+
+                      if (!materia) {
+                        return (
+                          <div
+                            key={index}
+                            className="p-4 border border-red-200 rounded-lg"
+                          >
+                            <div className="text-red-600">
+                              Error: Estructura de datos incompleta
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Ver consola para detalles
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg"
+                        >
+                          <div>
+                            <div className="font-semibold text-slate-900 dark:text-white">
+                              {materia.nombre}
+                            </div>
+                            <div className="text-sm text-slate-500 dark:text-slate-400">
+                              {materia.codigo_materia}
+                            </div>
+                            <div className="text-xs text-slate-400 dark:text-slate-500">
+                              {cursada.anio} - {cursada.cuatrimestre}°
+                              Cuatrimestre
+                            </div>
+                          </div>
+                          <div className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-full text-sm">
+                            Cursando
                           </div>
                         </div>
-                      </div>
-
-                      {/* Promedio General */}
-                      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="font-semibold text-slate-800 dark:text-slate-200">Promedio General</h3>
-                          <Star className="w-6 h-6 text-green-600 dark:text-green-400" />
-                        </div>
-                        <div className="space-y-2">
-                          <div className="text-3xl font-bold text-green-600">{promedio}</div>
-                          <div className="text-sm text-slate-500 dark:text-slate-400">Promedio de exámenes finales</div>
-                        </div>
-                      </div>
-
-                      {/* Materias Actuales */}
-                      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="font-semibold text-slate-800 dark:text-slate-200">Materias Actuales</h3>
-                          <BookOpen className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                        </div>
-                        <div className="space-y-2">
-                          <div className="text-3xl font-bold text-purple-600">{cantidadMateriasActuales}</div>
-                          <div className="text-sm text-slate-500 dark:text-slate-400">Cursadas activas</div>
-                        </div>
-                      </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                      No estás cursando materias este año
                     </div>
+                  )}
 
-                    {/* Materias Inscriptas */}
-                    <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow hover:shadow-md transition-shadow mb-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-bold">Materias Cursando</h2>
-                        <Button className="bg-black dark:bg-white dark:text-black text-white hover:bg-gray-800 dark:hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium">
-                          + Inscribirse
-                        </Button>
-                      </div>
-                      <div className="space-y-4">
-                        {materiasActualesTyped && materiasActualesTyped.length > 0 ? (
-                          materiasActualesTyped.map((inscripcion, index) => {
-                            // Acceso correcto a la estructura de datos (tipo local)
-                            const cursada = inscripcion.cursadas as CursadaInfo
-                            const materiaDocente = cursada?.materia_docente as MateriaDocente
-                            const materia = materiaDocente?.materias as MateriaInfo
-                            
-                            if (!materia) {
-                              return (
-                                <div key={index} className="p-4 border border-red-200 rounded-lg">
-                                  <div className="text-red-600">Error: Estructura de datos incompleta</div>
-                                  <div className="text-xs text-gray-500">Ver consola para detalles</div>
-                                </div>
-                              );
-                            }
-                            
+                  {/* Mostrar también exámenes inscriptos si los hay */}
+                  {examenesInscriptosTyped &&
+                    examenesInscriptosTyped.length > 0 && (
+                      <>
+                        <div className="border-t pt-4 mt-6">
+                          <h3 className="text-lg font-semibold mb-3 text-slate-800 dark:text-slate-200">
+                            Exámenes Inscriptos
+                          </h3>
+                          {examenesInscriptosTyped.map((examen, index) => {
+                            const mesa = examen.mesas_examen as MesasExamenInfo;
+                            const materia = mesa?.materias as MateriaInfo;
+
                             return (
-                              <div key={index} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+                              <div
+                                key={`examen-${index}`}
+                                className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg mb-3"
+                              >
                                 <div>
                                   <div className="font-semibold text-slate-900 dark:text-white">
-                                    {materia.nombre}
+                                    {materia?.nombre || "Materia no encontrada"}
                                   </div>
                                   <div className="text-sm text-slate-500 dark:text-slate-400">
-                                    {materia.codigo_materia}
+                                    {materia?.codigo_materia ||
+                                      "Código no disponible"}
                                   </div>
                                   <div className="text-xs text-slate-400 dark:text-slate-500">
-                                    {cursada.anio} - {cursada.cuatrimestre}° Cuatrimestre
+                                    {mesa?.fecha_examen
+                                      ? new Date(
+                                          mesa.fecha_examen
+                                        ).toLocaleDateString()
+                                      : "Fecha no disponible"}{" "}
+                                    -{" "}
+                                    {mesa?.hora_examen || "Hora no disponible"}{" "}
+                                    -{" "}
+                                    {mesa?.ubicacion ||
+                                      "Ubicación no disponible"}
                                   </div>
                                 </div>
-                                <div className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-full text-sm">
-                                  Cursando
+                                <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-sm">
+                                  Inscripto
                                 </div>
                               </div>
                             );
-                          })
-                        ) : (
-                          <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-                            No estás cursando materias este año
-                          </div>
-                        )}
-                        
-                        {/* Mostrar también exámenes inscriptos si los hay */}
-                        {examenesInscriptosTyped && examenesInscriptosTyped.length > 0 && (
-                          <>
-                            <div className="border-t pt-4 mt-6">
-                              <h3 className="text-lg font-semibold mb-3 text-slate-800 dark:text-slate-200">Exámenes Inscriptos</h3>
-                              {examenesInscriptosTyped.map((examen, index) => {
-                                const mesa = examen.mesas_examen as MesasExamenInfo
-                                const materia = mesa?.materias as MateriaInfo
-                                
-                                return (
-                                  <div key={`examen-${index}`} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg mb-3">
-                                    <div>
-                                      <div className="font-semibold text-slate-900 dark:text-white">
-                                        {materia?.nombre || 'Materia no encontrada'}
-                                      </div>
-                                      <div className="text-sm text-slate-500 dark:text-slate-400">
-                                        {materia?.codigo_materia || 'Código no disponible'}
-                                      </div>
-                                      <div className="text-xs text-slate-400 dark:text-slate-500">
-                                        {mesa?.fecha_examen ? new Date(mesa.fecha_examen).toLocaleDateString() : 'Fecha no disponible'} - {mesa?.hora_examen || 'Hora no disponible'} - {mesa?.ubicacion || 'Ubicación no disponible'}
-                                      </div>
-                                    </div>
-                                    <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-sm">
-                                      Inscripto
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </main>
+                          })}
+                        </div>
+                      </>
+                    )}
+                </div>
               </div>
             </div>
-          )
+          </main>
+        </div>
+      </div>
+    );
 }
