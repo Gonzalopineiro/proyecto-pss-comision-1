@@ -58,6 +58,8 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Validar que docentes no sea undefined o null
   if (!docentes || !Array.isArray(docentes)) {
@@ -201,11 +203,23 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
         setSuccessMessage(`Docente ${docenteToEdit.nombre} ${docenteToEdit.apellido} actualizado correctamente`)
         setShowSuccessPopup(true)
       } else {
-        alert('No se pudo actualizar: ' + (json.error || 'Error'))
+        // Cerrar modal
+        setEditModalOpen(false)
+        setDocenteToEdit(null)
+        
+        // Mostrar mensaje de error con popup
+        setErrorMessage('No se pudo actualizar: ' + (json.error || 'Error desconocido'))
+        setShowErrorPopup(true)
       }
     } catch (err) {
       console.error('Error al actualizar docente:', err)
-      alert('Error al actualizar docente')
+      // Cerrar modal
+      setEditModalOpen(false)
+      setDocenteToEdit(null)
+      
+      // Mostrar mensaje de error con popup
+      setErrorMessage('Error al actualizar docente. Por favor, intente nuevamente.')
+      setShowErrorPopup(true)
     } finally {
       setLoadingEdit(false)
     }
@@ -401,6 +415,17 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
       }}
       title="¡Docente Actualizado con Éxito!"
       message={successMessage}
+    />
+
+    {/* Popup de error para modificar docente */}
+    <ConfirmationPopup
+      isOpen={showErrorPopup}
+      onClose={() => {
+        setShowErrorPopup(false)
+      }}
+      title="Error al Actualizar Docente"
+      message={errorMessage}
+      type="error"
     />
     </>
   );
