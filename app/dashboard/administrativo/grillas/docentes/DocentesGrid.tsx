@@ -56,6 +56,8 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [docenteToEdit, setDocenteToEdit] = useState<Docente | null>(null);
   const [loadingEdit, setLoadingEdit] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Validar que docentes no sea undefined o null
   if (!docentes || !Array.isArray(docentes)) {
@@ -195,11 +197,9 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
         setEditModalOpen(false)
         setDocenteToEdit(null)
         
-        // Mostrar mensaje de éxito - podrías agregar un estado de confirmación aquí
-        alert(`Docente ${docenteToEdit.nombre} ${docenteToEdit.apellido} actualizado correctamente`)
-        
-        // Refrescar la página para mostrar los cambios
-        window.location.reload()
+        // Mostrar mensaje de éxito con popup de confirmación
+        setSuccessMessage(`Docente ${docenteToEdit.nombre} ${docenteToEdit.apellido} actualizado correctamente`)
+        setShowSuccessPopup(true)
       } else {
         alert('No se pudo actualizar: ' + (json.error || 'Error'))
       }
@@ -345,6 +345,7 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
         }}
         docenteNombre={`${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido}`}
         docenteLegajo={docenteSeleccionado.legajo}
+        docenteEstado="activo"
         docenteId={docenteSeleccionado.id}
         materiasAsignadas={materiasDocente}
         onDesasignar={handleDesasignarMaterias}
@@ -388,6 +389,18 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
       onSave={handleSaveEdit}
       loading={loadingEdit}
       userType="docente"
+    />
+
+    {/* Popup de éxito para modificar docente */}
+    <ConfirmationPopup
+      isOpen={showSuccessPopup}
+      onClose={() => {
+        setShowSuccessPopup(false)
+        // Refrescar la página para mostrar los cambios
+        window.location.reload()
+      }}
+      title="¡Docente Actualizado con Éxito!"
+      message={successMessage}
     />
     </>
   );

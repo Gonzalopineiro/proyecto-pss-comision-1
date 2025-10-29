@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useRouter } from 'next/navigation'
+import ConfirmationPopup from '@/components/ui/confirmation-popup'
 
 interface User {
   id: string
@@ -29,6 +30,7 @@ export default function ProfileEditor({ user, userRole }: ProfileEditorProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false)
   const [formData, setFormData] = useState({
     email: user.email || '',
     telefono: user.telefono || '',
@@ -94,12 +96,7 @@ export default function ProfileEditor({ user, userRole }: ProfileEditorProps) {
       const json = await res.json()
       if (json.success) {
         setIsEditing(false)
-        setSuccess(true)
-        // Actualizar la página para mostrar los nuevos datos
-        router.refresh()
-        
-        // Ocultar mensaje de éxito después de 3 segundos
-        setTimeout(() => setSuccess(false), 3000)
+        setShowSuccessPopup(true)
       } else {
         alert('No se pudo actualizar: ' + (json.error || 'Error'))
       }
@@ -134,21 +131,6 @@ export default function ProfileEditor({ user, userRole }: ProfileEditorProps) {
 
   return (
     <div className="space-y-6">
-      {/* Mensaje de éxito */}
-      {success && (
-        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">✅</span>
-            <div>
-              <h3 className="font-medium text-green-800 dark:text-green-200">¡Perfil actualizado!</h3>
-              <p className="text-sm text-green-700 dark:text-green-300">
-                Tus datos han sido actualizados correctamente.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Información General (Solo lectura) */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
@@ -344,6 +326,18 @@ export default function ProfileEditor({ user, userRole }: ProfileEditorProps) {
           )}
         </div>
       </Card>
+
+      {/* Popup de confirmación de éxito */}
+      <ConfirmationPopup
+        isOpen={showSuccessPopup}
+        onClose={() => {
+          setShowSuccessPopup(false)
+          // Actualizar la página para mostrar los nuevos datos
+          router.refresh()
+        }}
+        title="¡Perfil Actualizado con Éxito!"
+        message="Tus datos han sido actualizados correctamente en el sistema."
+      />
     </div>
   )
 }
