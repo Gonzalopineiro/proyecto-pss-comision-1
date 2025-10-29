@@ -359,14 +359,10 @@ export async function eliminarCarrera(
   }
 }
 
-/**
- * Obtiene los detalles completos de una carrera, incluyendo su plan de estudios y las materias del plan.
- * 
- * @param {number} carreraId - ID de la carrera
- * @returns {Promise<Object | null>} - Datos completos de la carrera o null si no se encuentra.
- */
+
 export async function obtenerDetallesCompletosCarrera(carreraId: number) {
   try {
+    // --- CORRECCIÓN 3 (APLICADA EN TODAS LAS FUNCIONES NUEVAS) ---
     const supabase = await createClient();
 
     const { data: carrera, error: errorCarrera } = await supabase
@@ -390,13 +386,10 @@ export async function obtenerDetallesCompletosCarrera(carreraId: number) {
       return null;
     }
     
-    // --- INICIO DE LA CORRECCIÓN ---
-    // Verificamos si plan_de_estudio es un array y obtenemos el primer elemento.
-    const plan = Array.isArray(carrera.plan_de_estudio) && carrera.plan_de_estudio.length > 0
-      ? carrera.plan_de_estudio[0]
-      : null;
+    const plan = Array.isArray(carrera.plan_de_estudio) 
+      ? carrera.plan_de_estudio[0] 
+      : carrera.plan_de_estudio;
 
-    // Si la carrera no tiene un plan de estudios válido, devolvemos la info básica.
     if (!plan) {
         return { ...carrera, plan_de_estudio: null, materias_plan: [] };
     }
@@ -404,19 +397,16 @@ export async function obtenerDetallesCompletosCarrera(carreraId: number) {
     const { data: materiasPlan, error: errorMaterias } = await supabase
       .from('vista_materias_plan')
       .select('*')
-      // Usamos el 'id' del objeto 'plan' que extrajimos de forma segura.
       .eq('plan_id', plan.id)
       .order('anio', { ascending: true })
       .order('cuatrimestre', { ascending: true });
-    // --- FIN DE LA CORRECCIÓN ---
 
     if (errorMaterias) {
       console.error('Error al obtener las materias del plan:', errorMaterias);
       return { ...carrera, plan_de_estudio: plan, materias_plan: [] };
     }
 
-    // Devolvemos el objeto de carrera, pero reemplazando el array del plan con el objeto único.
-    return { ...carrera, plan_de_estudio: plan, materias_plan: materiasPlan };
+    return { ...carrera, plan_de_estudio: plan, materias_plan: materiasPlan || [] };
 
   } catch (e) {
     console.error('Error inesperado al obtener detalles de la carrera:', e);
@@ -462,4 +452,117 @@ export async function actualizarCarrera(
     console.error('Error inesperado al actualizar la carrera:', e);
     return { error: 'Error inesperado al actualizar la carrera' };
   }
+}
+
+
+/**
+ * Busca materias que no están actualmente en un plan de estudios.
+ * 
+ * @param {number} planId - El ID del plan de estudios para excluir materias.
+ * @param {string} terminoBusqueda - El código o nombre de la materia a buscar.
+ * @returns {Promise<Array<{id: number, codigo_materia: string, nombre: string, descripcion: string | null}>>}
+ */
+export async function buscarMateriasDisponibles(planId: number, terminoBusqueda: string) {
+    try {
+        // --- CORRECCIÓN 3 ---
+        const supabase = await createClient();
+
+        const { data: materiasEnPlan, error: errorExistentes } = await supabase
+            .from('plan_materia')
+            .select('materia_id')
+            .eq('plan_id', planId);
+
+        if (errorExistentes) {
+            console.error("Error al buscar materias existentes en el plan:", errorExistentes);
+            return [];
+        }
+
+        const idsExcluir = materiasEnPlan.map(m => m.materia_id);
+
+        const query = supabase
+            .from('materias')
+            .select('id, codigo_materia, nombre, descripcion')
+            .or(`codigo_materia.ilike.%${terminoBusqueda}%,nombre.ilike.%${terminoBusqueda}%`);
+        
+        // Solo aplicar el filtro .not si hay IDs para excluir
+        if (idsExcluir.length > 0) {
+            query.not('id', 'in', `(${idsExcluir.join(',')})`);
+        }
+
+        const { data: materiasEncontradas, error: errorBusqueda } = await query.limit(10);
+
+        if (errorBusqueda) {
+            console.error("Error al buscar materias disponibles:", errorBusqueda);
+            return [];
+        }
+
+        return materiasEncontradas;
+
+    } catch (e) {
+        console.error('Error inesperado al buscar materias:', e);
+        return [];
+    }
+}
+
+/**
+ * Actualiza el plan de estudios agregando y eliminando materias.
+ * 
+ * @param {number} planId - ID del plan de estudios a modificar.
+ * @param {Array<{materia_id: number, anio: number, cuatrimestre: number}>} materiasAAgregar - Materias para insertar en plan_materia.
+ * @param {number[]} planMateriaIdsAEliminar - IDs de la tabla `plan_materia` para eliminar.
+ * @returns {Promise<{ success: boolean } | { error: string }>}
+ */
+export async function actualizarPlanDeEstudios(
+  planId: number,
+  materiasAAgregar: { materia_id: number, anio: number | null, cuatrimestre: number | null }[],
+  planMateriaIdsAEliminar: number[]
+): Promise<{ success: boolean } | { error: string }> {
+    try {
+        // --- CORRECCIÓN 3 ---
+        const supabase = await createClient();
+
+        if (planMateriaIdsAEliminar.length > 0) {
+            const { data: materiasAVerificar, error: checkError } = await supabase
+                .from('vista_materias_plan')
+                .select('estudiantes_activos, nombre_materia')
+                .in('plan_materia_id', planMateriaIdsAEliminar);
+            
+            if (checkError) throw checkError;
+
+            const materiaConEstudiantes = materiasAVerificar.find(m => m.estudiantes_activos > 0);
+            if (materiaConEstudiantes) {
+                return { error: `No se puede eliminar "${materiaConEstudiantes.nombre_materia}" porque tiene estudiantes activos.` };
+            }
+
+            const { error: deleteError } = await supabase
+                .from('plan_materia')
+                .delete()
+                .in('id', planMateriaIdsAEliminar);
+
+            if (deleteError) throw deleteError;
+        }
+
+        if (materiasAAgregar.length > 0) {
+            const inserts = materiasAAgregar.map(m => ({
+                plan_id: planId,
+                materia_id: m.materia_id,
+                anio: m.anio,
+                cuatrimestre: m.cuatrimestre,
+            }));
+
+            const { error: insertError } = await supabase
+                .from('plan_materia')
+                .insert(inserts);
+            
+            if (insertError) throw insertError;
+        }
+
+        revalidatePath(`/dashboard/administrativo/carreras`);
+        revalidatePath(`/dashboard/administrativo/carreras/${planId}`); // Asumiendo que la ruta es por planId o carreraId
+        return { success: true };
+
+    } catch (e: any) {
+        console.error('Error al actualizar el plan de estudios:', e);
+        return { error: `Error en el servidor: ${e.message}` };
+    }
 }
