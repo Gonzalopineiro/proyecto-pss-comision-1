@@ -387,6 +387,31 @@ const handleQuitarCorrelativa = async (tipo: 'cursado' | 'final', correlativaId:
   }
 };
 
+const materiaSeleccionada = selectedMateriaId
+  ? materiasPlan.find(m => String(m.materia_id) === String(selectedMateriaId)) || null
+  : null;
+
+const correlativasPermitidas = (() => {
+  if (!materiaSeleccionada) return [];
+  const anioSeleccionado = Number(materiaSeleccionada.anio || 1);
+
+  if (anioSeleccionado === 1) {
+    return materiasPlan
+      .filter(m => m.materia_id !== materiaSeleccionada.materia_id && (Number(m.anio) || 1) === 1)
+      .sort((a, b) => (a.nombre_materia.localeCompare(b.nombre_materia)));
+  }
+
+  return materiasPlan
+    .filter(m => m.materia_id !== materiaSeleccionada.materia_id && (Number(m.anio) || 1) < anioSeleccionado)
+    .sort((a, b) => (a.anio - b.anio) || a.nombre_materia.localeCompare(b.nombre_materia));
+})();
+
+useEffect(() => {
+  if (correlativasPermitidas.length === 0) {
+    setMateriaParaAgregar('');
+  }
+}, [correlativasPermitidas]);
+
 return (
     <div>
         <div className="flex justify-between items-center mb-6">
@@ -549,20 +574,43 @@ return (
                         <Separator />
 
                         <p className="text-sm font-semibold">Agregar correlativa</p>
-                        <Select value={materiaParaAgregar} onValueChange={(v) => setMateriaParaAgregar(v)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar materia correlativa..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {materiasPlan.filter(m => String(m.materia_id) !== selectedMateriaId).map(m => (
-                                    <SelectItem key={m.materia_id} value={String(m.materia_id)}>{m.codigo_materia} - {m.nombre_materia}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <div className="flex gap-2">
-                            <Button className="w-1/2" onClick={() => handleAgregarCorrelativa('cursado')}>Agregar como Cursado</Button>
-                            <Button className="w-1/2" onClick={() => handleAgregarCorrelativa('final')}>Agregar como Final</Button>
-                        </div>
+<Select
+  value={materiaParaAgregar}
+  onValueChange={(v) => setMateriaParaAgregar(v)}
+  disabled={!materiaSeleccionada || correlativasPermitidas.length === 0}
+>
+  <SelectTrigger>
+    <SelectValue placeholder={materiaSeleccionada ? "Seleccionar materia correlativa..." : "Seleccioná primero una materia"} />
+  </SelectTrigger>
+  <SelectContent>
+    {correlativasPermitidas.length > 0 ? (
+      correlativasPermitidas.map(m => (
+        <SelectItem key={m.materia_id} value={String(m.materia_id)}>
+          {m.codigo_materia} - {m.nombre_materia} ({m.anio}º Año)
+        </SelectItem>
+      ))
+    ) : (
+      <SelectItem value="__no__" disabled>No hay materias de años anteriores</SelectItem>
+    )}
+  </SelectContent>
+</Select>
+
+<div className="flex gap-2">
+  <Button
+    className="w-1/2"
+    onClick={() => handleAgregarCorrelativa('cursado')}
+    disabled={!materiaSeleccionada || !materiaParaAgregar}
+  >
+    Agregar como Cursado
+  </Button>
+  <Button
+    className="w-1/2"
+    onClick={() => handleAgregarCorrelativa('final')}
+    disabled={!materiaSeleccionada || !materiaParaAgregar}
+  >
+    Agregar como Final
+  </Button>
+</div>
 
                     </CardContent>
                 </Card>
