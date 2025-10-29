@@ -189,10 +189,12 @@ export default function PanelDocente() {
                   Crear Mesa de Examen
                 </Button>
               </Link>
-              <Button className="w-full justify-start" variant="outline">
-                <Star className="h-4 w-4 mr-3" />
-                Calificaciones
-              </Button>
+              <Link href="/dashboard/docente/mesas-examen">
+                <Button className="w-full justify-start" variant="outline">
+                  <Star className="h-4 w-4 mr-3" />
+                  Calificaciones
+                </Button>
+              </Link>
               <Button className="w-full justify-start" variant="outline">
                 <FileText className="h-4 w-4 mr-3" />
                 Actas

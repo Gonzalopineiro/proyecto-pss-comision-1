@@ -105,7 +105,7 @@ export async function crearMesaExamen(data: MesaExamenData): Promise<{ success: 
 
     // Revalidar la página para mostrar los cambios
     revalidatePath('/dashboard/docente/mesas-examen')
-    
+    revalidatePath('/dashboard/docente')
     return { success: true }
   } catch (error) {
     console.error('Error en crearMesaExamen:', error)
