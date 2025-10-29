@@ -41,6 +41,7 @@ export default function ModificarCarreraPage() {
     const [departamento, setDepartamento] = useState('');
     const [descripcion, setDescripcion] = useState('');
     const [departamentosDisponibles, setDepartamentosDisponibles] = useState<string[]>([]);
+    const [isSavingCarrera, setIsSavingCarrera] = useState(false);
 
     const cargarDatosCarrera = async () => {
         setIsLoading(true);
@@ -64,12 +65,14 @@ export default function ModificarCarreraPage() {
     }, [carreraId]);
     
     const handleGuardarCambiosCarrera = async () => {
+        setIsSavingCarrera(true);
         const result = await actualizarCarrera(carreraId, { departamento, descripcion });
         if (result && 'error' in result) {
             toast.error(result.error);
         } else {
-            toast.success('Carrera actualizada con éxito');
+            toast.success('Cambio guardado con éxito.');
         }
+        setIsSavingCarrera(false);
     };
     
     if (isLoading) {
@@ -93,7 +96,10 @@ export default function ModificarCarreraPage() {
                              <Button variant="outline" onClick={() => router.back()}>
                                 <ArrowLeft className="mr-2 h-4 w-4" /> Volver
                             </Button>
-                            <Button onClick={handleGuardarCambiosCarrera}>Guardar Cambios</Button>
+                            <Button onClick={handleGuardarCambiosCarrera} disabled={isSavingCarrera}>
+                                {isSavingCarrera && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Guardar Cambios
+                            </Button>
                         </div>
                     </div>
                     
@@ -398,11 +404,11 @@ function ModificarPlanDeEstudios({ plan, materiasIniciales, onVolver, onGuardado
                      <Card>
                         <CardHeader><CardTitle>Gestión de Correlatividades</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
-                            <p className="text-sm text-gray-500">Funcionalidad en desarrollo.</p>
+                            <p className="text-sm text-gray-500"></p>
                              <Select disabled><SelectTrigger><SelectValue placeholder="Seleccionar materia..." /></SelectTrigger></Select>
                             <div className="flex gap-2">
                                 <Button className="w-full" disabled>Agregar Correlativa</Button>
-                                <Button className="w-full" variant="outline" disabled>Quitar Correlativa</Button>
+                                
                             </div>
                         </CardContent>
                     </Card>
