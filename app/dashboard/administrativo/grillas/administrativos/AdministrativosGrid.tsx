@@ -22,8 +22,8 @@ export default function AdministrativosGrid({ initialData }: { initialData: Admi
   const { role } = useUserRole()
   const [data, setData] = useState<Administrativo[]>(initialData || [])
   const [query, setQuery] = useState('')
-    const [currentPage, setCurrentPage] = useState(1)
-    const pageSize = 10
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
   const [loadingDelete, setLoadingDelete] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [toDelete, setToDelete] = useState<Administrativo | null>(null)
