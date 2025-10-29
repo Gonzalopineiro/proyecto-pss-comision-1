@@ -173,6 +173,31 @@ export async function actualizarAdministrativo(id: string, data: {
     console.error(`Error al actualizar administrativo ${id}:`, error)
     return { success: false, error: error.message }
   }
+
+  // Registrar auditoría (opcional - comentar si no existe la tabla)
+  try {
+    // Obtener el usuario autenticado que está realizando el cambio
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    const { error: auditError } = await supabase
+      .from('audit_log')
+      .insert({
+        user_id: id,
+        action: 'UPDATE_ADMINISTRATIVO_DATA',
+        details: {
+          updated_fields: data,
+          updated_by: user?.id || 'unknown',
+          timestamp: new Date().toISOString()
+        },
+        created_at: new Date().toISOString()
+      })
+
+    if (auditError) {
+      console.warn('Error al registrar auditoría (tabla puede no existir):', auditError)
+    }
+  } catch (auditErr) {
+    console.warn('Auditoría no disponible:', auditErr)
+  }
   
   // Si se actualizó el email, actualizar también en la tabla profiles
   if (data.email) {
