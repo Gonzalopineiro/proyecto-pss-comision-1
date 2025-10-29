@@ -88,7 +88,7 @@ export default function AdministrativoDashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {/* Gestión de Estudiantes */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-2 hover:scale-105 transition-all duration-300 cursor-pointer">
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4">
@@ -106,7 +106,7 @@ export default function AdministrativoDashboard() {
                   </div>
                   <div className="mt-4 flex items-center justify-between">
                     <Link href="/dashboard/administrativo/grillas/alumnos">
-                      <Button variant="outline" size="sm">Ver Grilla de Estudiantes</Button>
+                      <Button variant="outline" size="sm" className="hover:scale-105 hover:shadow-md transition-all duration-300">Ver Grilla de Estudiantes</Button>
                     </Link>
                     <span className="text-sm text-gray-500">2,847 registros</span>
                   </div>
@@ -114,7 +114,7 @@ export default function AdministrativoDashboard() {
               </div>
 
               {/* Gestión de Docentes */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-2 hover:scale-105 transition-all duration-300 cursor-pointer">
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4">
@@ -132,7 +132,7 @@ export default function AdministrativoDashboard() {
                   </div>
                   <div className="mt-4 flex items-center justify-between">
                     <Link href="/dashboard/administrativo/grillas/docentes">
-                      <Button variant="outline" size="sm">Ver Grilla de Docentes</Button>
+                      <Button variant="outline" size="sm" className="hover:scale-105 hover:shadow-md transition-all duration-300">Ver Grilla de Docentes</Button>
                     </Link>
                     <span className="text-sm text-gray-500">186 registros</span>
                   </div>
@@ -140,7 +140,7 @@ export default function AdministrativoDashboard() {
               </div>
 
               {/* Gestión de Carreras */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-2 hover:scale-105 transition-all duration-300 cursor-pointer">
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4">
@@ -158,7 +158,7 @@ export default function AdministrativoDashboard() {
                   </div>
                   <div className="mt-4 flex items-center justify-between">
                     <Link href="/dashboard/administrativo/grillas/carreras">
-                      <Button variant="outline" size="sm">Ver Grilla de Carreras</Button>
+                      <Button variant="outline" size="sm" className="hover:scale-105 hover:shadow-md transition-all duration-300">Ver Grilla de Carreras</Button>
                     </Link>
                     <span className="text-sm text-gray-500">24 registros</span>
                   </div>
@@ -166,7 +166,7 @@ export default function AdministrativoDashboard() {
               </div>
 
               {/* Gestión de Administradores */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-2 hover:scale-105 transition-all duration-300 cursor-pointer">
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4">
@@ -184,7 +184,7 @@ export default function AdministrativoDashboard() {
                   </div>
                   <div className="mt-4 flex items-center justify-between">
                     <Link href="/dashboard/administrativo/grillas/administrativos">
-                      <Button variant="outline" size="sm">Ver Grilla de Administradores</Button>
+                      <Button variant="outline" size="sm" className="hover:scale-105 hover:shadow-md transition-all duration-300">Ver Grilla de Administradores</Button>
                     </Link>
                     <span className="text-sm text-gray-500">12 registros</span>
                   </div>
@@ -192,7 +192,7 @@ export default function AdministrativoDashboard() {
               </div>
 
               {/* Gestión de Materias */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-2 hover:scale-105 transition-all duration-300 cursor-pointer">
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4">
@@ -210,7 +210,7 @@ export default function AdministrativoDashboard() {
                   </div>
                   <div className="mt-4 flex items-center justify-between">
                     <Link href="/dashboard/administrativo/crear-materia">
-                      <Button variant="outline" size="sm">Registrar Materia</Button>
+                      <Button variant="outline" size="sm" className="hover:scale-105 hover:shadow-md transition-all duration-300">Registrar Materia</Button>
                     </Link>
                     <span className="text-sm text-gray-500">156 registros</span>
                   </div>
