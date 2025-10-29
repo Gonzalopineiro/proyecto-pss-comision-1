@@ -435,7 +435,7 @@ export async function desasignarMateriasDocente(
         }
       }
 
-      // 5.4. Eliminar de profiles (si existe el profile)
+      // 5.4. Eliminar de profiles y auth.users (si existe el profile)
       if (profileDocente) {
         // Eliminar de profiles
         const { error: errorDeleteProfile } = await supabase
@@ -447,9 +447,28 @@ export async function desasignarMateriasDocente(
           console.error('Error al eliminar profile:', errorDeleteProfile);
         }
 
-        // Nota: No se puede eliminar de auth.users usando el cliente normal de Supabase
-        // ya que requiere privilegios de administrador (service role key).
-        // El usuario quedará en auth.users pero sin perfil ni acceso como docente.
+        // Eliminar el usuario de auth.users usando fetch directo a la API de Supabase Auth
+        try {
+          const deleteResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users/${profileDocente.id}`,
+            {
+              method: 'DELETE',
+              headers: {
+                'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+                'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}`
+              }
+            }
+          );
+
+          if (!deleteResponse.ok) {
+            const errorText = await deleteResponse.text();
+            console.error('Error al eliminar usuario de auth:', errorText);
+          } else {
+            console.log('Usuario docente eliminado correctamente de auth.users');
+          }
+        } catch (error) {
+          console.error('Error al eliminar usuario de auth:', error);
+        }
       }
       
       mensajeFinal += '. El docente ha sido eliminado completamente del sistema al quedar sin materias asignadas'
@@ -577,7 +596,7 @@ export async function eliminarDocente(
       }
     }
 
-    // 8. Eliminar de profiles (si existe el profile)
+    // 8. Eliminar de profiles y auth.users (si existe el profile)
     if (profileDocente) {
       // Eliminar de profiles
       const { error: errorDeleteProfile } = await supabase
@@ -593,9 +612,30 @@ export async function eliminarDocente(
         };
       }
 
-      // Nota: No se puede eliminar de auth.users usando el cliente normal de Supabase
-      // ya que requiere privilegios de administrador (service role key).
-      // El usuario quedará en auth.users pero sin perfil ni acceso como docente.
+      // Eliminar el usuario de auth.users usando fetch directo a la API de Supabase Auth
+      try {
+        const deleteResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users/${profileDocente.id}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+              'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}`
+            }
+          }
+        );
+
+        if (!deleteResponse.ok) {
+          const errorText = await deleteResponse.text();
+          console.error('Error al eliminar usuario de auth:', errorText);
+          // No retornamos error aquí porque el docente ya fue eliminado de las tablas principales
+        } else {
+          console.log('Usuario docente eliminado correctamente de auth.users');
+        }
+      } catch (error) {
+        console.error('Error al eliminar usuario de auth:', error);
+        // No retornamos error aquí porque el docente ya fue eliminado de las tablas principales
+      }
     }
 
     return { 
