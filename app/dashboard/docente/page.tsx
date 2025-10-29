@@ -1,4 +1,3 @@
-import Sidebar_docente from '@/components/dashboard/sidebar_docente'
 import PanelDocente from './PanelDocente'
 
 export default async function DocentePage() {
@@ -6,12 +5,9 @@ export default async function DocentePage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      <div className="flex">
-        <Sidebar_docente />
-        <main className="flex-1 p-8">
-          <PanelDocente />
-        </main>
-      </div>
+      <main className="p-8">
+        <PanelDocente />
+      </main>
     </div>
   )
 }
