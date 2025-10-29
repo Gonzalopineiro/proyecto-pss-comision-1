@@ -32,7 +32,7 @@ export default async function InscripcionCursadasPage() {
     mail: usuarioData.email,
   };
 
-  // Obtener cursadas activas
+  // Obtener cursadas activas con información completa
   const { data: cursadasData } = await supabase
     .from("cursadas")
     .select(
@@ -43,6 +43,7 @@ export default async function InscripcionCursadasPage() {
       materia_docente_id,
       materia_docente:materia_docente_id(
         materia:materia_id(
+          id,
           nombre,
           codigo_materia
         ),
@@ -78,6 +79,7 @@ export default async function InscripcionCursadasPage() {
         horarios: cursada.horarios,
         materia_docente: {
           materia: {
+            id: materia?.id || 0,
             nombre: materia?.nombre || "Sin nombre",
             codigo_materia: materia?.codigo_materia || "Sin código",
           },
