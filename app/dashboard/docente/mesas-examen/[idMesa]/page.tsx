@@ -3,6 +3,7 @@ import { getDatosMesaExamen, type MesaExamenDetalles } from './actions'
 import FormularioCargaNotas from './formulario-carga-notas'
 import { Badge } from '@/components/ui/badge' // (Asumo que usas shadcn)
 import { AlertTriangle } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 
 // Componente para la cabecera (basado en tu mockup)
 function CabeceraMesa({ detalles }: { detalles: MesaExamenDetalles }) {
@@ -14,6 +15,16 @@ function CabeceraMesa({ detalles }: { detalles: MesaExamenDetalles }) {
 
   return (
     <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border rounded-lg bg-white dark:bg-slate-800 shadow-sm">
+      {/* Botón de volver */}
+      <div className="mb-6">
+        <a 
+          href="/dashboard/docente"
+          className="inline-flex items-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+        >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Volver al Panel Docente
+        </a>
+      </div>
       <div>
         <p className="text-sm font-medium text-slate-500">Materia</p>
         <p className="text-lg font-semibold">{detalles.materiaNombre}</p>
