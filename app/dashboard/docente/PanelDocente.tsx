@@ -2,22 +2,21 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import {
-  BookOpen,
-  Users,
-  Calendar,
-  Plus,
-  Settings,
-  Star,
+import { 
+  BookOpen, 
+  Users, 
+  Calendar, 
+  Plus, 
+  Settings, 
+  Star, 
   FileText,
   Edit,
   Trash2,
-  Clock,
-  LogOut
+  Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-import {
+import { 
   obtenerMateriasDocente,
   obtenerMesasExamenDocente,
   eliminarMesaExamen,
@@ -35,30 +34,6 @@ export default function PanelDocente() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [mesaToDelete, setMesaToDelete] = useState<MesaExamen | null>(null);
 
-  // Función para cerrar sesión
-  const handleLogout = async () => {
-    try {
-      const response = await fetch('/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      
-      // La ruta de logout maneja la redirección automáticamente
-      // pero agregamos una redirección de respaldo por si acaso
-      if (response.redirected) {
-        window.location.href = response.url;
-      } else {
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error);
-      // Redirigir al login aunque haya error
-      router.push('/login');
-    }
-  };
-
   // Cargar datos al montar el componente
   useEffect(() => {
     async function fetchData() {
@@ -68,7 +43,7 @@ export default function PanelDocente() {
           obtenerMateriasDocente(),
           obtenerMesasExamenDocente()
         ]);
-
+        
         setMaterias(materiasData);
         setMesas(mesasData);
       } catch (error) {
@@ -77,14 +52,14 @@ export default function PanelDocente() {
         setLoading(false);
       }
     }
-
+    
     fetchData();
   }, []);
 
   // Manejar eliminación de mesa
   const handleDeleteMesa = async () => {
     if (!mesaToDelete) return;
-
+    
     try {
       const result = await eliminarMesaExamen(mesaToDelete.id);
       if (result.success) {
@@ -102,11 +77,7 @@ export default function PanelDocente() {
 
   // Formatear fecha
   const formatearFecha = (fecha: string) => {
-    // Usar fecha local para evitar problemas de zona horaria
-    const [year, month, day] = fecha.split('-');
-    const fechaLocal = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    
-    return fechaLocal.toLocaleDateString('es-ES', {
+    return new Date(fecha).toLocaleDateString('es-ES', {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
@@ -125,25 +96,12 @@ export default function PanelDocente() {
     <div className="max-w-7xl mx-auto p-6 space-y-8">
       {/* Encabezado */}
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-              Panel de Docente
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400">
-              Gestiona tus materias, estudiantes y evaluaciones
-            </p>
-          </div>
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
-          >
-            <LogOut className="h-4 w-4" />
-            Cerrar Sesión
-          </Button>
-        </div>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+          Panel de Docente
+        </h1>
+        <p className="text-slate-600 dark:text-slate-400">
+          Gestiona tus materias, estudiantes y evaluaciones
+        </p>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -231,20 +189,16 @@ export default function PanelDocente() {
                   Crear Mesa de Examen
                 </Button>
               </Link>
-              <Button className="w-full justify-start" variant="outline">
-                <Star className="h-4 w-4 mr-3" />
-                Calificaciones
-              </Button>
+              <Link href="/dashboard/docente/mesas-examen">
+                <Button className="w-full justify-start" variant="outline">
+                  <Star className="h-4 w-4 mr-3" />
+                  Calificaciones
+                </Button>
+              </Link>
               <Button className="w-full justify-start" variant="outline">
                 <FileText className="h-4 w-4 mr-3" />
                 Actas
               </Button>
-              <Link href="/dashboard/user/perfil">
-                <Button className="w-full justify-start" variant="outline">
-                  <Settings className="h-4 w-4 mr-3" />
-                  Modificar datos personales
-                </Button>
-              </Link>
             </div>
           </div>
 
@@ -293,7 +247,7 @@ export default function PanelDocente() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => { }}
+                            onClick={() => {}}
                             className="h-7 w-7 p-0"
                           >
                             <Edit className="h-3 w-3" />
@@ -313,7 +267,7 @@ export default function PanelDocente() {
                       </div>
                     </div>
                   ))}
-
+                  
                   {mesas.length > 4 && (
                     <Link href="/dashboard/docente/mesas-examen">
                       <Button variant="ghost" size="sm" className="w-full mt-3">
