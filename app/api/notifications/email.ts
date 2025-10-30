@@ -96,6 +96,10 @@ export async function enviarNotificacionMesaSinNotas(data: MesaSinNotasData): Pr
  * Verifica mesas de examen que necesitan notificación por falta de notas
  */
 export async function verificarMesasSinNotas(): Promise<{ success: boolean; mesasNotificadas: number; error?: string }> {
+  console.log('\n' + '🔍'.repeat(60))
+  console.log('🔍 INICIANDO VERIFICACIÓN DE MESAS SIN NOTAS')
+  console.log('🔍'.repeat(60))
+  
   try {
     const supabase = await createClient()
     
@@ -104,7 +108,9 @@ export async function verificarMesasSinNotas(): Promise<{ success: boolean; mesa
     fechaLimite.setDate(fechaLimite.getDate() - 14)
     const fechaLimiteStr = fechaLimite.toISOString().split('T')[0]
     
-    console.log('Verificando mesas sin notas desde:', fechaLimiteStr)
+    console.log('📅 Fecha actual:', new Date().toLocaleDateString('es-ES'))
+    console.log('📅 Fecha límite (2 semanas atrás):', new Date(fechaLimiteStr).toLocaleDateString('es-ES'))
+    console.log('🔍 Buscando mesas finalizadas sin notas desde esa fecha...')
     
     // Buscar mesas de examen que:
     // 1. Tengan fecha de examen mayor o igual a 2 semanas atrás
@@ -136,11 +142,16 @@ export async function verificarMesasSinNotas(): Promise<{ success: boolean; mesa
     }
     
     if (!mesas || mesas.length === 0) {
-      console.log('No se encontraron mesas que requieran notificación')
+      console.log('\n' + '✅'.repeat(60))
+      console.log('✅ No se encontraron mesas que requieran notificación')
+      console.log('📊 Todas las mesas están al día con sus notas')
+      console.log('✅'.repeat(60) + '\n')
       return { success: true, mesasNotificadas: 0 }
     }
     
-    console.log(`Encontradas ${mesas.length} mesas para notificar`)
+    console.log('\n' + '📋'.repeat(60))
+    console.log(`📋 ENCONTRADAS ${mesas.length} MESA(S) PARA VERIFICAR`)
+    console.log('📋'.repeat(60))
     
     let mesasNotificadas = 0
     
@@ -160,7 +171,7 @@ export async function verificarMesasSinNotas(): Promise<{ success: boolean; mesa
             .limit(1)
           
           if (notificacionReciente && notificacionReciente.length > 0) {
-            console.log(`Mesa ${mesa.id} ya fue notificada recientemente`)
+            console.log(`⏭️  Mesa ${mesa.id} ya fue notificada recientemente (últimas 24h)`)
             continue
           }
         } catch (error) {
@@ -193,9 +204,9 @@ export async function verificarMesasSinNotas(): Promise<{ success: boolean; mesa
         
         if (result.success) {
           mesasNotificadas++
-          console.log(`Notificación enviada para mesa ${mesa.id}`)
+          console.log(`✅ Notificación enviada exitosamente para mesa ${mesa.id}`)
         } else {
-          console.error(`Error al notificar mesa ${mesa.id}:`, result.error)
+          console.error(`❌ Error al notificar mesa ${mesa.id}:`, result.error)
         }
         
       } catch (error) {
@@ -203,7 +214,11 @@ export async function verificarMesasSinNotas(): Promise<{ success: boolean; mesa
       }
     }
     
-    console.log(`Proceso completado. Mesas notificadas: ${mesasNotificadas}`)
+    console.log('\n' + '🎉'.repeat(60))
+    console.log('🎉 PROCESO DE NOTIFICACIONES COMPLETADO')
+    console.log(`📊 Total mesas procesadas: ${mesas.length}`)
+    console.log(`📧 Total notificaciones enviadas: ${mesasNotificadas}`)
+    console.log('🎉'.repeat(60) + '\n')
     
     return { success: true, mesasNotificadas }
     

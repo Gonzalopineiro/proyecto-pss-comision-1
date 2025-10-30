@@ -21,7 +21,8 @@ interface DesasignarMateriaDialogProps {
   onClose: () => void
   docenteNombre: string
   docenteLegajo: string
-  docenteId: string
+  docenteEstado: string 
+  docenteId: string // UUID
   materiasAsignadas: MateriaAsignada[]
   onDesasignar: (materiasIds: number[]) => Promise<{ success: boolean; error?: string; mensaje?: string }>
   cargandoMaterias?: boolean
@@ -98,11 +99,8 @@ export default function DesasignarMateriaDialog({
       const result = await onDesasignar(materiasSeleccionadas)
 
       if (result.success) {
-        setMensaje(result.mensaje || 'Materia(s) desasignada(s) exitosamente')
-        // Esperar un momento para mostrar el mensaje y luego cerrar
-        setTimeout(() => {
-          handleClose()
-        }, 2000)
+        // Limpiar y cerrar - el componente padre mostrará el mensaje de éxito
+        handleClose()
       } else {
         setMostrarConfirmacion(false)
         setError(result.error || 'Error al desasignar materia(s)')

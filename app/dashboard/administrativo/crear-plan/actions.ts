@@ -270,3 +270,219 @@ export async function obtenerMateriasDePlan(planId: number) {
     return null
   }
 }
+
+/**
+ * Crea cursadas automáticamente para todas las materias de un plan
+ * 
+ * @param {number} planId - ID del plan de estudios
+ * @param {number} anioAcademico - Año académico para las cursadas (por defecto el año actual)
+ * @returns {Promise<{ success: boolean; cursadasCreadas: number } | { error: string }>}
+ */
+export async function crearCursadasParaPlan(
+  planId: number,
+  anioAcademico?: number
+): Promise<{ success: boolean; cursadasCreadas: number } | { error: string }> {
+  try {
+    const supabase = await createClient();
+    const anio = anioAcademico || new Date().getFullYear();
+
+    // 1. Obtener todas las materias del plan
+    const { data: materiasPlan, error: errorMaterias } = await supabase
+      .from('plan_materia')
+      .select(`
+        id,
+        materia_id,
+        anio,
+        cuatrimestre,
+        materias (
+          id,
+          nombre,
+          codigo_materia
+        )
+      `)
+      .eq('plan_id', planId);
+
+    if (errorMaterias || !materiasPlan) {
+      console.error('Error al obtener materias del plan:', errorMaterias);
+      return { error: 'No se pudieron obtener las materias del plan' };
+    }
+
+    if (materiasPlan.length === 0) {
+      return { error: 'El plan no tiene materias asociadas' };
+    }
+
+    // 2. Para cada materia, buscar si tiene docentes asignados
+    const cursadasParaCrear = [];
+    
+    for (const materiaPlan of materiasPlan) {
+      // Buscar docentes asignados a esta materia
+      const { data: materiasDocente, error: errorDocentes } = await supabase
+        .from('materia_docente')
+        .select('id')
+        .eq('materia_id', materiaPlan.materia_id);
+
+      if (errorDocentes) {
+        console.error(`Error al buscar docentes para materia ${materiaPlan.materia_id}:`, errorDocentes);
+        continue;
+      }
+
+      // Si tiene docentes asignados, crear cursadas para cada uno
+      if (materiasDocente && materiasDocente.length > 0) {
+        for (const materiaDocente of materiasDocente) {
+          // Verificar que no exista ya una cursada para este año y cuatrimestre
+          const { data: cursadaExistente } = await supabase
+            .from('cursadas')
+            .select('id')
+            .eq('materia_docente_id', materiaDocente.id)
+            .eq('anio', anio)
+            .eq('cuatrimestre', materiaPlan.cuatrimestre)
+            .maybeSingle();
+
+          if (!cursadaExistente) {
+            cursadasParaCrear.push({
+              materia_docente_id: materiaDocente.id,
+              anio: anio,
+              cuatrimestre: materiaPlan.cuatrimestre,
+              cupo_maximo: 50, // Valor por defecto
+              estado: 'activa'
+            });
+          }
+        }
+      } else {
+        console.warn(`Materia ID: ${materiaPlan.materia_id} no tiene docentes asignados. No se creará cursada.`);
+      }
+    }
+
+    // 3. Crear todas las cursadas de una vez
+    if (cursadasParaCrear.length === 0) {
+      return { error: 'No se pudieron crear cursadas. Asegúrate de que las materias tengan docentes asignados.' };
+    }
+
+    const { data: cursadasCreadas, error: errorCreacion } = await supabase
+      .from('cursadas')
+      .insert(cursadasParaCrear)
+      .select();
+
+    if (errorCreacion) {
+      console.error('Error al crear cursadas:', errorCreacion);
+      return { error: `Error al crear cursadas: ${errorCreacion.message}` };
+    }
+
+    console.log(`Cursadas creadas exitosamente: ${cursadasCreadas?.length || 0}`);
+    revalidatePath('/dashboard/administrativo');
+    
+    return { 
+      success: true, 
+      cursadasCreadas: cursadasCreadas?.length || 0 
+    };
+
+  } catch (e) {
+    console.error('Error inesperado al crear cursadas:', e);
+    return { error: 'Error inesperado al crear cursadas para el plan' };
+  }
+}
+
+/**
+ * Obtiene información sobre las cursadas existentes para un plan específico
+ * 
+ * @param {number} planId - ID del plan de estudios
+ * @param {number} anioAcademico - Año académico a consultar
+ * @returns {Promise<{ materiasConCursadas: number; materiasTotal: number; cursadasTotal: number } | { error: string }>}
+ */
+export async function obtenerInfoCursadasPlan(
+  planId: number,
+  anioAcademico?: number
+): Promise<{ materiasConCursadas: number; materiasTotal: number; cursadasTotal: number } | { error: string }> {
+  try {
+    const supabase = await createClient();
+    const anio = anioAcademico || new Date().getFullYear();
+
+    // 1. Obtener todas las materias del plan
+    const { data: materiasPlan, error: errorMaterias } = await supabase
+      .from('plan_materia')
+      .select('materia_id')
+      .eq('plan_id', planId);
+
+    if (errorMaterias || !materiasPlan) {
+      return { error: 'No se pudieron obtener las materias del plan' };
+    }
+
+    // 2. Para cada materia, verificar si tiene cursadas activas para el año
+    let materiasConCursadas = 0;
+    let cursadasTotal = 0;
+
+    for (const materiaPlan of materiasPlan) {
+      const { data: cursadas, error: errorCursadas } = await supabase
+        .from('cursadas')
+        .select(`
+          id,
+          materia_docente!inner(materia_id)
+        `)
+        .eq('materia_docente.materia_id', materiaPlan.materia_id)
+        .eq('anio', anio);
+
+      if (!errorCursadas && cursadas && cursadas.length > 0) {
+        materiasConCursadas++;
+        cursadasTotal += cursadas.length;
+      }
+    }
+
+    return {
+      materiasConCursadas,
+      materiasTotal: materiasPlan.length,
+      cursadasTotal
+    };
+
+  } catch (e) {
+    console.error('Error al obtener información de cursadas:', e);
+    return { error: 'Error inesperado al obtener información de cursadas' };
+  }
+}
+
+/**
+ * Desasocia una materia de un plan de estudios.
+ * 
+ * @param {number} planMateriaId - El ID de la relación en la tabla 'plan_materia'
+ * @returns {Promise<{ success: boolean } | { error: string }>}
+ */
+export async function desasociarMateriaDePlan(
+  planMateriaId: number
+): Promise<{ success: boolean } | { error: string }> {
+  try {
+    const supabase = await createClient();
+    
+    // Antes de eliminar, necesitamos verificar si la materia tiene alumnos inscriptos
+    const { data: materiaPlan, error: fetchError } = await supabase
+      .from('vista_materias_plan')
+      .select('estudiantes_activos')
+      .eq('plan_materia_id', planMateriaId)
+      .single();
+
+    if (fetchError || !materiaPlan) {
+      return { error: 'No se encontró la materia en el plan.' };
+    }
+
+    // Regla de negocio: No se puede eliminar si hay estudiantes.
+    if (materiaPlan.estudiantes_activos > 0) {
+      return { error: 'No se puede eliminar una materia con estudiantes activos.' };
+    }
+    
+    // Si no hay estudiantes, proceder a eliminar la asociación.
+    const { error: deleteError } = await supabase
+      .from('plan_materia')
+      .delete()
+      .eq('id', planMateriaId);
+
+    if (deleteError) {
+      console.error('Error al desasociar la materia:', deleteError);
+      return { error: `Error al desasociar la materia: ${deleteError.message}` };
+    }
+
+    revalidatePath('/dashboard/administrativo'); // Revalida para refrescar los datos
+    return { success: true };
+
+  } catch (e) {
+    console.error('Error inesperado al desasociar materia:', e);
+    return { error: 'Error inesperado al desasociar materia del plan.' };
+  }
+}

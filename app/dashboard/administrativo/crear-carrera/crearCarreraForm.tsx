@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Info } from 'lucide-react';
+import ConfirmationPopup from '@/components/ui/confirmation-popup';
 import { 
   crearCarrera, 
   verificarCarreraExistente, 
@@ -34,6 +35,8 @@ export default function CrearCarreraForm() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ [k: string]: string }>({});
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [carreraCreada, setCarreraCreada] = useState<string>('');
 
   // Efecto para generar el código automáticamente cuando cambia el departamento
   useEffect(() => {
@@ -70,15 +73,30 @@ export default function CrearCarreraForm() {
     fetchData();
   }, []);
 
+  // Función para limpiar errores específicos
+  const clearError = (field: string) => {
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[field];
+      return newErrors;
+    });
+  };
+
   // Función de validación del lado del cliente
   const validate = async (): Promise<boolean> => {
     const e: { [k: string]: string } = {};
-    if (!nombre.trim()) e.nombre = 'El nombre es obligatorio';
-    if (!departamento) e.departamento = 'El departamento es obligatorio';
-    if (!planDeEstudiosId) e.planDeEstudiosId = 'El plan de estudios es obligatorio';
     
-    // Verificar si ya existe una carrera con el mismo nombre
-    if (nombre.trim()) {
+    if (!nombre.trim()) {
+      e.nombre = 'El nombre es obligatorio';
+    } else if (/^\d+$/.test(nombre.trim())) {
+      e.nombre = 'El nombre no puede contener solo números';
+    }
+    
+    if (!departamento) e.departamento = 'Hay que seleccionar un departamento';
+    if (!planDeEstudiosId) e.planDeEstudiosId = 'Hay que seleccionar un plan de estudios';
+    
+    // Verificar si ya existe una carrera con el mismo nombre (solo si pasó las validaciones básicas)
+    if (nombre.trim() && !/^\d+$/.test(nombre.trim())) {
       const existeNombre = await verificarCarreraExistente(nombre.trim());
       if (existeNombre) {
         e.nombre = 'Ya existe una carrera con este nombre';
@@ -95,6 +113,45 @@ export default function CrearCarreraForm() {
     
     setErrors(e);
     return Object.keys(e).length === 0;
+  };
+
+  // Función para validar un campo específico
+  const validateField = async (field: string, value: string) => {
+    const newErrors = { ...errors };
+    
+    switch (field) {
+      case 'nombre':
+        if (!value.trim()) {
+          newErrors.nombre = 'El nombre es obligatorio';
+        } else if (/^\d+$/.test(value.trim())) {
+          newErrors.nombre = 'El nombre no puede contener solo números';
+        } else {
+          // Verificar si ya existe una carrera con el mismo nombre
+          const existeNombre = await verificarCarreraExistente(value.trim());
+          if (existeNombre) {
+            newErrors.nombre = 'Ya existe una carrera con este nombre';
+          } else {
+            delete newErrors.nombre;
+          }
+        }
+        break;
+      case 'departamento':
+        if (!value) {
+          newErrors.departamento = 'Hay que seleccionar un departamento';
+        } else {
+          delete newErrors.departamento;
+        }
+        break;
+      case 'planDeEstudiosId':
+        if (!value) {
+          newErrors.planDeEstudiosId = 'Hay que seleccionar un plan de estudios';
+        } else {
+          delete newErrors.planDeEstudiosId;
+        }
+        break;
+    }
+    
+    setErrors(newErrors);
   };
 
   // Función para manejar el envío del formulario
@@ -134,8 +191,14 @@ export default function CrearCarreraForm() {
       if ('error' in resultado) {
         setServerError(resultado.error);
       } else {
-        // Redireccionar en caso de éxito
-        router.push('/dashboard/administrativo');
+        // Mostrar popup de éxito
+        setCarreraCreada(nombre);
+        setShowSuccessPopup(true);
+        
+        // Redirigir después de 3 segundos
+        setTimeout(() => {
+          router.push('/dashboard/administrativo');
+        }, 3000);
       }
     } catch (err: any) {
       setServerError(err.message || 'Error desconocido al crear la carrera');
@@ -157,7 +220,12 @@ export default function CrearCarreraForm() {
               Cancelar
             </button>
             <button type="submit" disabled={loading} className="bg-gray-800 text-white font-semibold py-2 px-5 rounded-md hover:bg-black disabled:opacity-50">
-              {loading ? 'Creando...' : 'Crear Carrera'}
+              {showSuccessPopup 
+                ? "Carrera creada exitosamente. Redirigiendo..." 
+                : loading 
+                ? 'Creando...' 
+                : 'Crear Carrera'
+              }
             </button>
           </div>
         </div>
@@ -169,10 +237,17 @@ export default function CrearCarreraForm() {
               <input 
                 type="text"
                 value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
+                onChange={(e) => {
+                  setNombre(e.target.value);
+                  clearError('nombre');
+                }}
+                onBlur={(e) => validateField('nombre', e.target.value)}
                 placeholder="Ej: Ingeniería en Sistemas"
                 className={`w-full p-2.5 rounded-md border ${errors.nombre ? 'border-red-500' : 'border-gray-300'} shadow-sm`}
               />
+              {errors.nombre && (
+                <p className="text-red-500 text-sm mt-1">{errors.nombre}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Código de Identificación generado automáticamente</label>
@@ -181,15 +256,21 @@ export default function CrearCarreraForm() {
                 type="text"
                 value={codigo}
                 readOnly
-                className="w-full p-2.5 rounded-md border border-gray-300 bg-gray-50 shadow-sm"
+                className={`w-full p-2.5 rounded-md border ${errors.codigo ? 'border-red-500' : 'border-gray-300'} bg-gray-50 shadow-sm`}
               />
+              {errors.codigo && (
+                <p className="text-red-500 text-sm mt-1">{errors.codigo}</p>
+              )}
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Departamento Responsable *</label>            
               <select
                 title="Departamento Responsable"
                 value={departamento}
-                onChange={(e) => setDepartamento(e.target.value)}
+                onChange={(e) => {
+                  setDepartamento(e.target.value);
+                  validateField('departamento', e.target.value);
+                }}
                 className={`w-full p-2.5 rounded-md border ${errors.departamento ? 'border-red-500' : 'border-gray-300'} shadow-sm`}
               >
                 <option value="">Seleccionar departamento...</option>
@@ -197,18 +278,27 @@ export default function CrearCarreraForm() {
                   <option key={dep} value={dep}>{dep}</option>
                 ))}
               </select>
+              {errors.departamento && (
+                <p className="text-red-500 text-sm mt-1">{errors.departamento}</p>
+              )}
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Plan de Estudios Asociado *</label>
               <select
                 title="Plan de Estudios"
                 value={planDeEstudiosId}
-                onChange={(e) => setPlanDeEstudiosId(e.target.value)}
+                onChange={(e) => {
+                  setPlanDeEstudiosId(e.target.value);
+                  validateField('planDeEstudiosId', e.target.value);
+                }}
                 className={`w-full p-2.5 rounded-md border ${errors.planDeEstudiosId ? 'border-red-500' : 'border-gray-300'} shadow-sm`}
               >
                 <option value="">Seleccionar plan de estudios...</option>
                 {planesDisponibles.map(plan => <option key={plan.id} value={plan.id}>{plan.nombre}</option>)}
               </select>
+              {errors.planDeEstudiosId && (
+                <p className="text-red-500 text-sm mt-1">{errors.planDeEstudiosId}</p>
+              )}
               <p className="text-xs text-gray-500 mt-1">Solo se muestran planes de estudios vigentes y aprobados</p>
             </div>
           </div>
@@ -240,6 +330,16 @@ export default function CrearCarreraForm() {
           </div>
         </div>
       </form>
+
+      <ConfirmationPopup
+        isOpen={showSuccessPopup}
+        onClose={() => {
+          setShowSuccessPopup(false);
+          router.push('/dashboard/administrativo');
+        }}
+        title="¡Carrera Creada con Éxito!"
+        message={`La carrera "${carreraCreada}" ha sido registrada correctamente en el sistema.`}
+      />
     </div>
   );
 }

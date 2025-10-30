@@ -113,9 +113,9 @@ const AltaUsuarioForm = () => {
         if (value.trim().length < 3) {
           return 'El legajo debe tener al menos 3 caracteres'
         }
-        // Validación para formato de legajo (alfanumérico)
-        if (!/^[A-Za-z0-9-]+$/.test(value)) {
-          return 'El legajo solo puede contener letras, números y guiones'
+        // Validación para formato de legajo (solo números)
+        if (!/^\d+$/.test(value)) {
+          return 'El legajo solo puede contener números'
         }
         return ''
       
@@ -365,12 +365,15 @@ const AltaUsuarioForm = () => {
                     name="legajo"
                     value={formData.legajo}
                     onChange={handleInputChange}
+                    pattern="[0-9]+"
+                    inputMode="numeric"
+                    title="El legajo solo debe contener números"
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       errors.legajo ? 'border-red-300 bg-red-50' : 'border-gray-300'
                     }`}
-                    placeholder="Ej: LEG2025001"
+                    placeholder="Ej: 2025001"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Código único del alumno</p>
+                  <p className="text-xs text-gray-500 mt-1">Solo números, código único del alumno</p>
                   {errors.legajo && <p className="mt-1 text-sm text-red-600">{errors.legajo}</p>}
                 </div>
               </div>

@@ -4,8 +4,8 @@ import { useRouter } from 'next/navigation';
 import { Calendar, Clock, MapPin, BookOpen, MessageSquare, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ConfirmationPopup from '@/components/ui/confirmation-popup';
-import {
-  crearMesaExamen,
+import { 
+  crearMesaExamen, 
   obtenerMateriasDocente,
   verificarMesaExistente,
   type MesaExamenData,
@@ -43,54 +43,35 @@ export default function CrearMesaForm() {
         setServerError('Error al cargar las materias disponibles.');
       }
     }
-
+    
     fetchMaterias();
   }, []);
 
   // Función de validación
   const validate = async (): Promise<boolean> => {
     const e: { [k: string]: string } = {};
-
+    
     if (!materiaId) e.materiaId = 'Debe seleccionar una materia';
     if (!fechaExamen) e.fechaExamen = 'La fecha del examen es obligatoria';
     if (!horaExamen) e.horaExamen = 'La hora del examen es obligatoria';
-    
-    // Validar ubicación (debe contener "aula" y un número)
-    if (!ubicacion.trim()) {
-      e.ubicacion = 'La ubicación es obligatoria';
-    } else {
-      const ubicacionLower = ubicacion.toLowerCase().trim();
-      const contieneAula = ubicacionLower.includes('aula');
-      const contieneNumero = /\d/.test(ubicacion);
-      
-      if (!contieneAula || !contieneNumero) {
-        e.ubicacion = 'La ubicación debe incluir "Aula" y un número (ej: Aula 205)';
-      }
-    }
+    if (!ubicacion.trim()) e.ubicacion = 'La ubicación es obligatoria';
 
-    // Validar fecha del examen
+    // Validar que la fecha no sea en el pasado
     if (fechaExamen) {
-      const [year, month, day] = fechaExamen.split('-');
-      const fechaSeleccionada = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      const fechaSeleccionada = new Date(fechaExamen);
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
       
-      // Fecha límite: 1 año en el futuro
-      const fechaMaxima = new Date();
-      fechaMaxima.setFullYear(fechaMaxima.getFullYear() + 1);
-
       if (fechaSeleccionada < hoy) {
-        e.fechaExamen = 'La fecha del examen no puede ser anterior a hoy';
-      } else if (fechaSeleccionada > fechaMaxima) {
-        e.fechaExamen = 'La fecha del examen no puede ser más de un año en el futuro';
+        e.fechaExamen = 'La fecha del examen no puede ser en el pasado';
       }
     }
 
     // Verificar si ya existe una mesa para la misma materia, fecha y hora
     if (materiaId && fechaExamen && horaExamen) {
       const existeMesa = await verificarMesaExistente(
-        parseInt(materiaId),
-        fechaExamen,
+        parseInt(materiaId), 
+        fechaExamen, 
         horaExamen
       );
       if (existeMesa) {
@@ -105,7 +86,7 @@ export default function CrearMesaForm() {
   // Función para manejar el envío del formulario
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     setLoading(true);
     setServerError(null);
     setShowSuccessPopup(false);
@@ -127,24 +108,24 @@ export default function CrearMesaForm() {
       };
 
       const result = await crearMesaExamen(mesaData);
-
+      
       if (result.success) {
         // Obtener el nombre de la materia seleccionada
         const materiaSeleccionada = materias.find(m => m.id === parseInt(materiaId));
-
+        
         setMesaCreada({
           materia: materiaSeleccionada ? `${materiaSeleccionada.codigo_materia} - ${materiaSeleccionada.nombre}` : 'Materia',
           fecha: fechaExamen,
           hora: horaExamen
         });
-
+        
         // Limpiar el formulario
         setMateriaId('');
         setFechaExamen('');
         setHoraExamen('');
         setUbicacion('');
         setComentarios('');
-
+        
         // Mostrar popup de éxito
         setShowSuccessPopup(true);
       } else {
@@ -157,9 +138,11 @@ export default function CrearMesaForm() {
     }
   };
 
-
-
-
+  // Obtener la fecha mínima (hoy)
+  const getMinDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
 
   return (
     <div className="max-w-2xl mx-auto bg-white dark:bg-slate-800 rounded-lg shadow-lg p-8">
@@ -209,8 +192,9 @@ export default function CrearMesaForm() {
               id="materia"
               value={materiaId}
               onChange={(e) => setMateriaId(e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.materiaId ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
-                }`}
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                errors.materiaId ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
+              }`}
               disabled={loading || materias.length === 0}
             >
               <option value="">Seleccione una materia</option>
@@ -238,8 +222,10 @@ export default function CrearMesaForm() {
                 id="fecha"
                 value={fechaExamen}
                 onChange={(e) => setFechaExamen(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.fechaExamen ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
-                  }`}
+                min={getMinDate()}
+                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  errors.fechaExamen ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
+                }`}
                 disabled={loading}
               />
               {errors.fechaExamen && (
@@ -258,8 +244,9 @@ export default function CrearMesaForm() {
                 id="hora"
                 value={horaExamen}
                 onChange={(e) => setHoraExamen(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.horaExamen ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
-                  }`}
+                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  errors.horaExamen ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
+                }`}
                 disabled={loading}
               />
               {errors.horaExamen && (
@@ -280,8 +267,9 @@ export default function CrearMesaForm() {
               value={ubicacion}
               onChange={(e) => setUbicacion(e.target.value)}
               placeholder="Ej: Aula 205, Edificio Central"
-              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.ubicacion ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
-                }`}
+              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                errors.ubicacion ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
+              }`}
               disabled={loading}
             />
             {errors.ubicacion && (
@@ -337,14 +325,10 @@ export default function CrearMesaForm() {
         }}
         title="¡Mesa Creada con Éxito!"
         message={mesaCreada ? 
-          `La mesa de examen para "${mesaCreada.materia}" ha sido programada para el ${(() => {
-            const [year, month, day] = mesaCreada.fecha.split('-');
-            const fechaLocal = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-            return fechaLocal.toLocaleDateString('es-ES');
-          })()} a las ${mesaCreada.hora}.` :
+          `La mesa de examen para "${mesaCreada.materia}" ha sido programada para el ${new Date(mesaCreada.fecha).toLocaleDateString('es-ES')} a las ${mesaCreada.hora}.` :
           'La mesa de examen ha sido creada exitosamente.'
         }
-
+       
       />
     </div>
   );

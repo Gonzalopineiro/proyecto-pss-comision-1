@@ -1,30 +1,7 @@
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/server";
-import { inscribirseEnCursada } from "./actions";
-
-type Cursada = {
-  id: number;
-  cupo_maximo: number | null;
-  horarios: {
-    horarios: Array<{
-      dia: string;
-      hora_inicio: string;
-      hora_fin: string;
-      aula: string;
-    }>;
-  } | null;
-  materia_docente: {
-    materia: {
-      nombre: string;
-      codigo_materia: string;
-    };
-    docente: {
-      nombre: string;
-      apellido: string;
-    };
-  };
-};
+import SidebarAlumno from "@/components/ui/sidebar_alumno";
+import CursadasTable, { Cursada } from "./CursadasTable";
 
 export default async function InscripcionCursadasPage() {
   const supabase = await createClient();
@@ -37,7 +14,59 @@ export default async function InscripcionCursadasPage() {
     return <p>No hay sesión activa</p>;
   }
 
-  // Obtener cursadas activas
+  // Buscar datos completos del alumno en tabla 'usuarios' usando el email
+  const { data: usuarioData, error: usuarioError } = await supabase
+    .from("usuarios")
+    .select(`
+      nombre, 
+      apellido, 
+      legajo, 
+      email,
+      carrera_id,
+      carreras!carrera_id (
+        id,
+        nombre,
+        plan_de_estudio_id
+      )
+    `)
+    .eq("email", user.email)
+    .single(); // Usamos single() en lugar de maybeSingle()
+
+  if (usuarioError || !usuarioData) {
+    console.error("No se encontró información del alumno:", usuarioError);
+    return <p>No se pudo obtener la información del alumno</p>;
+  }
+
+  if (!usuarioData.carreras) {
+    return <p>El alumno no tiene una carrera asignada</p>;
+  }
+
+  const alumno = {
+    nombre: `${usuarioData.nombre} ${usuarioData.apellido}`,
+    legajo: usuarioData.legajo,
+    mail: usuarioData.email,
+  };
+
+  const planDeEstudioId = (usuarioData.carreras as any).plan_de_estudio_id;
+
+  // Obtener las materias que pertenecen al plan de estudios del alumno
+  const { data: materiasDelPlan, error: materiasError } = await supabase
+    .from("plan_materia")
+    .select("materia_id")
+    .eq("plan_id", planDeEstudioId);
+
+  if (materiasError) {
+    console.error("Error obteniendo materias del plan:", materiasError);
+    return <p>Error al obtener las materias de la carrera</p>;
+  }
+
+  const materiaIds = materiasDelPlan?.map(item => item.materia_id) || [];
+
+  if (materiaIds.length === 0) {
+    return <p>No hay materias disponibles para tu plan de estudios</p>;
+  }
+
+  // Obtener cursadas activas con información completa
   const { data: cursadasData } = await supabase
     .from("cursadas")
     .select(
@@ -47,7 +76,9 @@ export default async function InscripcionCursadasPage() {
       horarios,
       materia_docente_id,
       materia_docente:materia_docente_id(
+        materia_id,
         materia:materia_id(
+          id,
           nombre,
           codigo_materia
         ),
@@ -61,6 +92,12 @@ export default async function InscripcionCursadasPage() {
     .eq("estado", "activa")
     .order("created_at");
 
+  // Filtrar cursadas para incluir solo materias del plan de estudios del alumno
+  const cursadasFiltradas = (cursadasData || []).filter((cursada: any) => {
+    const materiaId = cursada?.materia_docente?.materia_id;
+    return materiaId && materiaIds.includes(materiaId);
+  });
+
   // Obtener inscripciones del usuario
   const { data: inscripcionesData } = await supabase
     .from("inscripciones_cursada")
@@ -71,7 +108,7 @@ export default async function InscripcionCursadasPage() {
     (inscripcionesData || []).map((i) => i.cursada_id)
   );
 
-  const cursadas = (cursadasData || [])
+  const cursadas = cursadasFiltradas
     .map((cursada: any) => {
       if (!cursada?.materia_docente) return null;
 
@@ -83,6 +120,7 @@ export default async function InscripcionCursadasPage() {
         horarios: cursada.horarios,
         materia_docente: {
           materia: {
+            id: materia?.id || 0,
             nombre: materia?.nombre || "Sin nombre",
             codigo_materia: materia?.codigo_materia || "Sin código",
           },
@@ -125,6 +163,9 @@ export default async function InscripcionCursadasPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <div className="flex">
+        <aside className="w-64">
+          <SidebarAlumno />
+        </aside>
         <main className="flex-1 p-8">
           <div className="max-w-6xl mx-auto mt-6">
             <div className="flex flex-col gap-4">
@@ -157,94 +198,13 @@ export default async function InscripcionCursadasPage() {
                 </div>
               </Card>
 
-              {/* Grid de cursadas */}
+              {/* Componente CursadasTable */}
               <div className="mt-8">
-                <div className="grid grid-cols-3 gap-6">
-                  {cursadas.map((cursada: Cursada) => {
-                    const yaInscripto = cursadasInscripto.has(cursada.id);
-                    return (
-                      <Card
-                        key={cursada.id}
-                        className="p-6 aspect-square flex flex-col hover:border-primary transition-colors cursor-pointer"
-                      >
-                        <div className="flex flex-col h-full">
-                          <div className="mb-4">
-                            <h3 className="text-lg font-semibold">
-                              {cursada.materia_docente.materia.nombre}
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                              Código:{" "}
-                              {
-                                cursada.materia_docente.materia
-                                  .codigo_materia
-                              }
-                            </p>
-                          </div>
-
-                          <div className="flex-grow">
-                            <p className="text-sm mb-2">
-                              <span className="font-medium">Profesor:</span>{" "}
-                              {cursada.materia_docente.docente.nombre}{" "}
-                              {cursada.materia_docente.docente.apellido}
-                            </p>
-                            <p className="text-sm mb-2">
-                              <span className="font-medium">Cupo:</span>{" "}
-                              {cursada.cupo_maximo || "Sin límite"}
-                            </p>
-                            <div className="text-sm whitespace-pre-line">
-                              <span className="font-medium">Horarios:</span>
-                              <br />
-                              {cursada.horarios?.horarios
-                                ?.map(
-                                  (h) =>
-                                    `${h.dia} ${h.hora_inicio}-${h.hora_fin} (${h.aula})`
-                                )
-                                .join("\n")}
-                            </div>
-                          </div>
-
-                          <form action={inscribirseEnCursada}>
-                            <input
-                              type="hidden"
-                              name="cursadaId"
-                              value={cursada.id}
-                            />
-                            <Button
-                              type="submit"
-                              className="mt-4"
-                              size="sm"
-                              disabled={yaInscripto}
-                            >
-                              {yaInscripto
-                                ? "Ya estás inscripto"
-                                : "Inscribirme"}
-                            </Button>
-                          </form>
-                        </div>
-                      </Card>
-                    );
-                  })}
-                </div>
-
-                {/* Paginación */}
-                <div className="mt-6 flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    Mostrando {Math.min(6, cursadas.length)} de{" "}
-                    {cursadas.length} cursadas disponibles
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" disabled>
-                      Anterior
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={cursadas.length <= 6}
-                    >
-                      Siguiente
-                    </Button>
-                  </div>
-                </div>
+                <CursadasTable
+                  cursadas={cursadas}
+                  cursadasInscripto={cursadasInscripto}
+                  alumno={alumno}
+                />
               </div>
             </div>
           </div>

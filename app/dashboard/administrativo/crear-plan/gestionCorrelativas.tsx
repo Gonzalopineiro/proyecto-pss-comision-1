@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Search, Plus, Trash } from 'lucide-react';
+import { Plus, Trash } from 'lucide-react';
 import { 
   agregarCorrelativaCursado, 
   agregarCorrelativaFinal,
@@ -416,51 +416,34 @@ export default function GestionCorrelativas({
                     
                     {/* Input para buscar y agregar correlativas */}
                     <div className="relative">
-                      <div className="flex">
-                        <div className="relative flex-grow">
-                          <input
-                            type="text"
-                            placeholder="Buscar materias..."
-                            value={busquedaCursado[materia.materias.id] || ''}
-                            onChange={(e) => setBusquedaCursado(prev => ({
-                              ...prev,
-                              [materia.materias.id]: e.target.value
-                            }))}
-                            className="w-full px-3 py-1 text-xs border border-gray-300 rounded-l-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                          {(busquedaCursado[materia.materias.id]?.length || 0) > 0 && (
-                            <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-40 overflow-y-auto">
-                              {filtrarMateriasPorBusqueda(materia.materias.id, 'cursado').map(m => (
-                                <div
-                                  key={m.id}
-                                  className="px-3 py-2 text-xs hover:bg-gray-100 cursor-pointer"
-                                  onClick={() => handleAgregarCorrelativaCursado(materia.materias.id, m.materias.id)}
-                                >
-                                  {m.materias.nombre}
-                                </div>
-                              ))}
-                              {filtrarMateriasPorBusqueda(materia.materias.id, 'cursado').length === 0 && (
-                                <div className="px-3 py-2 text-xs text-gray-500">
-                                  No hay resultados
-                                </div>
-                              )}
+                      <input
+                        type="text"
+                        placeholder="Buscar materias..."
+                        value={busquedaCursado[materia.materias.id] || ''}
+                        onChange={(e) => setBusquedaCursado(prev => ({
+                          ...prev,
+                          [materia.materias.id]: e.target.value
+                        }))}
+                        className="w-full px-3 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      {(busquedaCursado[materia.materias.id]?.length || 0) > 0 && (
+                        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-40 overflow-y-auto">
+                          {filtrarMateriasPorBusqueda(materia.materias.id, 'cursado').map(m => (
+                            <div
+                              key={m.id}
+                              className="px-3 py-2 text-xs hover:bg-gray-100 cursor-pointer"
+                              onClick={() => handleAgregarCorrelativaCursado(materia.materias.id, m.materias.id)}
+                            >
+                              {m.materias.nombre}
+                            </div>
+                          ))}
+                          {filtrarMateriasPorBusqueda(materia.materias.id, 'cursado').length === 0 && (
+                            <div className="px-3 py-2 text-xs text-gray-500">
+                              No hay resultados
                             </div>
                           )}
                         </div>
-                        <button
-                          className="px-2 py-1 bg-gray-100 text-gray-600 border border-l-0 border-gray-300 rounded-r-md"
-                          onClick={() => {
-                            setBusquedaCursado(prev => ({
-                              ...prev,
-                              [materia.materias.id]: ''
-                            }));
-                          }}
-                          title="Buscar correlativas de cursada"
-                          aria-label="Buscar correlativas de cursada"
-                        >
-                          <Search size={14} />
-                        </button>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </td>
@@ -493,51 +476,34 @@ export default function GestionCorrelativas({
                     
                     {/* Input para buscar y agregar correlativas */}
                     <div className="relative">
-                      <div className="flex">
-                        <div className="relative flex-grow">
-                          <input
-                            type="text"
-                            placeholder="Buscar materias..."
-                            value={busquedaFinal[materia.materias.id] || ''}
-                            onChange={(e) => setBusquedaFinal(prev => ({
-                              ...prev,
-                              [materia.materias.id]: e.target.value
-                            }))}
-                            className="w-full px-3 py-1 text-xs border border-gray-300 rounded-l-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                          {(busquedaFinal[materia.materias.id]?.length || 0) > 0 && (
-                            <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-40 overflow-y-auto">
-                              {filtrarMateriasPorBusqueda(materia.materias.id, 'final').map(m => (
-                                <div
-                                  key={m.id}
-                                  className="px-3 py-2 text-xs hover:bg-gray-100 cursor-pointer"
-                                  onClick={() => handleAgregarCorrelativaFinal(materia.materias.id, m.materias.id)}
-                                >
-                                  {m.materias.nombre}
-                                </div>
-                              ))}
-                              {filtrarMateriasPorBusqueda(materia.materias.id, 'final').length === 0 && (
-                                <div className="px-3 py-2 text-xs text-gray-500">
-                                  No hay resultados
-                                </div>
-                              )}
+                      <input
+                        type="text"
+                        placeholder="Buscar materias..."
+                        value={busquedaFinal[materia.materias.id] || ''}
+                        onChange={(e) => setBusquedaFinal(prev => ({
+                          ...prev,
+                          [materia.materias.id]: e.target.value
+                        }))}
+                        className="w-full px-3 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      {(busquedaFinal[materia.materias.id]?.length || 0) > 0 && (
+                        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-40 overflow-y-auto">
+                          {filtrarMateriasPorBusqueda(materia.materias.id, 'final').map(m => (
+                            <div
+                              key={m.id}
+                              className="px-3 py-2 text-xs hover:bg-gray-100 cursor-pointer"
+                              onClick={() => handleAgregarCorrelativaFinal(materia.materias.id, m.materias.id)}
+                            >
+                              {m.materias.nombre}
+                            </div>
+                          ))}
+                          {filtrarMateriasPorBusqueda(materia.materias.id, 'final').length === 0 && (
+                            <div className="px-3 py-2 text-xs text-gray-500">
+                              No hay resultados
                             </div>
                           )}
                         </div>
-                        <button
-                          className="px-2 py-1 bg-gray-100 text-gray-600 border border-l-0 border-gray-300 rounded-r-md"
-                          onClick={() => {
-                            setBusquedaFinal(prev => ({
-                              ...prev,
-                              [materia.materias.id]: ''
-                            }));
-                          }}
-                          title="Buscar correlativas de examen final"
-                          aria-label="Buscar correlativas de examen final"
-                        >
-                          <Search size={14} />
-                        </button>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </td>

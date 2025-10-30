@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import ConfirmDialog from '@/components/ui/confirm-dialog'
 import ConfirmationPopup from '@/components/ui/confirmation-popup'
+import EditUserModal from '@/components/ui/edit-user-modal'
 import { useUserRole } from '@/utils/hooks'
 
 interface Alumno {
@@ -39,6 +40,9 @@ export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) 
   const [showConfirmationPopup, setShowConfirmationPopup] = useState(false)
   const [alumnoName, setAlumnoName] = useState<string | null>(null)
   const [successType, setSuccessType] = useState<'deleted' | 'modified' | null>(null)
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [userToEdit, setUserToEdit] = useState<Alumno | null>(null)
+  const [loadingEdit, setLoadingEdit] = useState(false)
   const router = useRouter()
 
   // On mount, check if another page set a success message (e.g. after editing an alumno)
@@ -132,6 +136,55 @@ export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) 
     }
   }
 
+  function handleEdit(alumno: Alumno) {
+    setUserToEdit(alumno)
+    setEditModalOpen(true)
+  }
+
+  async function handleSaveEdit(editData: { email: string; telefono: string; direccion: string }) {
+    if (!userToEdit) return
+
+    setLoadingEdit(true)
+    try {
+      const res = await fetch('/api/alumnos/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: userToEdit.id,
+          email: editData.email,
+          telefono: editData.telefono,
+          direccion: editData.direccion
+        })
+      })
+
+      const json = await res.json()
+      if (json.success) {
+        // Actualizar los datos en la grilla
+        setData(prev => prev.map(alumno => 
+          alumno.id === userToEdit.id 
+            ? { ...alumno, ...editData }
+            : alumno
+        ))
+        
+        // Cerrar modal
+        setEditModalOpen(false)
+        setUserToEdit(null)
+        
+        // Mostrar mensaje de éxito
+        setAlumnoName(`${userToEdit.nombre} ${userToEdit.apellido}`)
+        setSuccessType('modified')
+        setShowConfirmationPopup(true)
+      } else {
+        alert('No se pudo actualizar: ' + (json.error || 'Error'))
+      }
+    } catch (err) {
+      console.error('Error al actualizar alumno:', err)
+      alert('Error al actualizar alumno')
+    } finally {
+      setLoadingEdit(false)
+    }
+  }
+
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
@@ -196,9 +249,14 @@ export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) 
                 <td className="py-3">{a.carrera_id ?? '-'}</td>
                 <td className="py-3">
                   <div className="flex items-center gap-2">
-                    <Link href={`/dashboard/administrativo/modificar-alumno?id=${a.id}`} className="">
-                      <Button size="sm" variant="outline">✏️ Modificar</Button>
-                    </Link>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => handleEdit(a)}
+                      disabled={loadingEdit}
+                    >
+                      ✏️ Modificar
+                    </Button>
                     {(role === 'admin' || role === 'super') && (
                       <Button size="sm" variant="destructive" onClick={() => handleDelete(a)} disabled={loadingDelete && deletingId === a.id}>
                         🗑️ {loadingDelete && deletingId === a.id ? 'Eliminando...' : 'Eliminar'}
@@ -277,6 +335,18 @@ export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) 
         confirmLabel="Eliminar definitivamente"
         cancelLabel="Cancelar"
         loading={loadingDelete}
+      />
+
+      <EditUserModal
+        isOpen={editModalOpen}
+        user={userToEdit}
+        onClose={() => {
+          setEditModalOpen(false)
+          setUserToEdit(null)
+        }}
+        onSave={handleSaveEdit}
+        loading={loadingEdit}
+        userType="estudiante"
       />
     </Card>
   )

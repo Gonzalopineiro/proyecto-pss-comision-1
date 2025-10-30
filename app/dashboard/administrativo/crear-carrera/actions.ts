@@ -3,9 +3,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-/**
- * Interfaz para los datos de la carrera
- */
 export interface CarreraData {
   nombre: string
   codigo: string
@@ -13,11 +10,15 @@ export interface CarreraData {
   plan_de_estudio_id: number
 }
 
-/**
- * Obtiene la lista de departamentos disponibles
- * 
- * @returns {Promise<string[]>} - Lista de departamentos disponibles
- */
+export type CarreraCompleta = {
+  id: number;
+  nombre: string;
+  codigo: string;
+  departamento: string | null;
+  duracion: string | null;
+  inscriptos: number;
+};
+
 export async function obtenerDepartamentos(): Promise<string[]> {
   return [
     'Agronomía',
@@ -40,17 +41,10 @@ export async function obtenerDepartamentos(): Promise<string[]> {
   ]
 }
 
-/**
- * Crea una nueva carrera en la base de datos
- * 
- * @param {CarreraData} data - Datos de la carrera a crear
- * @returns {Promise<{ id: number } | { error: string }>} - ID de la carrera creada o mensaje de error
- */
 export async function crearCarrera(
   data: CarreraData
 ): Promise<{ id: number } | { error: string }> {
   try {
-    // Validar datos obligatorios
     if (!data.nombre || !data.codigo || !data.plan_de_estudio_id) {
       return { 
         error: 'Faltan campos obligatorios: nombre, código y plan de estudio son requeridos' 
@@ -59,7 +53,6 @@ export async function crearCarrera(
 
     const supabase = await createClient()
     
-    // Verificar si ya existe una carrera con el mismo código
     const { data: existente, error: errorVerificacion } = await supabase
       .from('carreras')
       .select('id')
@@ -75,7 +68,6 @@ export async function crearCarrera(
       return { error: 'Ya existe una carrera con el código especificado' }
     }
 
-    // Verificar que el plan de estudio exista
     const { data: planExistente, error: errorPlan } = await supabase
       .from('plan_de_estudios')
       .select('id')
@@ -91,7 +83,6 @@ export async function crearCarrera(
       return { error: 'El plan de estudios seleccionado no existe' }
     }
     
-    // Insertar la nueva carrera
     const { data: nuevaCarrera, error } = await supabase
       .from('carreras')
       .insert({
@@ -108,7 +99,6 @@ export async function crearCarrera(
       return { error: `Error al crear la carrera: ${error.message}` }
     }
     
-    // Revalidar las rutas que podrían mostrar la nueva carrera
     revalidatePath('/dashboard/administrativo')
     
     return { id: nuevaCarrera.id }
@@ -119,17 +109,11 @@ export async function crearCarrera(
   }
 }
 
-/**
- * Verifica si ya existe una carrera con el nombre dado
- * 
- * @param {string} nombre - Nombre de la carrera a verificar
- * @returns {Promise<boolean>} - true si existe, false si no existe
- */
 export async function verificarCarreraExistente(nombre: string): Promise<boolean> {
   try {
     const supabase = await createClient()
     
-    const { data, error, count } = await supabase
+    const { count, error } = await supabase
       .from('carreras')
       .select('*', { count: 'exact', head: true })
       .ilike('nombre', nombre)
@@ -146,17 +130,11 @@ export async function verificarCarreraExistente(nombre: string): Promise<boolean
   }
 }
 
-/**
- * Verifica si ya existe una carrera con el código dado
- * 
- * @param {string} codigo - Código de la carrera a verificar
- * @returns {Promise<boolean>} - true si existe, false si no existe
- */
 export async function verificarCodigoExistente(codigo: string): Promise<boolean> {
   try {
     const supabase = await createClient()
     
-    const { data, error, count } = await supabase
+    const { count, error } = await supabase
       .from('carreras')
       .select('*', { count: 'exact', head: true })
       .eq('codigo', codigo)
@@ -173,25 +151,17 @@ export async function verificarCodigoExistente(codigo: string): Promise<boolean>
   }
 }
 
-/**
- * Obtiene todas las carreras
- * 
- * @returns {Promise<Array<Object> | null>} - Lista de carreras o null en caso de error
- */
-export async function obtenerCarreras() {
+export async function obtenerCarreras(): Promise<CarreraCompleta[] | null> {
   try {
     const supabase = await createClient()
     
     const { data, error } = await supabase
-      .from('carreras')
-      .select(`
-        *,
-        plan_de_estudio:plan_de_estudios(id, nombre)
-      `)
-      .order('created_at', { ascending: false })
+      .from('vista_grilla_carreras')
+      .select('id, nombre, codigo, departamento, duracion, inscriptos')
+      .order('nombre', { ascending: true })
     
     if (error) {
-      console.error('Error al obtener carreras:', error)
+      console.error('Error al obtener carreras desde la vista:', error)
       return null
     }
     
@@ -202,12 +172,6 @@ export async function obtenerCarreras() {
   }
 }
 
-/**
- * Obtiene los detalles de una carrera por su ID
- * 
- * @param {number} carreraId - ID de la carrera
- * @returns {Promise<Object | null>} - Datos de la carrera o null en caso de error
- */
 export async function obtenerCarreraPorId(carreraId: number) {
   try {
     const supabase = await createClient()
@@ -233,11 +197,6 @@ export async function obtenerCarreraPorId(carreraId: number) {
   }
 }
 
-/**
- * Obtiene todos los planes de estudio disponibles
- * 
- * @returns {Promise<Array<Object> | null>} - Lista de planes de estudio o null en caso de error
- */
 export async function obtenerPlanesDeEstudio() {
   try {
     const supabase = await createClient()
@@ -259,22 +218,14 @@ export async function obtenerPlanesDeEstudio() {
   }
 }
 
-/**
- * Genera un código único para la carrera basado en el departamento y un contador
- * 
- * @param {string} departamento - Nombre del departamento
- * @returns {Promise<string>} - Código generado para la carrera
- */
 export async function generarCodigoCarrera(departamento: string): Promise<string> {
-  // Obtener el prefijo del departamento (primeras letras de cada palabra)
   const prefijo = departamento
     .split(' ')
     .map(word => word.charAt(0).toUpperCase())
     .join('')
-    .substring(0, 3); // Tomar máximo 3 letras
+    .substring(0, 3);
   
   try {
-    // Obtener el número de carreras existentes para ese departamento
     const supabase = await createClient()
     const { count, error } = await supabase
       .from('carreras')
@@ -285,7 +236,6 @@ export async function generarCodigoCarrera(departamento: string): Promise<string
       console.error('Error al contar carreras del departamento:', error)
     }
     
-    // Número de carreras + 1, formateado con ceros a la izquierda (001, 002, etc.)
     const contador = String((count || 0) + 1).padStart(3, '0')
     const año = new Date().getFullYear()
     
@@ -293,34 +243,42 @@ export async function generarCodigoCarrera(departamento: string): Promise<string
   } catch (e) {
     console.error('Error al generar código de carrera:', e)
     
-    // En caso de error, crear un código con un número aleatorio
-    const random = Math.floor(100 + Math.random() * 900) // Número aleatorio entre 100 y 999
+    const random = Math.floor(100 + Math.random() * 900)
     const año = new Date().getFullYear()
     
     return `${prefijo}-${año}-${random}`
   }
 }
 
-/**
- * Elimina una carrera por su ID
- * 
- * @param {number} carreraId - ID de la carrera a eliminar
- * @returns {Promise<{ success: boolean } | { error: string }>} - Resultado de la operación
- */
 export async function eliminarCarrera(
   carreraId: number
 ): Promise<{ success: boolean } | { error: string }> {
   try {
     const supabase = await createClient()
     
-    const { error } = await supabase
+    const { data: carrera, error: chequeoError } = await supabase
+      .from('vista_grilla_carreras')
+      .select('inscriptos')
+      .eq('id', carreraId)
+      .single();
+
+    if (chequeoError) {
+      console.error('Error al verificar estudiantes de la carrera:', chequeoError);
+      return { error: 'Error al verificar los datos de la carrera.' };
+    }
+
+    if (carrera && carrera.inscriptos > 0) {
+      return { error: 'No se puede eliminar la carrera porque tiene estudiantes activos.' };
+    }
+    
+    const { error: deleteError } = await supabase
       .from('carreras')
       .delete()
       .eq('id', carreraId)
     
-    if (error) {
-      console.error('Error al eliminar la carrera:', error)
-      return { error: `Error al eliminar la carrera: ${error.message}` }
+    if (deleteError) {
+      console.error('Error al eliminar la carrera:', deleteError)
+      return { error: `Error al eliminar la carrera: ${deleteError.message}` }
     }
     
     revalidatePath('/dashboard/administrativo')
@@ -329,5 +287,311 @@ export async function eliminarCarrera(
   } catch (e) {
     console.error('Error inesperado al eliminar carrera:', e)
     return { error: 'Error inesperado al eliminar la carrera' }
+  }
+}
+
+
+export async function obtenerDetallesCompletosCarrera(carreraId: number) {
+  try {
+    const supabase = await createClient();
+
+    const { data: carrera, error: errorCarrera } = await supabase
+      .from('carreras')
+      .select(`
+        id,
+        nombre,
+        codigo,
+        departamento,
+        plan_de_estudio: plan_de_estudios (
+          id,
+          nombre,
+          anio_creacion,
+          duracion
+        )
+      `)
+      .eq('id', carreraId)
+      .single();
+
+    if (errorCarrera || !carrera) {
+      console.error('Error al obtener la carrera:', errorCarrera);
+      return null;
+    }
+    
+    const plan = Array.isArray(carrera.plan_de_estudio) 
+      ? carrera.plan_de_estudio[0] 
+      : carrera.plan_de_estudio;
+
+    if (!plan) {
+        return { ...carrera, plan_de_estudio: null, materias_plan: [] };
+    }
+    
+    const { data: materiasPlan, error: errorMaterias } = await supabase
+      .from('vista_materias_plan')
+      .select('*')
+      .eq('plan_id', plan.id)
+      .order('anio', { ascending: true })
+      .order('cuatrimestre', { ascending: true });
+
+    if (errorMaterias) {
+      console.error('Error al obtener las materias del plan:', errorMaterias);
+      return { ...carrera, plan_de_estudio: plan, materias_plan: [] };
+    }
+
+    return { ...carrera, plan_de_estudio: plan, materias_plan: materiasPlan || [] };
+
+  } catch (e) {
+    console.error('Error inesperado al obtener detalles de la carrera:', e);
+    return null;
+  }
+}
+
+export async function actualizarCarrera(
+  carreraId: number,
+  data: { departamento?: string; descripcion?: string }
+): Promise<{ success: boolean } | { error: string }> {
+  try {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+      .from('carreras')
+      .update({
+        departamento: data.departamento,
+      })
+      .eq('id', carreraId);
+
+    if (error) {
+      console.error('Error al actualizar la carrera:', error);
+      return { error: `Error al actualizar la carrera: ${error.message}` };
+    }
+
+    revalidatePath(`/dashboard/administrativo/carreras`);
+    revalidatePath(`/dashboard/administrativo/carreras/${carreraId}`);
+    return { success: true };
+
+  } catch (e) {
+    console.error('Error inesperado al actualizar la carrera:', e);
+    return { error: 'Error inesperado al actualizar la carrera' };
+  }
+}
+
+export async function buscarMateriasDisponibles(planId: number, terminoBusqueda: string) {
+    try {
+        const supabase = await createClient();
+
+        const { data: materiasEnPlan, error: errorExistentes } = await supabase
+            .from('plan_materia')
+            .select('materia_id')
+            .eq('plan_id', planId);
+
+        if (errorExistentes) {
+            console.error("Error al buscar materias existentes en el plan:", errorExistentes);
+            return [];
+        }
+
+        const idsExcluir = materiasEnPlan.map(m => m.materia_id);
+
+        const query = supabase
+            .from('materias')
+            .select('id, codigo_materia, nombre, descripcion')
+            .or(`codigo_materia.ilike.%${terminoBusqueda}%,nombre.ilike.%${terminoBusqueda}%`);
+        
+        if (idsExcluir.length > 0) {
+            query.not('id', 'in', `(${idsExcluir.join(',')})`);
+        }
+
+        const { data: materiasEncontradas, error: errorBusqueda } = await query.limit(10);
+
+        if (errorBusqueda) {
+            console.error("Error al buscar materias disponibles:", errorBusqueda);
+            return [];
+        }
+
+        return materiasEncontradas;
+
+    } catch (e) {
+        console.error('Error inesperado al buscar materias:', e);
+        return [];
+    }
+}
+
+export async function actualizarPlanDeEstudios(
+  planId: number,
+  materiasAAgregar: { materia_id: number, anio: number | null, cuatrimestre: number | null }[],
+  planMateriaIdsAEliminar: number[]
+): Promise<{ success: boolean } | { error: string }> {
+    try {
+        const supabase = await createClient();
+
+        if (planMateriaIdsAEliminar.length > 0) {
+            const { data: materiasAVerificar, error: checkError } = await supabase
+                .from('vista_materias_plan')
+                .select('estudiantes_activos, nombre_materia')
+                .in('plan_materia_id', planMateriaIdsAEliminar);
+            
+            if (checkError) throw checkError;
+
+            const materiaConEstudiantes = materiasAVerificar.find(m => m.estudiantes_activos > 0);
+            if (materiaConEstudiantes) {
+                return { error: `No se puede eliminar "${materiaConEstudiantes.nombre_materia}" porque tiene estudiantes activos.` };
+            }
+
+            const { error: deleteError } = await supabase
+                .from('plan_materia')
+                .delete()
+                .in('id', planMateriaIdsAEliminar);
+
+            if (deleteError) throw deleteError;
+        }
+
+        if (materiasAAgregar.length > 0) {
+            const inserts = materiasAAgregar.map(m => ({
+                plan_id: planId,
+                materia_id: m.materia_id,
+                anio: m.anio,
+                cuatrimestre: m.cuatrimestre,
+            }));
+
+            const { error: insertError } = await supabase
+                .from('plan_materia')
+                .insert(inserts);
+            
+            if (insertError) throw insertError;
+        }
+
+        revalidatePath(`/dashboard/administrativo/carreras`);
+        revalidatePath(`/dashboard/administrativo/carreras/${planId}`);
+        return { success: true };
+
+    } catch (e: any) {
+        console.error('Error al actualizar el plan de estudios:', e);
+        return { error: `Error en el servidor: ${e.message}` };
+    }
+}
+
+export async function obtenerMateriasDisponiblesParaPlan(planId: number) {
+    try {
+        const supabase = await createClient();
+
+        const { data: materiasEnPlan, error: errorExistentes } = await supabase
+            .from('plan_materia')
+            .select('materia_id')
+            .eq('plan_id', planId);
+
+        if (errorExistentes) {
+            console.error("Error al obtener las materias existentes en el plan:", errorExistentes);
+            return [];
+        }
+
+        const idsExcluir = materiasEnPlan.map(m => m.materia_id);
+
+        const query = supabase
+            .from('materias')
+            .select('id, codigo_materia, nombre, descripcion')
+            .order('nombre', { ascending: true });
+        
+        if (idsExcluir.length > 0) {
+            query.not('id', 'in', `(${idsExcluir.join(',')})`);
+        }
+
+        const { data: materiasDisponibles, error: errorBusqueda } = await query;
+
+        if (errorBusqueda) {
+            console.error("Error al buscar materias disponibles:", errorBusqueda);
+            return [];
+        }
+
+        return materiasDisponibles;
+
+    } catch (e) {
+        console.error('Error inesperado al buscar materias disponibles:', e);
+        return [];
+    }
+}
+
+export async function obtenerCorrelatividades(planId: number, materiaId: number) {
+  try {
+    const supabase = await createClient();
+    const { data: cursadoRows, error: errC } = await supabase
+      .from('correlatividades_cursado')
+      .select('correlativa_id')
+      .eq('plan_id', planId)
+      .eq('materia_id', materiaId);
+
+    const { data: finalRows, error: errF } = await supabase
+      .from('correlatividades_final')
+      .select('correlativa_id')
+      .eq('plan_id', planId)
+      .eq('materia_id', materiaId);
+
+    if (errC) {
+      console.error('Error al obtener correlativas cursado:', errC);
+    }
+    if (errF) {
+      console.error('Error al obtener correlativas final:', errF);
+    }
+
+    const idsCursado = (cursadoRows || []).map((r: any) => r.correlativa_id);
+    const idsFinal = (finalRows || []).map((r: any) => r.correlativa_id);
+    const allIds = Array.from(new Set([...idsCursado, ...idsFinal]));
+
+    let materiasMap: Record<number, any> = {};
+    if (allIds.length > 0) {
+      const { data: materias, error: errM } = await supabase
+        .from('materias')
+        .select('id, codigo_materia, nombre')
+        .in('id', allIds);
+      if (errM) {
+        console.error('Error al obtener datos de materias correlativas:', errM);
+      } else {
+        materiasMap = Object.fromEntries((materias || []).map((m: any) => [m.id, m]));
+      }
+    }
+
+    return {
+      cursado: (cursadoRows || []).map((r: any) => ({ correlativa_id: r.correlativa_id, materia: materiasMap[r.correlativa_id] || null })),
+      final: (finalRows || []).map((r: any) => ({ correlativa_id: r.correlativa_id, materia: materiasMap[r.correlativa_id] || null }))
+    };
+  } catch (e) {
+    console.error('Error inesperado al obtener correlatividades:', e);
+    return { cursado: [], final: [] };
+  }
+}
+
+export async function agregarCorrelativa(planId: number, materiaId: number, correlativaId: number, tipo: 'cursado' | 'final') {
+  try {
+    const supabase = await createClient();
+    const table = tipo === 'cursado' ? 'correlatividades_cursado' : 'correlatividades_final';
+    const { data, error } = await supabase
+      .from(table)
+      .insert({ plan_id: planId, materia_id: materiaId, correlativa_id: correlativaId });
+
+    if (error) {
+      console.error('Error al insertar correlativa:', error);
+      return { error: error.message || 'Error al agregar correlativa' };
+    }
+    return { success: true };
+  } catch (e: any) {
+    console.error('Error inesperado al agregar correlativa:', e);
+    return { error: e.message || 'Error inesperado' };
+  }
+}
+
+export async function quitarCorrelativa(planId: number, materiaId: number, correlativaId: number, tipo: 'cursado' | 'final') {
+  try {
+    const supabase = await createClient();
+    const table = tipo === 'cursado' ? 'correlatividades_cursado' : 'correlatividades_final';
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .match({ plan_id: planId, materia_id: materiaId, correlativa_id: correlativaId });
+
+    if (error) {
+      console.error('Error al eliminar correlativa:', error);
+      return { error: error.message || 'Error al eliminar correlativa' };
+    }
+    return { success: true };
+  } catch (e: any) {
+    console.error('Error inesperado al quitar correlativa:', e);
+    return { error: e.message || 'Error inesperado' };
   }
 }

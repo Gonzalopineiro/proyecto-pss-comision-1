@@ -7,6 +7,7 @@ import AsignarMateriaDialog from './AsignarMateriaDialog';
 import DesasignarMateriaDialog from './DesasignarMateriaDialog';
 import ConfirmationPopup from '@/components/ui/confirmation-popup';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
+import EditUserModal from '@/components/ui/edit-user-modal';
 import { asignarMateriaADocente, obtenerInformacionMaterias, desasignarMateriasDocente, eliminarDocente } from './actions';
 
 interface MateriaAsignadaDetalle {
@@ -29,6 +30,8 @@ interface Docente {
   legajo: string;
   materias: string[];
   email: string;
+  telefono?: string | null;
+  direccion_completa?: string | null;
   materia_docente_completo?: any[]; // Datos completos de materia_docente
 }
 
@@ -47,6 +50,13 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
   const [eliminandoDocente, setEliminandoDocente] = useState(false);
   const [errorEliminar, setErrorEliminar] = useState('');
   const router = useRouter();
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [docenteToEdit, setDocenteToEdit] = useState<Docente | null>(null);
+  const [loadingEdit, setLoadingEdit] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Validar que docentes no sea undefined o null
   if (!docentes || !Array.isArray(docentes)) {
@@ -69,9 +79,11 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
       materiaNombre
     );
 
-    // Si fue exitoso, recargar los datos
+    // Si fue exitoso, mostrar mensaje de éxito
     if (result.success) {
-      router.refresh();
+      setIsAsignarDialogOpen(false);
+      setSuccessMessage(`Materia asignada exitosamente al docente ${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido}`);
+      setShowSuccessPopup(true);
     }
 
     return result;
@@ -106,9 +118,12 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
       const result = await eliminarDocente(docenteSeleccionado.id);
 
       if (result.success) {
-        // Cerrar el popup y recargar la página
+        // Cerrar el popup de eliminación
         setIsEliminarPopupOpen(false);
-        router.refresh();
+        
+        // Mostrar mensaje de éxito
+        setSuccessMessage(result.mensaje || `El docente ${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido} ha sido eliminado exitosamente`);
+        setShowSuccessPopup(true);
       } else {
         setErrorEliminar(result.error || 'Error al eliminar el docente');
       }
@@ -147,13 +162,69 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
       materiasIds
     );
 
-    // Si fue exitoso, recargar los datos
+
     if (result.success) {
-      router.refresh();
+      setIsDesasignarDialogOpen(false);
+      setSuccessMessage(result.mensaje || `Materias desasignadas exitosamente del docente ${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido}`);
+      setShowSuccessPopup(true);
     }
 
     return result;
   };
+
+  // Funciones para editar docente
+  function handleEdit(docente: Docente) {
+    setDocenteToEdit(docente)
+    setEditModalOpen(true)
+  }
+
+  async function handleSaveEdit(editData: { email: string; telefono: string; direccion: string }) {
+    if (!docenteToEdit) return
+
+    setLoadingEdit(true)
+    try {
+      const res = await fetch('/api/docentes/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: docenteToEdit.id,
+          email: editData.email,
+          telefono: editData.telefono,
+          direccion: editData.direccion
+        })
+      })
+
+      const json = await res.json()
+      if (json.success) {
+        // Cerrar modal
+        setEditModalOpen(false)
+        setDocenteToEdit(null)
+        
+        // Mostrar mensaje de éxito con popup de confirmación
+        setSuccessMessage(`Docente ${docenteToEdit.nombre} ${docenteToEdit.apellido} actualizado correctamente`)
+        setShowSuccessPopup(true)
+      } else {
+        // Cerrar modal
+        setEditModalOpen(false)
+        setDocenteToEdit(null)
+        
+        // Mostrar mensaje de error con popup
+        setErrorMessage('No se pudo actualizar: ' + (json.error || 'Error desconocido'))
+        setShowErrorPopup(true)
+      }
+    } catch (err) {
+      console.error('Error al actualizar docente:', err)
+      // Cerrar modal
+      setEditModalOpen(false)
+      setDocenteToEdit(null)
+      
+      // Mostrar mensaje de error con popup
+      setErrorMessage('Error al actualizar docente. Por favor, intente nuevamente.')
+      setShowErrorPopup(true)
+    } finally {
+      setLoadingEdit(false)
+    }
+  }
   
   // Mapea a solo lo que necesitas para la grilla
   const docentesGrilla: Docente[] = docentes.map(d => ({
@@ -163,6 +234,8 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
     dni: d.dni,
     legajo: d.legajo,
     email: d.email,
+    telefono: d.telefono,
+    direccion_completa: d.direccion_completa,
     materias: d.materias || []
   }))
   
@@ -240,8 +313,9 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
           accessor: (row) => (
             <div className="flex gap-3">
               <button 
-                onClick={() => abrirPopupModificar(row)}
                 className="text-blue-600 hover:text-blue-800 font-medium"
+                onClick={() => handleEdit(row)}
+                disabled={loadingEdit}
               >
                 Modificar
               </button>
@@ -286,20 +360,11 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
         }}
         docenteNombre={`${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido}`}
         docenteLegajo={docenteSeleccionado.legajo}
+        docenteEstado="activo"
         docenteId={docenteSeleccionado.id}
         materiasAsignadas={materiasDocente}
         onDesasignar={handleDesasignarMaterias}
         cargandoMaterias={cargandoMaterias}
-      />
-    )}
-
-    {/* Popup de confirmación para modificar */}
-    {docenteSeleccionado && (
-      <ConfirmationPopup
-        isOpen={isModificarPopupOpen}
-        onClose={() => setIsModificarPopupOpen(false)}
-        title="Modificar Docente"
-        message={`Has presionado el botón modificar para el docente ${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido} (Legajo: ${docenteSeleccionado.legajo})`}
       />
     )}
 
@@ -320,6 +385,49 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
         onConfirm={handleEliminarDocente}
       />
     )}
+
+    {/* Modal de edición */}
+    <EditUserModal
+      isOpen={editModalOpen}
+      user={docenteToEdit ? {
+        id: docenteToEdit.id, // Ya es string (UUID)
+        nombre: docenteToEdit.nombre,
+        apellido: docenteToEdit.apellido,
+        email: docenteToEdit.email,
+        telefono: docenteToEdit.telefono || '',
+        direccion: docenteToEdit.direccion_completa || ''
+      } : null}
+      onClose={() => {
+        setEditModalOpen(false)
+        setDocenteToEdit(null)
+      }}
+      onSave={handleSaveEdit}
+      loading={loadingEdit}
+      userType="docente"
+    />
+
+    {/* Popup de éxito para operaciones exitosas */}
+    <ConfirmationPopup
+      isOpen={showSuccessPopup}
+      onClose={() => {
+        setShowSuccessPopup(false)
+        // Refrescar la página para mostrar los cambios
+        window.location.reload()
+      }}
+      title="¡Operación Exitosa!"
+      message={successMessage}
+    />
+
+    {/* Popup de error para modificar docente */}
+    <ConfirmationPopup
+      isOpen={showErrorPopup}
+      onClose={() => {
+        setShowErrorPopup(false)
+      }}
+      title="Error al Actualizar Docente"
+      message={errorMessage}
+      type="error"
+    />
     </>
   );
 }

@@ -216,6 +216,50 @@ export default function AdministrativoDashboard() {
                   </div>
                 </div>
               </div>
+
+              {/* Auditoría del Sistema */}
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                        <FileCheck className="w-6 h-6 text-red-600 dark:text-red-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold">Auditoría del Sistema</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Revisar historial de cambios, modificaciones y actividad del sistema
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <div className="mt-4 flex items-center justify-between">
+                    <Link href="/dashboard/administrativo/auditoria">
+                      <Button variant="outline" size="sm">Ver Auditorías</Button>
+                    </Link>
+                    <span className="text-sm text-gray-500">Sistema activo</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <h2 className="text-xl font-semibold mt-10 mb-4">Gestión Personal</h2>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Link href="/dashboard/user/perfil" className="block">
+                <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow hover:shadow-md transition-shadow">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                      <User className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="text-lg font-semibold">Modificar datos personales</div>
+                      <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">Actualiza tu información personal y datos de contacto</div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
             </div>
           </div>
         </main>

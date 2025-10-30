@@ -307,10 +307,10 @@ export async function desasignarMateriasDocente(
   const supabase = await createClient()
 
   try {
-    // 1. Verificar que el docente exista y obtener su email
+    // 1. Verificar que el docente exista y obtener su email y legajo
     const { data: docente, error: errorDocente } = await supabase
       .from('docentes')
-      .select('id, nombre, apellido, email')
+      .select('id, nombre, apellido, email, legajo')
       .eq('id', docenteId)
       .single()
     
@@ -393,7 +393,7 @@ export async function desasignarMateriasDocente(
     let mensajeFinal = `${materiasIds.length} materia(s) desasignada(s) exitosamente`
     
     if (!materiasRestantes || materiasRestantes.length === 0) {
-      // El docente quedó sin materias, debe ser eliminado
+      // El docente quedó sin materias, debe ser eliminado completamente del sistema
       
       // 5.1. Eliminar de la tabla docentes
       const { error: errorDeleteDocente } = await supabase
@@ -409,19 +409,69 @@ export async function desasignarMateriasDocente(
         }
       }
 
-      // 5.2. Actualizar el rol en profiles a 'user' (si existe el profile)
-      if (profileDocente) {
-        const { error: errorRole } = await supabase
-          .from('profiles')
-          .update({ role: 'user' })
-          .eq('id', profileDocente.id)
+      // 5.2. Obtener el legajo del docente para eliminar de Roles
+      const docenteLegajo = docente.legajo || null;
+
+      // 5.3. Eliminar de la tabla Roles (si existe entrada con su email o legajo)
+      if (docente.email) {
+        const { error: errorDeleteRoleEmail } = await supabase
+          .from('Roles')
+          .delete()
+          .eq('email', docente.email);
         
-        if (errorRole) {
-          console.error('Error al actualizar rol del docente:', errorRole)
+        if (errorDeleteRoleEmail) {
+          console.error('Error al eliminar rol por email:', errorDeleteRoleEmail);
+        }
+      }
+
+      if (docenteLegajo) {
+        const { error: errorDeleteRoleLegajo } = await supabase
+          .from('Roles')
+          .delete()
+          .eq('legajo', parseInt(docenteLegajo));
+        
+        if (errorDeleteRoleLegajo) {
+          console.error('Error al eliminar rol por legajo:', errorDeleteRoleLegajo);
+        }
+      }
+
+      // 5.4. Eliminar de profiles y auth.users (si existe el profile)
+      if (profileDocente) {
+        // Eliminar de profiles
+        const { error: errorDeleteProfile } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', profileDocente.id);
+        
+        if (errorDeleteProfile) {
+          console.error('Error al eliminar profile:', errorDeleteProfile);
+        }
+
+        // Eliminar el usuario de auth.users usando fetch directo a la API de Supabase Auth
+        try {
+          const deleteResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users/${profileDocente.id}`,
+            {
+              method: 'DELETE',
+              headers: {
+                'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+                'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}`
+              }
+            }
+          );
+
+          if (!deleteResponse.ok) {
+            const errorText = await deleteResponse.text();
+            console.error('Error al eliminar usuario de auth:', errorText);
+          } else {
+            console.log('Usuario docente eliminado correctamente de auth.users');
+          }
+        } catch (error) {
+          console.error('Error al eliminar usuario de auth:', error);
         }
       }
       
-      mensajeFinal += '. El docente ha sido eliminado del sistema al quedar sin materias asignadas'
+      mensajeFinal += '. El docente ha sido eliminado completamente del sistema al quedar sin materias asignadas'
     }
 
     return { 
@@ -444,10 +494,10 @@ export async function eliminarDocente(
   const supabase = await createClient()
 
   try {
-    // 1. Verificar que el docente exista y obtener su email
+    // 1. Verificar que el docente exista y obtener su email y legajo
     const { data: docente, error: errorDocente } = await supabase
       .from('docentes')
-      .select('id, nombre, apellido, email')
+      .select('id, nombre, apellido, email, legajo')
       .eq('id', docenteId)
       .single()
     
@@ -465,7 +515,37 @@ export async function eliminarDocente(
       .eq('email', docente.email)
       .single();
 
-    // 3. Eliminar todas las asignaciones de materia_docente
+    // 3. Verificar si tiene materias asignadas
+    const { data: materiasAsignadas, error: errorMaterias } = await supabase
+      .from('materia_docente')
+      .select('id')
+      .eq('docente_id', docenteId)
+      .limit(1);
+
+    if (!errorMaterias && materiasAsignadas && materiasAsignadas.length > 0) {
+      return {
+        success: false,
+        error: 'No se puede eliminar el docente porque tiene materias asignadas. Primero debe desasignar todas sus materias.'
+      };
+    }
+
+    // 4. Verificar si tiene mesas de examen (cualquier estado, futuras o pasadas)
+    if (profileDocente) {
+      const { data: mesasExamen, error: errorMesas } = await supabase
+        .from('mesas_examen')
+        .select('id')
+        .eq('docente_id', profileDocente.id)
+        .limit(1);
+
+      if (!errorMesas && mesasExamen && mesasExamen.length > 0) {
+        return {
+          success: false,
+          error: 'No se puede eliminar el docente porque tiene mesas de examen asociadas en el sistema.'
+        };
+      }
+    }
+
+    // 5. Eliminar todas las asignaciones de materia_docente (no debería haber ninguna a este punto)
     const { error: errorDeleteAsignaciones } = await supabase
       .from('materia_docente')
       .delete()
@@ -479,7 +559,7 @@ export async function eliminarDocente(
       }
     }
 
-    // 4. Eliminar de la tabla docentes
+    // 6. Eliminar de la tabla docentes
     const { error: errorDeleteDocente } = await supabase
       .from('docentes')
       .delete()
@@ -493,21 +573,74 @@ export async function eliminarDocente(
       }
     }
 
-    // 5. Actualizar el rol en profiles a 'user' (si existe el profile)
-    if (profileDocente) {
-      const { error: errorRole } = await supabase
-        .from('profiles')
-        .update({ role: 'user' })
-        .eq('id', profileDocente.id)
+    // 7. Eliminar de la tabla Roles (si existe entrada con su email o legajo)
+    if (docente.email) {
+      const { error: errorDeleteRoleEmail } = await supabase
+        .from('Roles')
+        .delete()
+        .eq('email', docente.email);
       
-      if (errorRole) {
-        console.error('Error al actualizar rol del docente:', errorRole)
+      if (errorDeleteRoleEmail) {
+        console.error('Error al eliminar rol por email:', errorDeleteRoleEmail);
+      }
+    }
+
+    if (docente.legajo) {
+      const { error: errorDeleteRoleLegajo } = await supabase
+        .from('Roles')
+        .delete()
+        .eq('legajo', parseInt(docente.legajo));
+      
+      if (errorDeleteRoleLegajo) {
+        console.error('Error al eliminar rol por legajo:', errorDeleteRoleLegajo);
+      }
+    }
+
+    // 8. Eliminar de profiles y auth.users (si existe el profile)
+    if (profileDocente) {
+      // Eliminar de profiles
+      const { error: errorDeleteProfile } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', profileDocente.id);
+      
+      if (errorDeleteProfile) {
+        console.error('Error al eliminar profile:', errorDeleteProfile);
+        return { 
+          success: false, 
+          error: 'Error al eliminar el perfil del docente' 
+        };
+      }
+
+      // Eliminar el usuario de auth.users usando fetch directo a la API de Supabase Auth
+      try {
+        const deleteResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users/${profileDocente.id}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+              'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY || ''}`
+            }
+          }
+        );
+
+        if (!deleteResponse.ok) {
+          const errorText = await deleteResponse.text();
+          console.error('Error al eliminar usuario de auth:', errorText);
+          // No retornamos error aquí porque el docente ya fue eliminado de las tablas principales
+        } else {
+          console.log('Usuario docente eliminado correctamente de auth.users');
+        }
+      } catch (error) {
+        console.error('Error al eliminar usuario de auth:', error);
+        // No retornamos error aquí porque el docente ya fue eliminado de las tablas principales
       }
     }
 
     return { 
       success: true,
-      mensaje: `El docente ${docente.nombre} ${docente.apellido} ha sido eliminado del sistema exitosamente`
+      mensaje: `El docente ${docente.nombre} ${docente.apellido} ha sido eliminado completamente del sistema`
     }
   } catch (error: any) {
     console.error('Error inesperado en eliminarDocente:', error)

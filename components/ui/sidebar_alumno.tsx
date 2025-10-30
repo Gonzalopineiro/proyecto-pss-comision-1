@@ -33,12 +33,12 @@ export default function Sidebar(){
         </div>
 
         <nav className="flex flex-col gap-3 mt-4">
-          <Link href="/dashboard/alumno/materias" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-slate-800/60">
+          <Link href="/dashboard/alumno/materias/inscripcion" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-slate-800/60">
             <div className="p-2 bg-slate-800 rounded-md"><Book className="w-5 h-5 text-white" /></div>
             <span>Materias</span>
           </Link>
 
-          <Link href="/dashboard/alumno/examenes" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-slate-800/60">
+          <Link href="/dashboard/alumno/examenes/inscripcion" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-slate-800/60">
             <div className="p-2 bg-slate-800 rounded-md"><ClipboardCheck className="w-5 h-5 text-white" /></div>
             <span>Exámenes</span>
           </Link>
@@ -53,9 +53,9 @@ export default function Sidebar(){
             <span>Certificados</span>
           </Link>
 
-          <Link href="/dashboard/alumno/perfil" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-slate-800/60">
+          <Link href="/dashboard/user/perfil" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-slate-800/60">
             <div className="p-2 bg-slate-800 rounded-md"><User className="w-5 h-5 text-white" /></div>
-            <span>Mi Perfil</span>
+            <span>Modificar datos personales</span>
           </Link>
         </nav>
         
