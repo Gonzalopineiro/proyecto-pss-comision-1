@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -16,7 +16,6 @@ import {
   LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { gsap } from 'gsap';
 
 import {
   obtenerMateriasDocente,
@@ -35,14 +34,6 @@ export default function PanelDocente() {
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [mesaToDelete, setMesaToDelete] = useState<MesaExamen | null>(null);
-
-  // Referencias para animaciones GSAP
-  const headerRef = useRef<HTMLDivElement>(null);
-  const materiasRef = useRef<HTMLDivElement>(null);
-  const mesasRef = useRef<HTMLDivElement>(null);
-  const accionesRef = useRef<HTMLDivElement>(null);
-  const materiaCardsRef = useRef<(HTMLDivElement | null)[]>([]);
-  const mesaCardsRef = useRef<(HTMLDivElement | null)[]>([]);
 
   // Función para cerrar sesión
   const handleLogout = async () => {
@@ -90,8 +81,6 @@ export default function PanelDocente() {
     fetchData();
   }, []);
 
-  // Solo mantener el estado de loading, sin animaciones de entrada
-
   // Manejar eliminación de mesa
   const handleDeleteMesa = async () => {
     if (!mesaToDelete) return;
@@ -135,7 +124,7 @@ export default function PanelDocente() {
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
       {/* Encabezado */}
-      <div ref={headerRef} className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
@@ -150,8 +139,6 @@ export default function PanelDocente() {
             variant="outline"
             size="sm"
             className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
-            onMouseEnter={e => gsap.to(e.currentTarget, { scale: 1.05, duration: 0.2 })}
-            onMouseLeave={e => gsap.to(e.currentTarget, { scale: 1, duration: 0.2 })}
           >
             <LogOut className="h-4 w-4" />
             Cerrar Sesión
@@ -162,7 +149,7 @@ export default function PanelDocente() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         {/* Columna Izquierda - Mis Materias */}
         <div className="xl:col-span-2 space-y-6">
-          <div ref={materiasRef} className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -190,11 +177,10 @@ export default function PanelDocente() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {materias.map((materia, index) => (
+                  {materias.map((materia) => (
                     <div
                       key={materia.id}
-                      ref={el => materiaCardsRef.current[index] = el}
-                      className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-lg hover:-translate-y-2 hover:scale-105 transition-all duration-300 cursor-pointer"
+                      className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -215,7 +201,7 @@ export default function PanelDocente() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="ml-4 hover:scale-105 hover:shadow-md transition-all duration-300"
+                          className="ml-4"
                         >
                           <Settings className="h-4 w-4 mr-2" />
                           Gestionar
@@ -232,7 +218,7 @@ export default function PanelDocente() {
         {/* Columna Derecha - Acciones Rápidas y Mesas */}
         <div className="space-y-6">
           {/* Acciones Rápidas */}
-          <div ref={accionesRef} className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
                 Acciones Rápidas
@@ -240,16 +226,16 @@ export default function PanelDocente() {
             </div>
             <div className="p-6 space-y-3">
               <Link href="/dashboard/docente/mesas-examen/crear-mesa">
-                <Button className="w-full justify-start hover:scale-105 hover:shadow-md transition-all duration-300" variant="outline">
+                <Button className="w-full justify-start" variant="outline">
                   <Calendar className="h-4 w-4 mr-3" />
                   Crear Mesa de Examen
                 </Button>
               </Link>
-              <Button className="w-full justify-start hover:scale-105 hover:shadow-md transition-all duration-300" variant="outline">
+              <Button className="w-full justify-start" variant="outline">
                 <Star className="h-4 w-4 mr-3" />
                 Calificaciones
               </Button>
-              <Button className="w-full justify-start hover:scale-105 hover:shadow-md transition-all duration-300" variant="outline">
+              <Button className="w-full justify-start" variant="outline">
                 <FileText className="h-4 w-4 mr-3" />
                 Actas
               </Button>
@@ -257,7 +243,7 @@ export default function PanelDocente() {
           </div>
 
           {/* Mesas de Examen */}
-          <div ref={mesasRef} className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
@@ -282,11 +268,10 @@ export default function PanelDocente() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {mesas.slice(0, 4).map((mesa, index) => (
+                  {mesas.slice(0, 4).map((mesa) => (
                     <div
                       key={mesa.id}
-                      ref={el => mesaCardsRef.current[index] = el}
-                      className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 cursor-pointer hover:shadow-lg hover:-translate-y-2 hover:scale-105 transition-all duration-300"
+                      className="border border-slate-200 dark:border-slate-700 rounded-lg p-3"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
