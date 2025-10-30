@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Plus, Calendar, Clock, BookOpen, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge'; // Necesitarás el Badge
+import { ArrowLeft } from 'lucide-react';
 
 // (IMPORTANTE: Ajusta la ruta a tu archivo 'actions' si es diferente)
 // Asumo que tus actions están en la carpeta padre 'docente'
@@ -76,7 +77,18 @@ export default async function MesasExamenPage() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <div className="flex">
         <main className="flex-1 p-8">
+          
           <div className="max-w-6xl mx-auto mt-6">
+            {/* Botón de volver */}
+            <div className="mb-6">
+              <a 
+                href="/dashboard/docente"
+                className="inline-flex items-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver al Panel Docente
+              </a>
+            </div>
             
             {/* Encabezado (Tu código original) */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
