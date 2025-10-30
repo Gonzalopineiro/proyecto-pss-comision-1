@@ -66,9 +66,9 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
         if (value.trim().length < 3) {
           return 'El legajo debe tener al menos 3 caracteres'
         }
-        // Validación para formato de legajo (alfanumérico)
-        if (!/^[A-Za-z0-9-]+$/.test(value)) {
-          return 'El legajo solo puede contener letras, números y guiones'
+        // Validación para formato de legajo (solo números)
+        if (!/^\d+$/.test(value)) {
+          return 'El legajo solo puede contener números'
         }
         return ''
       
@@ -288,11 +288,13 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
               name="legajo"
               value={formData.legajo}
               onChange={handleChange}
-              pattern="[A-Za-z0-9-]+"
-              title="El legajo solo puede contener letras, números y guiones"
+              pattern="[0-9]+"
+              inputMode="numeric"
+              title="El legajo solo debe contener números"
               className={`w-full mt-1 p-2 rounded border ${errors.legajo ? 'border-red-500' : ''}`}
-              placeholder="Número de legajo"
+              placeholder="Ej: 2025001"
             />
+            <p className="text-xs text-gray-500 mt-1">Solo números</p>
             {errors.legajo && <p className="text-xs text-red-600 mt-1">{errors.legajo}</p>}
           </div>
         </div>
