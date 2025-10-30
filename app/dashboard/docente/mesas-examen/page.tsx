@@ -1,4 +1,3 @@
-import Sidebar from '@/components/dashboard/sidebar';
 import Link from 'next/link';
 import { Plus, Calendar, Clock, BookOpen, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -76,7 +75,6 @@ export default async function MesasExamenPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <div className="flex">
-        <Sidebar />
         <main className="flex-1 p-8">
           <div className="max-w-6xl mx-auto mt-6">
             
