@@ -51,7 +51,11 @@ const CorrelativasFinalesModal: React.FC<CorrelativasFinalesModalProps> = ({
         <div className="space-y-4">
           <div className="space-y-2 text-left text-sm text-muted-foreground">
             <div><strong>Materia:</strong> {mesaInfo.materia_nombre}</div>
-            <div><strong>Fecha:</strong> {new Date(mesaInfo.fecha_examen).toLocaleDateString('es-AR')}</div>
+            <div><strong>Fecha:</strong> {(() => {
+              const [año, mes, dia] = mesaInfo.fecha_examen.split('-').map(Number);
+              const fechaLocal = new Date(año, mes - 1, dia);
+              return fechaLocal.toLocaleDateString('es-AR');
+            })()}</div>
             <div><strong>Hora:</strong> {mesaInfo.hora_examen}</div>
             <div><strong>Ubicación:</strong> {mesaInfo.ubicacion}</div>
           </div>

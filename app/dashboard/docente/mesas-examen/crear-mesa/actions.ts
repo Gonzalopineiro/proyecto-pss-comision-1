@@ -40,19 +40,68 @@ export async function obtenerMateriasDocente(): Promise<Materia[]> {
       throw new Error('No se pudo obtener la información del usuario')
     }
 
-    // Por ahora, obtenemos todas las materias disponibles
-    // En una implementación real, deberíamos filtrar por las materias asignadas al docente
-    const { data: materias, error } = await supabase
-      .from('materias')
-      .select('id, codigo_materia, nombre, descripcion, duracion')
-      .order('nombre')
+    console.log('Usuario autenticado para materias:', user.id, user.email)
 
-    if (error) {
-      console.error('Error al obtener materias:', error)
-      throw new Error('Error al cargar las materias')
+    // Obtener el docente_id desde la tabla docentes usando el email
+    const { data: docenteData, error: docenteError } = await supabase
+      .from('docentes')
+      .select('id, nombre, apellido, email')
+      .eq('email', user.email)
+      .single()
+
+    if (docenteError || !docenteData) {
+      console.error('Error al obtener datos del docente:', docenteError)
+      throw new Error('No se encontró el perfil de docente asociado a este usuario')
     }
 
-    return materias || []
+    console.log('Docente encontrado:', docenteData.id)
+
+    // Obtener solo las materias asignadas al docente mediante la tabla materia_docente
+    const { data: materiasAsignadas, error } = await supabase
+      .from('materia_docente')
+      .select(`
+        materia_id,
+        materias:materia_id (
+          id,
+          codigo_materia,
+          nombre,
+          descripcion,
+          duracion
+        )
+      `)
+      .eq('docente_id', docenteData.id)
+
+    if (error) {
+      console.error('Error al obtener materias asignadas:', error)
+      throw new Error('Error al cargar las materias asignadas')
+    }
+
+    console.log('Materias asignadas encontradas:', materiasAsignadas?.length || 0)
+
+    if (!materiasAsignadas || materiasAsignadas.length === 0) {
+      return []
+    }
+
+    // Procesar y formatear las materias
+    const materias: Materia[] = materiasAsignadas
+      .map((item) => {
+        const materia = Array.isArray(item.materias) ? item.materias[0] : item.materias;
+        if (!materia) return null;
+        
+        return {
+          id: materia.id,
+          codigo_materia: materia.codigo_materia,
+          nombre: materia.nombre,
+          descripcion: materia.descripcion,
+          duracion: materia.duracion
+        };
+      })
+      .filter(Boolean) as Materia[]
+
+    // Ordenar por nombre
+    materias.sort((a, b) => a.nombre.localeCompare(b.nombre))
+
+    return materias
   } catch (error) {
     console.error('Error en obtenerMateriasDocente:', error)
     return []
@@ -82,6 +131,15 @@ export async function crearMesaExamen(data: MesaExamenData): Promise<{ success: 
     
     if (fechaExamen < hoy) {
       return { success: false, error: 'La fecha del examen no puede ser en el pasado' }
+    }
+
+    // Validar que la fecha no sea más de 6 meses en el futuro
+    const seisMesesEnFuturo = new Date()
+    seisMesesEnFuturo.setMonth(seisMesesEnFuturo.getMonth() + 6)
+    seisMesesEnFuturo.setHours(23, 59, 59, 999)
+    
+    if (fechaExamen > seisMesesEnFuturo) {
+      return { success: false, error: 'La fecha del examen no puede ser mayor a 6 meses en el futuro' }
     }
 
     // Crear la mesa de examen

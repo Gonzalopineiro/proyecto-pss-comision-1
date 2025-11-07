@@ -25,22 +25,28 @@ export default function CrearMesaForm() {
   // Estados de soporte
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMaterias, setLoadingMaterias] = useState(true);
   const [errors, setErrors] = useState<{ [k: string]: string }>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [mesaCreada, setMesaCreada] = useState<{ materia: string; fecha: string; hora: string } | null>(null);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   // Cargar materias al montar el componente
   useEffect(() => {
     async function fetchMaterias() {
       try {
+        setLoadingMaterias(true);
         const materiasData = await obtenerMateriasDocente();
         setMaterias(materiasData);
         if (materiasData.length === 0) {
-          setServerError('No se encontraron materias asignadas a su perfil de docente.');
+          setServerError('No tiene materias asignadas en el sistema. Contacte al administrador para que le asignen materias antes de crear mesas de examen.');
         }
       } catch (error) {
-        setServerError('Error al cargar las materias disponibles.');
+        console.error('Error al cargar materias:', error);
+        setServerError('Error al cargar las materias disponibles. Verifique su conexión e intente nuevamente.');
+      } finally {
+        setLoadingMaterias(false);
       }
     }
     
@@ -51,21 +57,37 @@ export default function CrearMesaForm() {
   const validate = async (): Promise<boolean> => {
     const e: { [k: string]: string } = {};
     
-    if (!materiaId) e.materiaId = 'Debe seleccionar una materia';
-    if (!fechaExamen) e.fechaExamen = 'La fecha del examen es obligatoria';
-    if (!horaExamen) e.horaExamen = 'La hora del examen es obligatoria';
-    if (!ubicacion.trim()) e.ubicacion = 'La ubicación es obligatoria';
-
-    // Validar que la fecha no sea en el pasado
-    if (fechaExamen) {
+    if (!loadingMaterias && materias.length === 0) {
+      e.materiaId = 'No tiene materias asignadas para crear mesas de examen';
+    } else if (!materiaId) {
+      e.materiaId = 'Debe seleccionar una materia';
+    }
+    
+    if (!fechaExamen) {
+      e.fechaExamen = 'La fecha del examen es obligatoria';
+    } else {
+      // Validaciones de fecha cuando hay fecha seleccionada
       const fechaSeleccionada = new Date(fechaExamen);
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
       
+      // Validar que la fecha no sea en el pasado
       if (fechaSeleccionada < hoy) {
         e.fechaExamen = 'La fecha del examen no puede ser en el pasado';
+      } else {
+        // Validar que la fecha no sea más de 6 meses en el futuro
+        const seisMesesEnFuturo = new Date();
+        seisMesesEnFuturo.setMonth(seisMesesEnFuturo.getMonth() + 6);
+        seisMesesEnFuturo.setHours(23, 59, 59, 999); // Final del día
+        
+        if (fechaSeleccionada > seisMesesEnFuturo) {
+          e.fechaExamen = 'La fecha del examen no puede ser mayor a 6 meses en el futuro';
+        }
       }
     }
+    
+    if (!horaExamen) e.horaExamen = 'La hora del examen es obligatoria';
+    if (!ubicacion.trim()) e.ubicacion = 'La ubicación es obligatoria';
 
     // Verificar si ya existe una mesa para la misma materia, fecha y hora
     if (materiaId && fechaExamen && horaExamen) {
@@ -91,6 +113,7 @@ export default function CrearMesaForm() {
     setServerError(null);
     setShowSuccessPopup(false);
     setErrors({});
+    setHasAttemptedSubmit(true);
 
     const isValid = await validate();
     if (!isValid) {
@@ -125,6 +148,7 @@ export default function CrearMesaForm() {
         setHoraExamen('');
         setUbicacion('');
         setComentarios('');
+        setHasAttemptedSubmit(false);
         
         // Mostrar popup de éxito
         setShowSuccessPopup(true);
@@ -138,10 +162,35 @@ export default function CrearMesaForm() {
     }
   };
 
-  // Obtener la fecha mínima (hoy)
+  // Obtener la fecha mínima (hoy) y máxima (6 meses en futuro)
   const getMinDate = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
+  };
+
+  const getMaxDate = () => {
+    const maxDate = new Date();
+    maxDate.setMonth(maxDate.getMonth() + 6);
+    return maxDate.toISOString().split('T')[0];
+  };
+
+  // Función para limpiar errores específicos
+  const clearFieldError = (fieldName: string) => {
+    if (hasAttemptedSubmit && errors[fieldName]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+  };
+
+  // Función para formatear fecha sin problemas de zona horaria
+  const formatearFechaSinDesfase = (fechaString: string) => {
+    // Crear fecha usando los componentes individuales para evitar problemas de UTC
+    const [año, mes, dia] = fechaString.split('-').map(Number);
+    const fecha = new Date(año, mes - 1, dia); // mes - 1 porque los meses empiezan en 0
+    return fecha.toLocaleDateString('es-ES');
   };
 
   return (
@@ -191,20 +240,30 @@ export default function CrearMesaForm() {
             <select
               id="materia"
               value={materiaId}
-              onChange={(e) => setMateriaId(e.target.value)}
+              onChange={(e) => {
+                setMateriaId(e.target.value);
+                clearFieldError('materiaId');
+              }}
               className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                errors.materiaId ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
+                hasAttemptedSubmit && errors.materiaId ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
               }`}
-              disabled={loading || materias.length === 0}
+              disabled={loading || loadingMaterias || materias.length === 0}
             >
-              <option value="">Seleccione una materia</option>
+              <option value="">
+                {loadingMaterias 
+                  ? 'Cargando materias...' 
+                  : materias.length === 0 
+                    ? 'No hay materias asignadas' 
+                    : 'Seleccione una materia'
+                }
+              </option>
               {materias.map((materia) => (
                 <option key={materia.id} value={materia.id}>
                   {materia.codigo_materia} - {materia.nombre}
                 </option>
               ))}
             </select>
-            {errors.materiaId && (
+            {hasAttemptedSubmit && errors.materiaId && (
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.materiaId}</p>
             )}
           </div>
@@ -221,14 +280,16 @@ export default function CrearMesaForm() {
                 type="date"
                 id="fecha"
                 value={fechaExamen}
-                onChange={(e) => setFechaExamen(e.target.value)}
-                min={getMinDate()}
+                onChange={(e) => {
+                  setFechaExamen(e.target.value);
+                  clearFieldError('fechaExamen');
+                }}
                 className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.fechaExamen ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
+                  hasAttemptedSubmit && errors.fechaExamen ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
                 }`}
                 disabled={loading}
               />
-              {errors.fechaExamen && (
+              {hasAttemptedSubmit && errors.fechaExamen && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.fechaExamen}</p>
               )}
             </div>
@@ -243,13 +304,16 @@ export default function CrearMesaForm() {
                 type="time"
                 id="hora"
                 value={horaExamen}
-                onChange={(e) => setHoraExamen(e.target.value)}
+                onChange={(e) => {
+                  setHoraExamen(e.target.value);
+                  clearFieldError('horaExamen');
+                }}
                 className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.horaExamen ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
+                  hasAttemptedSubmit && errors.horaExamen ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
                 }`}
                 disabled={loading}
               />
-              {errors.horaExamen && (
+              {hasAttemptedSubmit && errors.horaExamen && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.horaExamen}</p>
               )}
             </div>
@@ -265,14 +329,17 @@ export default function CrearMesaForm() {
               type="text"
               id="ubicacion"
               value={ubicacion}
-              onChange={(e) => setUbicacion(e.target.value)}
+              onChange={(e) => {
+                setUbicacion(e.target.value);
+                clearFieldError('ubicacion');
+              }}
               placeholder="Ej: Aula 205, Edificio Central"
               className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                errors.ubicacion ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
+                hasAttemptedSubmit && errors.ubicacion ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'
               }`}
               disabled={loading}
             />
-            {errors.ubicacion && (
+            {hasAttemptedSubmit && errors.ubicacion && (
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.ubicacion}</p>
             )}
           </div>
@@ -308,10 +375,10 @@ export default function CrearMesaForm() {
           </Button>
           <Button
             type="submit"
-            disabled={loading || materias.length === 0}
+            disabled={loading || loadingMaterias || materias.length === 0}
             className="sm:order-2"
           >
-            {loading ? 'Creando...' : 'Crear Mesa de Examen'}
+            {loading ? 'Creando...' : loadingMaterias ? 'Cargando...' : 'Crear Mesa de Examen'}
           </Button>
         </div>
       </form>
@@ -325,7 +392,7 @@ export default function CrearMesaForm() {
         }}
         title="¡Mesa Creada con Éxito!"
         message={mesaCreada ? 
-          `La mesa de examen para "${mesaCreada.materia}" ha sido programada para el ${new Date(mesaCreada.fecha).toLocaleDateString('es-ES')} a las ${mesaCreada.hora}.` :
+          `La mesa de examen para "${mesaCreada.materia}" ha sido programada para el ${formatearFechaSinDesfase(mesaCreada.fecha)} a las ${mesaCreada.hora}.` :
           'La mesa de examen ha sido creada exitosamente.'
         }
        
