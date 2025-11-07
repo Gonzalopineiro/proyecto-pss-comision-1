@@ -49,8 +49,15 @@ export default function MesasTable({
     setInscribiendo(false);
   };
 
+  // Función para formatear fecha sin problemas de zona horaria
+  const formatearFechaSinDesfase = (fechaString: string) => {
+    const [año, mes, dia] = fechaString.split('-').map(Number);
+    const fechaLocal = new Date(año, mes - 1, dia);
+    return fechaLocal.toLocaleDateString("es-AR");
+  };
+
   function generarComprobante(mesa: MesaDisponible) {
-    const fecha = new Date(mesa.fecha_examen).toLocaleDateString("es-AR");
+    const fecha = formatearFechaSinDesfase(mesa.fecha_examen);
     const contenido = `
     <h1>Comprobante de Inscripción</h1>
     <p><strong>Alumno:</strong> ${alumno.nombre}</p>
@@ -150,7 +157,7 @@ export default function MesasTable({
                     {mesa.materias?.nombre ?? "—"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                    {new Date(mesa.fecha_examen).toLocaleDateString("es-AR")}
+                    {formatearFechaSinDesfase(mesa.fecha_examen)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                     {mesa.hora_examen}

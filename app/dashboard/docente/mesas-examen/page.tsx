@@ -13,7 +13,10 @@ import { obtenerMesasExamenDocente, type MesaExamen } from '../actions';
 
 function MesaCard({ mesa }: { mesa: MesaExamen }) {
   const formatearFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString('es-ES', {
+    // Crear fecha usando los componentes individuales para evitar problemas de UTC
+    const [año, mes, dia] = fecha.split('-').map(Number);
+    const fechaLocal = new Date(año, mes - 1, dia); // mes - 1 porque los meses empiezan en 0
+    return fechaLocal.toLocaleDateString('es-ES', {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
