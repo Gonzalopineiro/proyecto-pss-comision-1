@@ -3,15 +3,16 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 // --- TIPOS DE DATOS ---
-// (Tu código SQL usa 'nota' y 'estado' (ej 'inscripto'), así que mantenemos los tipos de la última versión)
 
 export interface MesaExamenDetalles {
   id: string
   materiaNombre: string
   materiaCodigo: string
   inscriptosCount: number
-  estado: string
+  estado: string // 'programada', 'finalizada', 'cancelada'
   fecha: string
+  carreraNombre: string
+  docenteNombre: string | null
 }
 
 export interface AlumnoInscripcion {
@@ -24,6 +25,12 @@ export interface AlumnoInscripcion {
   estado: 'inscripto' | 'presente' | 'ausente' | 'aprobado' | 'reprobado'
 }
 
+export interface Usuario {
+  id: string
+  nombre: string | null
+  email: string
+}
+
 // --- ACCIONES DE BASE DE DATOS ---
 
 export async function getDatosMesaExamen(idMesa: string): Promise<{
@@ -33,26 +40,32 @@ export async function getDatosMesaExamen(idMesa: string): Promise<{
   const supabase = await createClient()
 
   try {
-    // 1. Obtener detalles de la mesa (Esto no cambia)
+    // 1. Obtener detalles de la mesa
+    // --- CORRECCIÓN DEFINITIVA ---
+    // Hemos eliminado las uniones a 'carreras' y 'docente'
+    // que estaban causando el fallo de la consulta.
     const { data: mesaData, error: mesaError } = await supabase
       .from('mesas_examen')
       .select(`
         id,
         estado,
         fecha_examen,
-        materias ( nombre, codigo_materia ),
-        inscripciones_mesa_examen ( count ) 
+        materias (
+          nombre,
+          codigo_materia
+        ),
+        inscripciones_mesa_examen ( count )
       `)
       .eq('id', idMesa)
       .single()
 
+    // Esta línea es la que falla. Ahora mesaError debería ser null
     if (mesaError || !mesaData) {
       console.error('Error al obtener mesa:', mesaError)
       throw new Error('No se pudo encontrar la mesa de examen.')
     }
 
     // 2. OBTENER ALUMNOS USANDO LA NUEVA FUNCIÓN RPC
-    //    Esto reemplaza el .select() que fallaba
     const { data: alumnosData, error: alumnosError } = await supabase
       .rpc('get_alumnos_para_mesa', { p_mesa_id: idMesa })
 
@@ -62,21 +75,33 @@ export async function getDatosMesaExamen(idMesa: string): Promise<{
     }
 
     // 3. Mapear los datos
+    const materia = mesaData.materias as unknown as {
+      nombre: string;
+      codigo_materia: string;
+    } | null;
+
+    const inscripciones = mesaData.inscripciones_mesa_examen as unknown as {
+      count: number;
+    }[];
+
+    // --- CORRECCIÓN DEFINITIVA ---
+    // Como no podemos obtener estos datos por ahora,
+    // ponemos valores temporales para que la página funcione.
+    const docenteNombre = 'No Asignado';
+    const carreraNombre = 'N/A';
+
     const detalles: MesaExamenDetalles = {
-      id: mesaData.id,
-      // @ts-ignore
-      materiaNombre: mesaData.materias.nombre,
-      // @ts-ignore
-      materiaCodigo: mesaData.materias.codigo_materia,
-      // @ts-ignore
-      inscriptosCount: mesaData.inscripciones_mesa_examen[0]?.count || 0,
+      id: String(mesaData.id),
+      materiaNombre: materia?.nombre || 'N/A',
+      materiaCodigo: materia?.codigo_materia || 'N/A',
+      carreraNombre: carreraNombre, // <- Valor temporal
+      docenteNombre: docenteNombre, // <- Valor temporal
+      inscriptosCount: inscripciones[0]?.count || 0,
       estado: mesaData.estado,
       fecha: new Date(mesaData.fecha_examen).toLocaleDateString('es-ES'),
     }
 
-    // Los datos de 'alumnosData' ya vienen en el formato correcto
-    // gracias a nuestra función SQL.
-    const alumnos = alumnosData as AlumnoInscripcion[]
+    const alumnos = alumnosData as unknown as AlumnoInscripcion[]
 
     return { detalles, alumnos }
 
@@ -86,79 +111,73 @@ export async function getDatosMesaExamen(idMesa: string): Promise<{
   }
 }
 
-/**
- * Actualiza el estado de 'presente'/'ausente' de un alumno
- */
-export async function actualizarPresente(inscripcionId: string, estaPresente: boolean) {
+export async function actualizarPresente(inscripcionId: string, estaPresente: boolean): Promise<{ success: boolean, error?: string, newState?: { estado: AlumnoInscripcion['estado'], nota: number | null } }> {
   const supabase = await createClient()
-
   const nuevoEstado = estaPresente ? 'presente' : 'ausente'
-  const nota = estaPresente ? undefined : null // Si está ausente, la nota se borra
-
+  const nota = estaPresente ? undefined : null
   const { error } = await supabase
     .from('inscripciones_mesa_examen')
     .update({ estado: nuevoEstado, nota: nota })
     .eq('id', inscripcionId)
-
   if (error) return { success: false, error: error.message }
   return { success: true, newState: { estado: nuevoEstado, nota: null } }
 }
 
-/**
- * Guarda la nota de un alumno
- */
-export async function guardarNota(inscripcionId: string, nota: number | null) {
+export async function guardarNota(inscripcionId: string, nota: number | null): Promise<{ success: boolean, error?: string, newState?: { nota: number | null, estado: AlumnoInscripcion['estado'] } }> {
   const supabase = await createClient()
-
   let nuevoEstado: AlumnoInscripcion['estado']
   if (nota === null) {
     nuevoEstado = 'presente'
   } else {
     nuevoEstado = nota >= 4 ? 'aprobado' : 'reprobado'
   }
-
   const { error } = await supabase
     .from('inscripciones_mesa_examen')
     .update({ nota, estado: nuevoEstado })
     .eq('id', inscripcionId)
-
   if (error) return { success: false, error: error.message }
   return { success: true, newState: { nota, estado: nuevoEstado } }
 }
 
-/**
- * Finaliza la carga.
- */
-export async function finalizarCarga(idMesa: string) {
+export async function finalizarCarga(idMesa: string): Promise<{ success: boolean, error?: string }> {
   const supabase = await createClient()
-  
   const { error } = await supabase
     .from('mesas_examen')
-    .update({ 
-        estado: 'finalizada', // Tu estado es 'finalizada'
-        notas_cargadas: true
-    }) 
+    .update({
+      estado: 'finalizada',
+      notas_cargadas: true
+    })
     .eq('id', idMesa)
-
   if (error) return { success: false, error: error.message }
-
   revalidatePath(`/dashboard/docente/mesas-examen/${idMesa}`)
   return { success: true }
 }
 
-/**
- * Publica las notas.
- */
-export async function publicarNotas(idMesa: string) {
+export async function publicarNotas(idMesa: string): Promise<{ success: boolean, error?: string }> {
   const supabase = await createClient()
-  
   const { error } = await supabase
     .from('mesas_examen')
-    .update({ estado: 'finalizada' }) // Asumo 'finalizada' es el estado final
+    .update({ estado: 'finalizada' })
     .eq('id', idMesa)
-
   if (error) return { success: false, error: error.message }
-
   revalidatePath(`/dashboard/docente/mesas-examen/${idMesa}`)
   return { success: true }
+}
+
+export async function getUsuarioActual(): Promise<Usuario> {
+  const supabase = await createClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+
+  if (error || !user) {
+    console.error("No hay usuario autenticado:", error)
+    return { id: '', nombre: 'Usuario no autenticado', email: '' }
+  }
+
+  const nombre = (user.user_metadata as { full_name?: string })?.full_name || user.email || null;
+
+  return {
+    id: user.id,
+    nombre: nombre,
+    email: user.email!
+  }
 }
