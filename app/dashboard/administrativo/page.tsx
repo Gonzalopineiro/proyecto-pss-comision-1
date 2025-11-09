@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { ChevronRight, Users, User, Book, Briefcase, PanelLeft, Library, FileCheck, LogOut } from 'lucide-react'
+import { ChevronRight, Users, User, Book, Briefcase, PanelLeft, Library, FileCheck, LogOut, UserCheck, Calendar } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 
 export default function AdministrativoDashboard() {
@@ -81,6 +81,68 @@ export default function AdministrativoDashboard() {
                   <LogOut className="h-4 w-4" />
                   Cerrar Sesión
                 </Button>
+              </div>
+            </div>
+
+            {/* Acciones Rápidas */}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-4">Acciones Rápidas</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Link href="/dashboard/administrativo/registrar-alumno" className="block">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                        <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">Registrar Alumno</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Nuevo estudiante</div>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+                
+                <Link href="/dashboard/administrativo/registrar-docente" className="block">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+                        <Users className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">Registrar Docente</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Nuevo profesor</div>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+                
+                <Link href="/dashboard/administrativo/crear-carrera" className="block">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+                        <Briefcase className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">Crear Carrera</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Nueva carrera</div>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+                
+                <Link href="/dashboard/administrativo/lista-inscriptos" className="block">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
+                        <UserCheck className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">Lista de Inscriptos</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Ver inscripciones</div>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
               </div>
             </div>
 

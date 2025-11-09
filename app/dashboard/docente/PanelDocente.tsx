@@ -13,7 +13,8 @@ import {
   Edit,
   Trash2,
   Clock,
-  LogOut
+  LogOut,
+  UserCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -198,14 +199,25 @@ export default function PanelDocente() {
                             </div>
                           </div>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="ml-4"
-                        >
-                          <Settings className="h-4 w-4 mr-2" />
-                          Gestionar
-                        </Button>
+                        <div className="flex items-center space-x-2">
+                          <Link href={`/dashboard/docente/cargar-calificaciones/${materia.id}`}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 hover:border-green-300"
+                            >
+                              <Star className="h-4 w-4 mr-2" />
+                              Cargar Calificaciones
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                          >
+                            <Settings className="h-4 w-4 mr-2" />
+                            Gestionar
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -229,6 +241,12 @@ export default function PanelDocente() {
                 <Button className="w-full justify-start" variant="outline">
                   <Calendar className="h-4 w-4 mr-3" />
                   Crear Mesa de Examen
+                </Button>
+              </Link>
+              <Link href="/dashboard/docente/lista-inscriptos">
+                <Button className="w-full justify-start" variant="outline">
+                  <UserCheck className="h-4 w-4 mr-3" />
+                  Lista de Inscriptos
                 </Button>
               </Link>
               <Link href="/dashboard/docente/mesas-examen">
