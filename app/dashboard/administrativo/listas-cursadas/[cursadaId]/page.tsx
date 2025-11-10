@@ -10,11 +10,19 @@ import {
   Users, 
   Calendar,
   Search,
+  Filter,
   FileText,
   Sheet
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import {
   obtenerAlumnosInscriptos,
@@ -35,6 +43,7 @@ export default function DetalleCursadaPage() {
   const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterEstado, setFilterEstado] = useState('todos');
 
   useEffect(() => {
     async function fetchData() {
@@ -67,11 +76,20 @@ export default function DetalleCursadaPage() {
       alumno.apellido.toLowerCase().includes(term) ||
       alumno.legajo.toString().includes(term);
     
-    return coincideBusqueda;
+    const coincideEstado = filterEstado === 'todos' || 
+      (filterEstado === 'pendiente' && (!alumno.estado || alumno.estado === 'pendiente')) ||
+      alumno.estado === filterEstado;
+    
+    return coincideBusqueda && coincideEstado;
   });
 
-  // Contador total de alumnos
-  const totalAlumnos = alumnos.length;
+  // Contadores por estado
+  const contadores = {
+    todos: alumnos.length,
+    aprobada: alumnos.filter(a => a.estado === 'aprobada').length,
+    regular: alumnos.filter(a => a.estado === 'regular').length,
+    sin_calificar: alumnos.filter(a => !a.estado || a.estado === 'pendiente').length
+  };
 
   const formatearFecha = (fecha: string) => {
     return new Date(fecha).toLocaleDateString('es-ES', {
@@ -83,24 +101,22 @@ export default function DetalleCursadaPage() {
 
   const getEstadoBadge = (estado: string) => {
     const estilos = {
-      activo: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
-      inactivo: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300',
-      pendiente: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300',
-      cancelado: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
+      aprobada: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
+      regular: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300',
+      pendiente: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300',
+      sin_calificar: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
     };
 
     const labels = {
-      activo: 'Activo',
-      inactivo: 'Inactivo',
-      pendiente: 'Pendiente',
-      cancelado: 'Cancelado'
+      aprobada: 'Aprobada',
+      regular: 'Regular', 
+      pendiente: 'Sin calificar',
+      sin_calificar: 'Sin calificar'
     };
 
-    const estadoLower = estado?.toLowerCase() || 'pendiente';
-
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${estilos[estadoLower as keyof typeof estilos] || estilos.pendiente}`}>
-        {labels[estadoLower as keyof typeof labels] || estado || 'Sin estado'}
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${estilos[estado as keyof typeof estilos] || estilos.sin_calificar}`}>
+        {labels[estado as keyof typeof labels] || 'Sin calificar'}
       </span>
     );
   };
@@ -178,23 +194,51 @@ export default function DetalleCursadaPage() {
             Listado de Inscriptos
           </h2>
           <div className="text-sm text-slate-600 dark:text-slate-400">
-            Total: {totalAlumnos} alumnos inscriptos
+            Total: {contadores.todos} alumnos inscriptos
           </div>
         </div>
 
         {/* Filtros de búsqueda */}
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none z-10" aria-hidden />
-            <Input
-              placeholder="Buscar por nombre, apellido o legajo..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full"
-              style={{ paddingLeft: '2.5rem' }}
-              aria-label="Buscar por nombre, apellido o legajo"
-            />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none z-10" aria-hidden />
+              <Input
+                placeholder="Buscar por nombre, apellido o legajo..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+                style={{ paddingLeft: '2.5rem' }}
+                aria-label="Buscar por nombre, apellido o legajo"
+              />
+            </div>
           </div>
+          
+          <Select value={filterEstado} onValueChange={setFilterEstado}>
+            <SelectTrigger className="w-48">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos los estados</SelectItem>
+              <SelectItem value="aprobada">Aprobados ({contadores.aprobada})</SelectItem>
+              <SelectItem value="regular">Regulares ({contadores.regular})</SelectItem>
+              <SelectItem value="pendiente">Sin calificar ({contadores.sin_calificar})</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Contadores */}
+        <div className="flex gap-4 mt-4 text-sm">
+          <span className="text-green-600 font-medium">
+            {contadores.aprobada} Aprobados
+          </span>
+          <span className="text-yellow-600 font-medium">
+            {contadores.regular} Regulares
+          </span>
+          <span className="text-gray-600 font-medium">
+            {contadores.sin_calificar} Sin calificar
+          </span>
         </div>
       </div>
 
@@ -206,7 +250,7 @@ export default function DetalleCursadaPage() {
             Alumnos Inscriptos
             <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs font-medium px-2.5 py-0.5 rounded ml-2">
               {alumnosFiltrados.length} 
-              {searchTerm ? ` de ${totalAlumnos} total` : ' alumnos'}
+              {searchTerm ? ` de ${contadores.todos} total` : ' alumnos'}
             </span>
           </h2>
         </div>
@@ -236,7 +280,7 @@ export default function DetalleCursadaPage() {
                     Email
                   </th>
                   <th className="text-left py-3 px-6 font-semibold text-slate-900 dark:text-white">
-                    Estado Inscripción
+                    Estado Cursada
                   </th>
                 </tr>
               </thead>
