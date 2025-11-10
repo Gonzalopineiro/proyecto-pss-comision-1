@@ -242,6 +242,32 @@ export default function AdministrativoDashboard() {
                   </div>
                 </div>
               </div>
+
+              {/* Lista de Cursadas */}
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center">
+                        <Library className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold">Lista de Cursadas</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Gestionar cursadas activas, inscripciones de estudiantes y estado académico
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <div className="mt-4 flex items-center justify-between">
+                    <Link href="/dashboard/administrativo/listas-cursadas">
+                      <Button variant="outline" size="sm">Ver Lista de Cursadas</Button>
+                    </Link>
+                    <span className="text-sm text-gray-500">Gestión activa</span>
+                  </div>
+                </div>
+              </div>
             </div>
             
             <h2 className="text-xl font-semibold mt-10 mb-4">Gestión Personal</h2>

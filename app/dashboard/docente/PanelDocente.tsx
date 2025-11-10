@@ -192,20 +192,8 @@ export default function PanelDocente() {
                           </p>
                           <div className="flex items-center gap-4 mt-3 text-sm text-slate-500 dark:text-slate-400">
                             <span>{materia.carrera} - {materia.anio}</span>
-                            <div className="flex items-center gap-1">
-                              <Users className="h-4 w-4" />
-                              <span>{materia.estudiantes_inscriptos} estudiantes inscriptos</span>
-                            </div>
                           </div>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="ml-4"
-                        >
-                          <Settings className="h-4 w-4 mr-2" />
-                          Gestionar
-                        </Button>
                       </div>
                     </div>
                   ))}
@@ -231,10 +219,16 @@ export default function PanelDocente() {
                   Crear Mesa de Examen
                 </Button>
               </Link>
+              <Link href="/dashboard/docente/cargar-calificaciones-cursada">
+                <Button className="w-full justify-start" variant="outline">
+                  <Star className="h-4 w-4 mr-3" />
+                  Cargar Calificaciones Cursada
+                </Button>
+              </Link>
               <Link href="/dashboard/docente/mesas-examen">
               <Button className="w-full justify-start" variant="outline">
                 <Star className="h-4 w-4 mr-3" />
-                Calificaciones
+                Calificaciones examenes
               </Button>
               </Link>
               <Button className="w-full justify-start" variant="outline">

@@ -240,7 +240,7 @@ export async function obtenerMateriasDocente(): Promise<MateriaDocente[]> {
 /**
  * Función auxiliar para crear datos de prueba (SOLO PARA DEBUG)
  */
-export async function crearDatosPruebaDocente(): Promise<{ success: boolean; message: string }> {
+/*export async function crearDatosPruebaDocente(): Promise<{ success: boolean; message: string }> {
   const supabase = await createClient()
   
   try {
@@ -323,12 +323,12 @@ export async function crearDatosPruebaDocente(): Promise<{ success: boolean; mes
     console.error('Error en crearDatosPruebaDocente:', error)
     return { success: false, message: 'Error interno: ' + String(error) }
   }
-}
+//}
 
 /**
  * Función para verificar mesas existentes (SOLO PARA DEBUG)
  */
-export async function arreglarMesasExistentes(): Promise<{ success: boolean; message: string }> {
+/*export async function arreglarMesasExistentes(): Promise<{ success: boolean; message: string }> {
   const supabase = await createClient()
   
   try {
@@ -364,7 +364,7 @@ export async function arreglarMesasExistentes(): Promise<{ success: boolean; mes
     console.error('Error en arreglarMesasExistentes:', error)
     return { success: false, message: 'Error interno: ' + String(error) }
   }
-}
+//}*/
 
 /**
  * Obtiene las mesas de examen del docente
