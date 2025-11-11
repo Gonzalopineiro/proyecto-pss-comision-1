@@ -4,19 +4,33 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import React from 'react'
 import SidebarAlumno from '@/components/ui/sidebar_alumno'
-import CertificadosCliente from './CertificadosCliente' // Importamos el nuevo componente cliente
+import CertificadosCliente from './CertificadosCliente'
 
-// Tipos para los datos que vamos a pasar
-type MateriaInfo = { nombre: string; codigo_materia: string }
-type MesaExamenCompleta = { 
-  fecha_examen: string;
-  materias: MateriaInfo 
-}
-export type MateriaAprobadaRow = {
+// --- TIPOS DE DATOS ---
+
+// Tipo para los datos de FINALES aprobados
+export type FinalAprobadoRow = {
   nota: string | number | null
-  mesas_examen: MesaExamenCompleta
+  mesas_examen: { 
+    fecha_examen: string;
+    materias: { nombre: string; codigo_materia: string } 
+  }
 }
 
+// NUEVO: Tipo para los datos de CURSADAS aprobadas
+export type CursadaAprobadaRow = {
+  estado: string;
+  cursadas: {
+    materia_docente: {
+      materias: {
+        codigo_materia: string;
+        nombre: string;
+      } | null;
+    } | null;
+  } | null;
+};
+
+// Tipo para los datos del alumno
 export type AlumnoCompleto = {
     id: string;
     nombre: string;
@@ -30,27 +44,25 @@ export type AlumnoCompleto = {
 }
 
 export default async function CertificadosPage() {
-    // 1. Verificar autenticación
     const supabase = await createClient()
     const { data: { user }, error } = await supabase.auth.getUser()
     if (error || !user) {
         redirect('/login')
     }
 
-    // 2. Obtener información COMPLETA del alumno (misma consulta que antes)
+    // 1. Obtener información COMPLETA del alumno (sin cambios)
     const { data: alumnoData, error: userError } = await supabase
         .from('usuarios')
-        .select('id, nombre, apellido, carrera_id, dni, legajo, nacimiento, email, telefono, direccion')
+        .select('id, nombre, apellido, dni, legajo, nacimiento, email, telefono, direccion')
         .eq('email', user.email)
         .single<AlumnoCompleto>()
 
     if (userError || !alumnoData) {
-        console.error('Error obteniendo datos del usuario:', userError)
-        return <p>Error al cargar la información del alumno para el certificado.</p>
+        return <p>Error al cargar la información del alumno.</p>
     }
 
-    // 3. Obtener SÓLO las materias aprobadas
-    const { data: materiasAprobadas, error: errorAprobadas } = await supabase
+    // 2. Obtener los FINALES aprobados (sin cambios)
+    const { data: finalesAprobadosData } = await supabase
         .from('inscripciones_mesa_examen')
         .select(`
             nota,
@@ -60,13 +72,36 @@ export default async function CertificadosPage() {
             )
         `)
         .eq('estudiante_id', user.id)
-        .eq('estado', 'aprobado') // Filtramos directamente las aprobadas
-        .order('fecha_examen', { foreignTable: 'mesas_examen', ascending: false });
+        .eq('estado', 'aprobado')
+        .order('fecha_examen', { foreignTable: 'mesas_examen', ascending: true });
+
+    const finalesAprobados = (finalesAprobadosData as FinalAprobadoRow[] | null) ?? []
+
+    // 3. NUEVO: Obtener las CURSADAS aprobadas
+    const { data: cursadasAprobadasData, error: errorCursadas } = await supabase
+      .from('inscripciones_cursada')
+      .select(`
+        estado,
+        cursadas!inner(
+          materia_docente!inner(
+            materias(
+              codigo_materia,
+              nombre
+            )
+          )
+        )
+      `)
+      .eq('alumno_id', user.id)
+      .eq('estado', 'aprobada');
+    
+    if (errorCursadas) {
+      console.error("Error obteniendo cursadas aprobadas:", errorCursadas);
+    }
+    
+    const cursadasAprobadas = (cursadasAprobadasData as CursadaAprobadaRow[] | null) ?? []
 
 
-    const materiasAprobadasTyped = (materiasAprobadas as MateriaAprobadaRow[] | null) ?? []
-
-    // 4. Renderizar el componente cliente con los datos
+    // 4. Renderizar el componente cliente con TODOS los datos
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
             <div className="flex">
@@ -77,7 +112,8 @@ export default async function CertificadosPage() {
                     <div className="max-w-4xl mx-auto">
                         <CertificadosCliente
                             alumno={alumnoData}
-                            materiasAprobadas={materiasAprobadasTyped}
+                            finalesAprobados={finalesAprobados}
+                            cursadasAprobadas={cursadasAprobadas}
                         />
                     </div>
                 </main>

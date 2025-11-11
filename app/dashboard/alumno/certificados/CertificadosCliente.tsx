@@ -3,19 +3,19 @@
 'use client'
 
 import React from 'react'
-import { AlumnoCompleto, MateriaAprobadaRow } from './page'
+import { AlumnoCompleto, FinalAprobadoRow, CursadaAprobadaRow } from './page'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Printer, FileText } from 'lucide-react'
 
 interface Props {
     alumno: AlumnoCompleto
-    materiasAprobadas: MateriaAprobadaRow[]
+    finalesAprobados: FinalAprobadoRow[]
+    cursadasAprobadas: CursadaAprobadaRow[] // <-- NUEVO PROP
 }
 
-export default function CertificadosCliente({ alumno, materiasAprobadas }: Props) {
+export default function CertificadosCliente({ alumno, finalesAprobados, cursadasAprobadas }: Props) {
 
-    // La función para generar el certificado (exactamente la misma que antes)
     const generarCertificadoAnalitico = () => {
         const fechaGeneracion = new Date().toLocaleDateString('es-AR', {
             day: '2-digit', month: 'long', year: 'numeric'
@@ -37,15 +37,11 @@ export default function CertificadosCliente({ alumno, materiasAprobadas }: Props
                     th, td { border: 1px solid #ddd; padding: 0.75rem; text-align: left; }
                     th { background-color: #f2f2f2; }
                     .footer { text-align: right; margin-top: 3rem; font-style: italic; color: #777; font-size: 0.9rem; }
-                    @media print {
-                        body { padding: 1rem; }
-                        .no-print { display: none; }
-                    }
                 </style>
             </head>
             <body>
                 <div class="header">
-                    <h1>Certificado Analítico de Materias Aprobadas</h1>
+                    <h1>Certificado Analítico de Estado Académico</h1>
                     <p>Universidad de la Innovación</p>
                 </div>
 
@@ -56,15 +52,34 @@ export default function CertificadosCliente({ alumno, materiasAprobadas }: Props
                     <div class="info-item"><strong>Legajo:</strong> ${alumno.legajo || 'No especificado'}</div>
                     <div class="info-item"><strong>Fecha de Nacimiento:</strong> ${alumno.nacimiento ? new Date(alumno.nacimiento).toLocaleDateString('es-AR') : 'No especificada'}</div>
                 </div>
-                
-                <h2>Información de Contacto</h2>
-                <div class="info-grid">
-                     <div class="info-item"><strong>Email:</strong> ${alumno.email || 'No especificado'}</div>
-                     <div class="info-item"><strong>Teléfono:</strong> ${alumno.telefono || 'No especificado'}</div>
-                </div>
 
-                <h2>Historial de Calificaciones Aprobadas</h2>
-                ${materiasAprobadas.length > 0 ? `
+                <!-- NUEVA SECCIÓN PARA CURSADAS -->
+                <h2>Cursadas Aprobadas</h2>
+                ${cursadasAprobadas.length > 0 ? `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Materia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${cursadasAprobadas.map(cursada => {
+                            const materia = cursada.cursadas?.materia_docente?.materias;
+                            return `
+                            <tr>
+                                <td>${materia?.codigo_materia || '—'}</td>
+                                <td>${materia?.nombre || '—'}</td>
+                            </tr>
+                        `}).join('')}
+                    </tbody>
+                </table>
+                ` : '<p>No hay cursadas aprobadas para mostrar.</p>'}
+
+
+                <!-- SECCIÓN EXISTENTE PARA FINALES -->
+                <h2>Finales Aprobados</h2>
+                ${finalesAprobados.length > 0 ? `
                 <table>
                     <thead>
                         <tr>
@@ -75,7 +90,7 @@ export default function CertificadosCliente({ alumno, materiasAprobadas }: Props
                         </tr>
                     </thead>
                     <tbody>
-                        ${materiasAprobadas.map(calif => `
+                        ${finalesAprobados.map(calif => `
                             <tr>
                                 <td>${calif.mesas_examen.materias.codigo_materia || '—'}</td>
                                 <td>${calif.mesas_examen.materias.nombre || '—'}</td>
@@ -85,7 +100,7 @@ export default function CertificadosCliente({ alumno, materiasAprobadas }: Props
                         `).join('')}
                     </tbody>
                 </table>
-                ` : '<p>No hay materias aprobadas para mostrar en el certificado.</p>'}
+                ` : '<p>No hay finales aprobados para mostrar.</p>'}
 
                 <div class="footer">
                     <p>Certificado generado el ${fechaGeneracion}.</p>
@@ -103,6 +118,8 @@ export default function CertificadosCliente({ alumno, materiasAprobadas }: Props
         }
     }
 
+    const totalAprobadas = cursadasAprobadas.length + finalesAprobados.length;
+
     return (
         <div>
             <div className="mb-6">
@@ -118,30 +135,27 @@ export default function CertificadosCliente({ alumno, materiasAprobadas }: Props
                         <FileText className="h-10 w-10 text-blue-600" />
                     </div>
                     <div className="flex-1">
-                        <h2 className="text-xl font-semibold">Certificado Analítico de Materias Aprobadas</h2>
+                        <h2 className="text-xl font-semibold">Certificado de Estado Académico</h2>
                         <p className="text-muted-foreground mt-1">
-                            Este documento oficial lista todas las materias que has aprobado hasta la fecha,
-                            incluyendo la nota final y la fecha del examen.
+                            Este documento oficial lista todas las cursadas y finales que has aprobado hasta la fecha.
+                            Actualmente tienes <strong>{cursadasAprobadas.length} cursadas</strong> y <strong>{finalesAprobados.length} finales</strong> aprobados.
                         </p>
                     </div>
                     <Button 
                         onClick={generarCertificadoAnalitico} 
                         className="w-full md:w-auto"
-                        disabled={materiasAprobadas.length === 0}
+                        disabled={totalAprobadas === 0}
                     >
                         <Printer className="h-4 w-4 mr-2" />
                         Generar e Imprimir
                     </Button>
                 </div>
-                {materiasAprobadas.length === 0 && (
+                {totalAprobadas === 0 && (
                      <p className="text-center text-sm text-amber-700 mt-4 p-3 bg-amber-50 rounded-md">
-                        Aún no tienes materias aprobadas para generar este certificado.
+                        Aún no tienes cursadas ni finales aprobados para generar este certificado.
                     </p>
                 )}
             </Card>
-
-            {/* Aquí podrías agregar más tarjetas para otros tipos de certificados en el futuro */}
-            {/* ej. Certificado de Alumno Regular, etc. */}
         </div>
     )
 }
