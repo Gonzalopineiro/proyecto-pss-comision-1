@@ -196,10 +196,135 @@ export default function GenerarConstanciaClient() {
       </html>
     `
 
-    // Abrir ventana para mostrar/descargar
+    // Solo abrir ventana para mostrar la constancia (SIN descarga automática)
+    const fecha = new Date().toISOString().split('T')[0]
+    const nombreArchivo = `Constancia_Alumno_Regular_${data.alumno.legajo}_${fecha}`
+    
+    // Agregar barra de herramientas estilo navegador
+    const contenidoConBarra = contenidoHTML.replace(
+      '<body>',
+      `<body>
+        <div style="
+          position: fixed; 
+          top: 0; 
+          left: 0; 
+          right: 0; 
+          height: 48px; 
+          background: #f8f9fa; 
+          border-bottom: 1px solid #e5e7eb; 
+          display: flex; 
+          align-items: center; 
+          justify-content: space-between; 
+          padding: 0 16px; 
+          z-index: 1000;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        ">
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #5f6368;">
+            <span>📄</span>
+            <span>${nombreArchivo}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <button onclick="descargarPDF()" style="
+              background: none; 
+              border: none; 
+              cursor: pointer; 
+              padding: 8px; 
+              border-radius: 4px; 
+              color: #5f6368;
+              font-size: 20px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              width: 32px;
+              height: 32px;
+            " title="Descargar">
+              ⬇️
+            </button>
+            <button onclick="imprimirCertificado()" style="
+              background: none; 
+              border: none; 
+              cursor: pointer; 
+              padding: 8px; 
+              border-radius: 4px; 
+              color: #5f6368;
+              font-size: 20px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              width: 32px;
+              height: 32px;
+            " title="Imprimir">
+              🖨️
+            </button>
+          </div>
+        </div>
+        <div style="margin-top: 48px;">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+        <script>
+          function descargarPDF() {
+            // Ocultar la barra de herramientas para el PDF
+            const barra = document.querySelector('div[style*="position: fixed"]');
+            const contenido = document.querySelector('div[style*="margin-top: 48px"]');
+            
+            if (barra) barra.style.display = 'none';
+            if (contenido) contenido.style.marginTop = '0';
+            
+            // Configuración para html2pdf
+            const opciones = {
+              margin: 0.5,
+              filename: '${nombreArchivo}.pdf',
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: { 
+                scale: 2,
+                useCORS: true,
+                letterRendering: true
+              },
+              jsPDF: { 
+                unit: 'in', 
+                format: 'letter', 
+                orientation: 'portrait' 
+              }
+            };
+            
+            // Generar y descargar PDF
+            html2pdf()
+              .set(opciones)
+              .from(contenido || document.body)
+              .save()
+              .then(() => {
+                // Restaurar la barra después de generar el PDF
+                if (barra) barra.style.display = 'flex';
+                if (contenido) contenido.style.marginTop = '48px';
+              });
+          }
+
+          function imprimirCertificado() {
+            // Ocultar la barra de herramientas para la impresión
+            const barra = document.querySelector('div[style*="position: fixed"]');
+            const contenido = document.querySelector('div[style*="margin-top: 48px"]');
+            
+            if (barra) barra.style.display = 'none';
+            if (contenido) contenido.style.marginTop = '0';
+            
+            // Abrir diálogo de impresión
+            setTimeout(() => {
+              window.print();
+              
+              // Restaurar la barra después de cerrar el diálogo de impresión
+              setTimeout(() => {
+                if (barra) barra.style.display = 'flex';
+                if (contenido) contenido.style.marginTop = '48px';
+              }, 1000);
+            }, 100);
+          }
+        </script>`
+    ).replace('</body>', '</div></body>')
+    
+    // Abrir ventana solo para mostrar (sin automatizar nada)
     const ventana = window.open('', '_blank', 'width=800,height=600')
     if (ventana) {
-      ventana.document.write(contenidoHTML)
+      ventana.document.write(contenidoConBarra)
+      ventana.document.title = nombreArchivo
       ventana.document.close()
     }
   }
