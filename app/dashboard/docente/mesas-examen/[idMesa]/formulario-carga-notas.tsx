@@ -388,7 +388,7 @@ export default function FormularioCargaNotas({
               Seleccione el formato en el que desea descargar la lista.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
+          <div className="flex flex-col space-y-4">
             <Button
               variant="outline"
               className="w-full"
