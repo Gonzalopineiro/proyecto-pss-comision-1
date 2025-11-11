@@ -19,14 +19,8 @@
     "@supabase/supabase-js": "^2.76.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-<<<<<<< HEAD
-    "html2canvas": "^1.4.1",
-    "html2pdf.js": "^0.12.1",
-    "jspdf": "^3.0.3",
-=======
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
->>>>>>> listado-examenes-finales
     "lucide-react": "^0.545.0",
     "next": "15.5.4",
     "react": "19.1.0",
