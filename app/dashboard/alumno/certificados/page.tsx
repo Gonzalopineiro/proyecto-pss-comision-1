@@ -1,14 +1,9 @@
-// app/dashboard/alumno/certificados/page.tsx
-
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import React from 'react'
 import SidebarAlumno from '@/components/ui/sidebar_alumno'
 import CertificadosCliente from './CertificadosCliente'
 
-// --- TIPOS DE DATOS ---
-
-// Tipo para los datos de FINALES aprobados
 export type FinalAprobadoRow = {
   nota: string | number | null
   mesas_examen: { 
@@ -17,7 +12,6 @@ export type FinalAprobadoRow = {
   }
 }
 
-// NUEVO: Tipo para los datos de CURSADAS aprobadas
 export type CursadaAprobadaRow = {
   estado: string;
   cursadas: {
@@ -30,7 +24,6 @@ export type CursadaAprobadaRow = {
   } | null;
 };
 
-// Tipo para los datos del alumno
 export type AlumnoCompleto = {
     id: string;
     nombre: string;

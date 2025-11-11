@@ -1,5 +1,3 @@
-// app/dashboard/alumno/certificados/CertificadosCliente.tsx
-
 'use client'
 
 import React from 'react'
@@ -7,11 +5,12 @@ import { AlumnoCompleto, FinalAprobadoRow, CursadaAprobadaRow } from './page'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Printer, FileText } from 'lucide-react'
+import { generateVerificationCode } from '@/lib/utils' 
 
 interface Props {
     alumno: AlumnoCompleto
     finalesAprobados: FinalAprobadoRow[]
-    cursadasAprobadas: CursadaAprobadaRow[] // <-- NUEVO PROP
+    cursadasAprobadas: CursadaAprobadaRow[]
 }
 
 export default function CertificadosCliente({ alumno, finalesAprobados, cursadasAprobadas }: Props) {
@@ -20,11 +19,41 @@ export default function CertificadosCliente({ alumno, finalesAprobados, cursadas
         const fechaGeneracion = new Date().toLocaleDateString('es-AR', {
             day: '2-digit', month: 'long', year: 'numeric'
         });
+        
+        const codigoVerificacion = generateVerificationCode();
+
+        // Mapear las cursadas aprobadas al formato de fila
+        const cursadasRows = cursadasAprobadas.map(cursada => {
+            const materia = cursada.cursadas?.materia_docente?.materias;
+            return `
+                <tr>
+                    <td>${materia?.codigo_materia || '—'}</td>
+                    <td>${materia?.nombre || '—'}</td>
+                    <td><span class="status cursada">Cursada</span></td>
+                    <td>—</td>
+                    <td>—</td>
+                </tr>
+            `;
+        }).join('');
+
+        // Mapear los finales aprobados al formato de fila
+        const finalesRows = finalesAprobados.map(calif => {
+            return `
+                <tr>
+                    <td>${calif.mesas_examen.materias.codigo_materia || '—'}</td>
+                    <td>${calif.mesas_examen.materias.nombre || '—'}</td>
+                    <td><span class="status aprobada">Aprobada</span></td>
+                    <td><strong>${calif.nota}</strong></td>
+                    <td>${calif.mesas_examen.fecha_examen ? new Date(calif.mesas_examen.fecha_examen).toLocaleDateString('es-AR') : '—'}</td>
+                </tr>
+            `;
+        }).join('');
+
 
         const contenido = `
             <html>
             <head>
-                <title>Certificado Analítico - ${alumno.apellido}, ${alumno.nombre}</title>
+                <title>Historial Académico - ${alumno.apellido}, ${alumno.nombre}</title>
                 <style>
                     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; padding: 2rem; color: #333; }
                     .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 1rem; margin-bottom: 2rem; }
@@ -37,11 +66,15 @@ export default function CertificadosCliente({ alumno, finalesAprobados, cursadas
                     th, td { border: 1px solid #ddd; padding: 0.75rem; text-align: left; }
                     th { background-color: #f2f2f2; }
                     .footer { text-align: right; margin-top: 3rem; font-style: italic; color: #777; font-size: 0.9rem; }
+                    .verification-code { font-style: normal; font-weight: bold; color: #333; margin-top: 1rem; }
+                    .status { padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; color: #fff; }
+                    .status.aprobada { background-color: #28a745; }
+                    .status.cursada { background-color: #007bff; }
                 </style>
             </head>
             <body>
                 <div class="header">
-                    <h1>Certificado Analítico de Estado Académico</h1>
+                    <h1>Historial Académico</h1>
                     <p>Universidad de la Innovación</p>
                 </div>
 
@@ -53,58 +86,27 @@ export default function CertificadosCliente({ alumno, finalesAprobados, cursadas
                     <div class="info-item"><strong>Fecha de Nacimiento:</strong> ${alumno.nacimiento ? new Date(alumno.nacimiento).toLocaleDateString('es-AR') : 'No especificada'}</div>
                 </div>
 
-                <!-- NUEVA SECCIÓN PARA CURSADAS -->
-                <h2>Cursadas Aprobadas</h2>
-                ${cursadasAprobadas.length > 0 ? `
+                <h2>Detalle de Materias</h2>
                 <table>
                     <thead>
                         <tr>
                             <th>Código</th>
                             <th>Materia</th>
+                            <th>Estado</th>
+                            <th>Nota</th>
+                            <th>Fecha</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${cursadasAprobadas.map(cursada => {
-                            const materia = cursada.cursadas?.materia_docente?.materias;
-                            return `
-                            <tr>
-                                <td>${materia?.codigo_materia || '—'}</td>
-                                <td>${materia?.nombre || '—'}</td>
-                            </tr>
-                        `}).join('')}
+                        ${cursadasRows}
+                        ${finalesRows}
                     </tbody>
                 </table>
-                ` : '<p>No hay cursadas aprobadas para mostrar.</p>'}
-
-
-                <!-- SECCIÓN EXISTENTE PARA FINALES -->
-                <h2>Finales Aprobados</h2>
-                ${finalesAprobados.length > 0 ? `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Código</th>
-                            <th>Materia</th>
-                            <th>Fecha de Examen</th>
-                            <th>Nota Final</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${finalesAprobados.map(calif => `
-                            <tr>
-                                <td>${calif.mesas_examen.materias.codigo_materia || '—'}</td>
-                                <td>${calif.mesas_examen.materias.nombre || '—'}</td>
-                                <td>${calif.mesas_examen.fecha_examen ? new Date(calif.mesas_examen.fecha_examen).toLocaleDateString('es-AR') : '—'}</td>
-                                <td><strong>${calif.nota}</strong></td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-                ` : '<p>No hay finales aprobados para mostrar.</p>'}
 
                 <div class="footer">
-                    <p>Certificado generado el ${fechaGeneracion}.</p>
-                    <p>Este documento no es válido sin la firma y sello de la institución.</p>
+                    <p>Certificado generado el ${fechaGeneracion}.</p>                    
+                    <!-- 3. AÑADIMOS EL CÓDIGO AL FOOTER -->
+                    <p class="verification-code">Código de Verificación: ${codigoVerificacion}</p>
                 </div>
             </body>
             </html>
@@ -117,7 +119,7 @@ export default function CertificadosCliente({ alumno, finalesAprobados, cursadas
             setTimeout(() => ventana.print(), 500);
         }
     }
-
+        
     const totalAprobadas = cursadasAprobadas.length + finalesAprobados.length;
 
     return (
