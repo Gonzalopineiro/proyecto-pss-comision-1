@@ -75,7 +75,7 @@ export default async function CertificadosPage(){
             </Card>
 
             {/* Certificados disponibles */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               {/* Constancia de Alumno Regular */}
               <Card className="p-6 hover:shadow-lg transition-shadow">
                 <div className="flex items-start gap-4">
@@ -136,25 +136,7 @@ export default async function CertificadosPage(){
                 </div>
               </Card>
 
-              {/* Otros certificados (para futuras implementaciones) */}
-              <Card className="p-6 opacity-60">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                    <FileText className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-                      Certificado Analítico
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                      Detalle completo de materias aprobadas y calificaciones
-                    </p>
-                    <Badge variant="outline" className="text-xs">
-                      Próximamente
-                    </Badge>
-                  </div>
-                </div>
-              </Card>
+
             </div>
 
             {/* Información adicional */}
