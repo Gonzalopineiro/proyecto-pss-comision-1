@@ -1,17 +1,23 @@
+'use client';
+
 import Link from 'next/link';
-import { Plus, Calendar, Clock, BookOpen, Edit } from 'lucide-react';
+import { Plus, Calendar, Clock, BookOpen, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge'; // Necesitarás el Badge
 import { ArrowLeft } from 'lucide-react';
+import { useState } from 'react';
+import { useEffect } from 'react';
 
 // (IMPORTANTE: Ajusta la ruta a tu archivo 'actions' si es diferente)
 // Asumo que tus actions están en la carpeta padre 'docente'
-import { obtenerMesasExamenDocente, type MesaExamen } from '../actions'; 
+import { obtenerMesasExamenDocente, eliminarMesaExamen, type MesaExamen } from '../actions'; 
 
 // --- Componente para una tarjeta de Mesa ---
 // (Moví la lógica de la tarjeta aquí para más orden)
 
-function MesaCard({ mesa }: { mesa: MesaExamen }) {
+function MesaCard({ mesa, onEliminar }: { mesa: MesaExamen; onEliminar: (id: number) => void }) {
+  const [eliminando, setEliminando] = useState(false);
+
   const formatearFecha = (fecha: string) => {
     // Crear fecha usando los componentes individuales para evitar problemas de UTC
     const [año, mes, dia] = fecha.split('-').map(Number);
@@ -29,6 +35,30 @@ function MesaCard({ mesa }: { mesa: MesaExamen }) {
     'Publicada': 'success',
   }[mesa.estado] || 'default';
 
+  const handleEliminar = async () => {
+    if (!confirm('¿Está seguro que desea eliminar esta mesa de examen? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    setEliminando(true);
+    try {
+      const resultado = await eliminarMesaExamen(mesa.id);
+      if (resultado.success) {
+        onEliminar(mesa.id);
+      } else {
+        alert(resultado.error || 'Error al eliminar la mesa');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al eliminar la mesa');
+    } finally {
+      setEliminando(false);
+    }
+  };
+
+  // Determinar si el botón de eliminar debe estar deshabilitado
+  const puedeEliminar = !mesa.tiene_notas;
+
   return (
     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
@@ -44,30 +74,70 @@ function MesaCard({ mesa }: { mesa: MesaExamen }) {
             {mesa.hora_examen}
           </span>
           <Badge variant={estadoVariant as any} className="w-fit">{mesa.estado}</Badge>
+          {mesa.tiene_notas && (
+            <Badge variant="secondary" className="w-fit bg-orange-100 text-orange-800">
+              Con notas
+            </Badge>
+          )}
         </div>
       </div>
       
-      {/* --- ESTE ES EL LINK CLAVE --- 
-         Lleva al formulario de carga de notas (.../[idMesa])
-      */}
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 flex gap-2">
         <Link href={`/dashboard/docente/mesas-examen/${mesa.id}`}>
           <Button variant="outline" size="sm" className="w-full sm:w-auto">
             <Edit className="h-4 w-4 mr-2" />
             {mesa.estado === 'programada' ? 'Cargar Notas' : 'Ver/Editar'}
           </Button>
         </Link>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleEliminar}
+          disabled={!puedeEliminar || eliminando}
+          className={`${
+            !puedeEliminar 
+              ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400' 
+              : 'hover:bg-red-50 hover:text-red-600 hover:border-red-200'
+          }`}
+          title={
+            !puedeEliminar 
+              ? 'No se puede eliminar: la mesa tiene notas cargadas'
+              : 'Eliminar mesa de examen'
+          }
+        >
+          <Trash2 className="h-4 w-4" />
+          {eliminando ? '...' : ''}
+        </Button>
       </div>
     </div>
   );
 }
 
-// --- Página Principal (Server Component) ---
+// --- Página Principal (Ahora Client Component) ---
 
-export default async function MesasExamenPage() {
-  
-  // 1. OBTENER DATOS (La parte que faltaba)
-  const mesas = await obtenerMesasExamenDocente();
+export default function MesasExamenPage() {
+  const [mesas, setMesas] = useState<MesaExamen[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const cargarMesas = async () => {
+      try {
+        const mesasObtenidas = await obtenerMesasExamenDocente();
+        setMesas(mesasObtenidas);
+      } catch (error) {
+        console.error('Error al cargar mesas:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarMesas();
+  }, []);
+
+  const handleEliminarMesa = (mesaId: number) => {
+    setMesas(prev => prev.filter(mesa => mesa.id !== mesaId));
+  };
 
   // 2. CALCULAR ESTADÍSTICAS
   const totalMesas = mesas.length;
@@ -173,7 +243,16 @@ export default async function MesasExamenPage() {
               </div>
               
               <div className="p-6">
-                {mesas.length === 0 ? (
+                {loading ? (
+                  <div className="text-center py-12">
+                    <div className="mx-auto h-12 w-12 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center mb-4">
+                      <Calendar className="h-6 w-6 text-slate-400 animate-pulse" />
+                    </div>
+                    <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                      Cargando mesas de examen...
+                    </h3>
+                  </div>
+                ) : mesas.length === 0 ? (
                   // Estado vacío (Tu código original)
                   <div className="text-center py-12">
                     <div className="mx-auto h-12 w-12 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center mb-4">
@@ -196,7 +275,7 @@ export default async function MesasExamenPage() {
                   // LISTA REAL DE MESAS
                   <div className="space-y-4">
                     {mesas.map((mesa) => (
-                      <MesaCard key={mesa.id} mesa={mesa} />
+                      <MesaCard key={mesa.id} mesa={mesa} onEliminar={handleEliminarMesa} />
                     ))}
                   </div>
                 )}

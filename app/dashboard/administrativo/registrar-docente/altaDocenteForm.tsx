@@ -54,6 +54,16 @@ const AltaDocenteForm = () => {
   const [materiasSeleccionadas, setMateriasSeleccionadas] = useState<Materia[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [showMateriasList, setShowMateriasList] = useState(false)
+  const [checkingDuplicates, setCheckingDuplicates] = useState<{
+    dni: boolean
+    legajo: boolean
+    email: boolean
+  }>({ dni: false, legajo: false, email: false })
+  const [fieldValidated, setFieldValidated] = useState<{
+    dni: boolean
+    legajo: boolean
+    email: boolean
+  }>({ dni: false, legajo: false, email: false })
 
   // Cargar materias al iniciar
   useEffect(() => {
@@ -91,6 +101,87 @@ const AltaDocenteForm = () => {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showMateriasList])
+
+  // Limpiar timeouts al desmontar
+  React.useEffect(() => {
+    return () => {
+      Object.values(debounceTimeouts.current).forEach(timeout => {
+        if (timeout) clearTimeout(timeout)
+      })
+    }
+  }, [])
+
+  // Función para verificar duplicados en tiempo real
+  const checkDuplicatesRealTime = async (field: 'dni' | 'legajo' | 'email', value: string) => {
+    if (!value.trim()) return
+
+    setCheckingDuplicates(prev => ({ ...prev, [field]: true }))
+    
+    try {
+      const { verificarDuplicadosDocente } = await import('./actions')
+      
+      // Crear valores temporales para la verificación
+      const checkValues = {
+        dni: field === 'dni' ? value : formData.dni,
+        legajo: field === 'legajo' ? value : formData.legajo,
+        email: field === 'email' ? value : formData.email
+      }
+      
+      const result = await verificarDuplicadosDocente(checkValues.email, checkValues.legajo, checkValues.dni)
+      
+      if (result.duplicado && result.campo === field) {
+        setErrors(prev => ({ ...prev, [field]: result.mensaje || `Este ${field} ya está registrado` }))
+        setFieldValidated(prev => ({ ...prev, [field]: false }))
+      } else if (result.duplicado && result.campo !== field) {
+        // Si hay duplicado en otro campo, no mostramos error en este campo específico
+        setErrors(prev => {
+          const newErrors = { ...prev }
+          if (newErrors[field] && newErrors[field].includes('ya está registrado')) {
+            delete newErrors[field]
+          }
+          return newErrors
+        })
+        setFieldValidated(prev => ({ ...prev, [field]: true }))
+      } else {
+        // No hay duplicados, limpiar error si existe
+        setErrors(prev => {
+          const newErrors = { ...prev }
+          if (newErrors[field] && newErrors[field].includes('ya está registrado')) {
+            delete newErrors[field]
+          }
+          return newErrors
+        })
+        setFieldValidated(prev => ({ ...prev, [field]: true }))
+      }
+    } catch (error) {
+      console.error(`Error verificando ${field}:`, error)
+    } finally {
+      setCheckingDuplicates(prev => ({ ...prev, [field]: false }))
+    }
+  }
+
+  // Debounce para las verificaciones de duplicados
+  const debounceTimeouts = React.useRef<{ [key: string]: NodeJS.Timeout }>({})
+
+  const debouncedCheckDuplicates = (field: 'dni' | 'legajo' | 'email', value: string) => {
+    // Limpiar timeout anterior
+    if (debounceTimeouts.current[field]) {
+      clearTimeout(debounceTimeouts.current[field])
+    }
+
+    // Solo verificar si el campo tiene el formato correcto
+    let shouldCheck = false
+    if (field === 'dni' && /^\d{7,8}$/.test(value)) shouldCheck = true
+    if (field === 'legajo' && /^\d{3,}$/.test(value)) shouldCheck = true
+    if (field === 'email' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) shouldCheck = true
+
+    if (shouldCheck) {
+      // Crear nuevo timeout
+      debounceTimeouts.current[field] = setTimeout(() => {
+        checkDuplicatesRealTime(field, value)
+      }, 800) // Esperar 800ms después de que el usuario deje de escribir
+    }
+  }
 
   // Validaciones en tiempo real
   const validateField = (name: string, value: string): string => {
@@ -200,9 +291,19 @@ const AltaDocenteForm = () => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
     
+    // Resetear estado de validación para campos únicos cuando cambian
+    if (name === 'dni' || name === 'legajo' || name === 'email') {
+      setFieldValidated(prev => ({ ...prev, [name]: false }))
+    }
+    
     // Validación en tiempo real
     const error = validateField(name, value)
     setErrors(prev => ({ ...prev, [name]: error }))
+    
+    // Verificar duplicados para campos específicos
+    if ((name === 'dni' || name === 'legajo' || name === 'email') && !error) {
+      debouncedCheckDuplicates(name as 'dni' | 'legajo' | 'email', value)
+    }
   }
 
   // Funciones para manejar materias
@@ -221,6 +322,30 @@ const AltaDocenteForm = () => {
   const removerMateria = (materiaId: number) => {
     setMateriasSeleccionadas(prev => prev.filter(m => m.id !== materiaId))
     setFormData(prev => ({ ...prev, materias: prev.materias.filter(id => id !== materiaId) }))
+  }
+
+  // Función para verificar si el formulario está completo y válido
+  const isFormValid = () => {
+    // Verificar que no hay errores
+    const hasErrors = Object.keys(errors).length > 0
+
+    // Verificar que no hay verificaciones en curso
+    const isChecking = checkingDuplicates.dni || checkingDuplicates.legajo || checkingDuplicates.email
+
+    // Verificar que todos los campos requeridos están completos
+    const requiredFieldsComplete = 
+      formData.nombre.trim() &&
+      formData.apellido.trim() &&
+      formData.dni.trim() &&
+      formData.legajo.trim() &&
+      formData.fechaNacimiento &&
+      formData.email.trim() &&
+      formData.direccion.trim()
+
+    // Verificar que al menos una materia está seleccionada
+    const hasMateria = materiasSeleccionadas.length > 0
+
+    return !hasErrors && !isChecking && requiredFieldsComplete && hasMateria
   }
 
   const validateForm = (): boolean => {
@@ -328,6 +453,11 @@ const AltaDocenteForm = () => {
               <div className="border-b pb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Información del Docente</h3>
                 <p className="text-sm text-gray-500 mt-1">Complete todos los campos obligatorios marcados con *</p>
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-xs text-blue-700">
+                    📋 <strong>Verificación automática:</strong> Los campos DNI, Legajo y Email se verifican automáticamente para evitar duplicados en el sistema.
+                  </p>
+                </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -377,21 +507,35 @@ const AltaDocenteForm = () => {
                   <label htmlFor="dni" className="block text-sm font-medium text-gray-700 mb-2">
                     DNI *
                   </label>
-                  <input
-                    type="text"
-                    id="dni"
-                    name="dni"
-                    value={formData.dni}
-                    onChange={handleInputChange}
-                    pattern="[0-9]{7,8}"
-                    inputMode="numeric"
-                    title="El DNI solo debe contener entre 7 y 8 dígitos numéricos"
-                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.dni ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
-                    placeholder="Ej: 12345678"
-                    maxLength={8}
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      id="dni"
+                      name="dni"
+                      value={formData.dni}
+                      onChange={handleInputChange}
+                      pattern="[0-9]{7,8}"
+                      inputMode="numeric"
+                      title="El DNI solo debe contener entre 7 y 8 dígitos numéricos"
+                      className={`w-full px-4 py-3 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.dni ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: 12345678"
+                      maxLength={8}
+                    />
+                    {checkingDuplicates.dni && (
+                      <div className="absolute right-3 top-3">
+                        <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                      </div>
+                    )}
+                    {!checkingDuplicates.dni && fieldValidated.dni && !errors.dni && formData.dni && (
+                      <div className="absolute right-3 top-3">
+                        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">Solo números, sin puntos ni espacios</p>
                   {errors.dni && <p className="mt-1 text-sm text-red-600">{errors.dni}</p>}
                 </div>
@@ -400,20 +544,34 @@ const AltaDocenteForm = () => {
                   <label htmlFor="legajo" className="block text-sm font-medium text-gray-700 mb-2">
                     Legajo *
                   </label>
-                  <input
-                    type="text"
-                    id="legajo"
-                    name="legajo"
-                    value={formData.legajo}
-                    onChange={handleInputChange}
-                    pattern="[0-9]+"
-                    inputMode="numeric"
-                    title="El legajo solo debe contener números"
-                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.legajo ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
-                    placeholder="Ej: 2025001"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      id="legajo"
+                      name="legajo"
+                      value={formData.legajo}
+                      onChange={handleInputChange}
+                      pattern="[0-9]+"
+                      inputMode="numeric"
+                      title="El legajo solo debe contener números"
+                      className={`w-full px-4 py-3 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.legajo ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Ej: 2025001"
+                    />
+                    {checkingDuplicates.legajo && (
+                      <div className="absolute right-3 top-3">
+                        <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                      </div>
+                    )}
+                    {!checkingDuplicates.legajo && fieldValidated.legajo && !errors.legajo && formData.legajo && (
+                      <div className="absolute right-3 top-3">
+                        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">Solo números, código único del docente</p>
                   {errors.legajo && <p className="mt-1 text-sm text-red-600">{errors.legajo}</p>}
                 </div>
@@ -442,17 +600,31 @@ const AltaDocenteForm = () => {
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                     Email *
                   </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
-                    placeholder="docente@ejemplo.com"
-                  />
+                  <div className="relative">
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-3 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="docente@ejemplo.com"
+                    />
+                    {checkingDuplicates.email && (
+                      <div className="absolute right-3 top-3">
+                        <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                      </div>
+                    )}
+                    {!checkingDuplicates.email && fieldValidated.email && !errors.email && formData.email && (
+                      <div className="absolute right-3 top-3">
+                        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">Se usará para el acceso al sistema</p>
                   {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
                 </div>
@@ -648,13 +820,38 @@ const AltaDocenteForm = () => {
               
               <Button
                 type="submit"
-                disabled={isSubmitting}
-                className="sm:order-2 bg-gray-800 hover:bg-gray-900 text-white px-8 py-3 flex items-center justify-center gap-2 sm:ml-auto"
+                disabled={isSubmitting || !isFormValid()}
+                className="sm:order-2 bg-gray-800 hover:bg-gray-900 text-white px-8 py-3 flex items-center justify-center gap-2 sm:ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="text-lg">🎓</span>
                 {isSubmitting ? 'Registrando...' : 'Dar de Alta Docente'}
               </Button>
             </div>
+
+            {/* Mensaje informativo cuando el botón está deshabilitado */}
+            {!isFormValid() && !isSubmitting && (
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  <span className="font-medium">⚠️ No se puede registrar el docente:</span>
+                </p>
+                <ul className="text-sm text-yellow-700 mt-2 space-y-1">
+                  {Object.keys(errors).length > 0 && (
+                    <li>• Corrija los errores marcados en rojo</li>
+                  )}
+                  {(checkingDuplicates.dni || checkingDuplicates.legajo || checkingDuplicates.email) && (
+                    <li>• Espere la verificación de datos únicos (DNI, Legajo, Email)</li>
+                  )}
+                  {(!formData.nombre.trim() || !formData.apellido.trim() || !formData.dni.trim() || 
+                    !formData.legajo.trim() || !formData.fechaNacimiento || !formData.email.trim() || 
+                    !formData.direccion.trim()) && (
+                    <li>• Complete todos los campos obligatorios (*)</li>
+                  )}
+                  {materiasSeleccionadas.length === 0 && (
+                    <li>• Seleccione al menos una materia para el docente</li>
+                  )}
+                </ul>
+              </div>
+            )}
           </form>
           
           {/* Popup de confirmación */}

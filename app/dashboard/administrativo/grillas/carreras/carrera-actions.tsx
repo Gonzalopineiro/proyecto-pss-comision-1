@@ -19,9 +19,10 @@ import { eliminarCarrera, type CarreraCompleta } from '@/app/dashboard/administr
 interface CarreraActionsProps {
   carrera: CarreraCompleta;
   onCarreraEliminada: (id: number) => void; 
+  onCarreraModificada?: (carrera: CarreraCompleta) => void;
 }
 
-export function CarreraActions({ carrera, onCarreraEliminada }: CarreraActionsProps) {
+export function CarreraActions({ carrera, onCarreraEliminada, onCarreraModificada }: CarreraActionsProps) {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 

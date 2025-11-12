@@ -27,6 +27,7 @@ export interface MesaExamen {
   hora_examen: string
   ubicacion: string
   estado: string
+  tiene_notas?: boolean
   materia: {
     codigo_materia: string
     nombre: string
@@ -423,8 +424,11 @@ export async function obtenerMesasExamenDocente(): Promise<MesaExamen[]> {
     }
 
     // Transformar los datos para que coincidan con la interfaz
-    const mesasFormateadas = (mesas || []).map((mesa: any) => {
+    const mesasFormateadas = await Promise.all((mesas || []).map(async (mesa: any) => {
       const materiaData = Array.isArray(mesa.materias) ? mesa.materias[0] : mesa.materias;
+      
+      // Verificar si la mesa tiene notas cargadas
+      const tieneNotas = await verificarMesaTieneNotas(mesa.id);
       
       return {
         id: mesa.id,
@@ -433,18 +437,48 @@ export async function obtenerMesasExamenDocente(): Promise<MesaExamen[]> {
         hora_examen: mesa.hora_examen,
         ubicacion: mesa.ubicacion,
         estado: mesa.estado,
+        tiene_notas: tieneNotas,
         materia: {
           codigo_materia: materiaData?.codigo_materia || '',
           nombre: materiaData?.nombre || ''
         }
       };
-    }).filter(mesa => mesa.materia.codigo_materia) as MesaExamen[]
+    }));
 
-    console.log('Mesas formateadas final:', mesasFormateadas)
-    return mesasFormateadas
+    const mesasFiltradas = mesasFormateadas.filter(mesa => mesa.materia.codigo_materia) as MesaExamen[]
+
+    console.log('Mesas formateadas final:', mesasFiltradas)
+    return mesasFiltradas
   } catch (error) {
     console.error('Error en obtenerMesasExamenDocente:', error)
     return []
+  }
+}
+
+/**
+ * Verifica si una mesa de examen tiene notas cargadas
+ */
+export async function verificarMesaTieneNotas(mesaId: number): Promise<boolean> {
+  const supabase = await createClient()
+
+  try {
+    const { data: inscripciones, error } = await supabase
+      .from('inscripciones_mesa_examen')
+      .select('id')
+      .eq('mesa_examen_id', mesaId)
+      .not('nota', 'is', null)
+      .limit(1)
+
+    if (error) {
+      console.error('Error al verificar notas de la mesa:', error)
+      return false
+    }
+
+    // Si hay al menos una inscripción con nota, la mesa tiene notas cargadas
+    return (inscripciones && inscripciones.length > 0)
+  } catch (error) {
+    console.error('Error en verificarMesaTieneNotas:', error)
+    return false
   }
 }
 
@@ -474,6 +508,15 @@ export async function eliminarMesaExamen(mesaId: number): Promise<{ success: boo
 
     if (mesa.docente_id !== user.id) {
       return { success: false, error: 'No tiene permisos para eliminar esta mesa' }
+    }
+
+    // Verificar si la mesa tiene notas cargadas
+    const tieneNotas = await verificarMesaTieneNotas(mesaId)
+    if (tieneNotas) {
+      return { 
+        success: false, 
+        error: 'No se puede eliminar la mesa porque ya tiene notas cargadas. Las notas deben mantenerse para el registro académico.' 
+      }
     }
 
     // Eliminar la mesa de examen

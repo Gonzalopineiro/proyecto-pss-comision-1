@@ -18,6 +18,11 @@ interface Alumno {
   legajo?: number | null
   email?: string | null
   carrera_id?: number | null
+  carrera?: {
+    id: number
+    nombre: string
+    codigo: string
+  } | null
   direccion?: string | null
   telefono?: string | null
   nacimiento?: string | null
@@ -31,6 +36,7 @@ export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) 
   const { role } = useUserRole()
   const [data, setData] = useState<Alumno[]>(initialData || [])
   const [query, setQuery] = useState('')
+  const [selectedCarrera, setSelectedCarrera] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
   const [loadingDelete, setLoadingDelete] = useState(false)
@@ -70,25 +76,49 @@ export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) 
     }
   }, [])
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return data
-    return data.filter((a) => {
-      const nombre = `${a.nombre || ''}`.toLowerCase()
-      const apellido = `${a.apellido || ''}`.toLowerCase()
-      const legajo = a.legajo ? String(a.legajo) : ''
-      return (
-        nombre.includes(q) ||
-        apellido.includes(q) ||
-        legajo.includes(q)
-      )
+  // Obtener carreras únicas de los datos
+  const carreras = useMemo(() => {
+    const carrerasUnicas = new Map()
+    data.forEach(alumno => {
+      if (alumno.carrera) {
+        carrerasUnicas.set(alumno.carrera.id, alumno.carrera)
+      }
     })
-  }, [data, query])
+    return Array.from(carrerasUnicas.values()).sort((a, b) => a.nombre.localeCompare(b.nombre))
+  }, [data])
+
+  const filtered = useMemo(() => {
+    let result = data
+
+    // Filtrar por carrera seleccionada
+    if (selectedCarrera) {
+      result = result.filter(a => a.carrera?.id === parseInt(selectedCarrera))
+    }
+
+    // Filtrar por texto de búsqueda
+    const q = query.trim().toLowerCase()
+    if (q) {
+      result = result.filter((a) => {
+        const nombre = `${a.nombre || ''}`.toLowerCase()
+        const apellido = `${a.apellido || ''}`.toLowerCase()
+        const legajo = a.legajo ? String(a.legajo) : ''
+        const carrera = `${a.carrera?.nombre || ''}`.toLowerCase()
+        return (
+          nombre.includes(q) ||
+          apellido.includes(q) ||
+          legajo.includes(q) ||
+          carrera.includes(q)
+        )
+      })
+    }
+
+    return result
+  }, [data, query, selectedCarrera])
   
-  // Reset page when query changes
+  // Reset page when query or carrera filter changes
   React.useEffect(() => {
     setCurrentPage(1)
-  }, [query])
+  }, [query, selectedCarrera])
   
   const totalItems = filtered.length
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
@@ -125,6 +155,7 @@ export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) 
         setSuccessType('deleted')
         setShowConfirmationPopup(true)
       } else {
+        console.error('Error al eliminar:', json.error || 'Error desconocido')
         alert('No se pudo eliminar: ' + (json.error || 'Error'))
       }
     } catch (err) {
@@ -199,28 +230,74 @@ export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) 
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por nombre o legajo..."
+            placeholder="Buscar por nombre, legajo o carrera..."
             className="w-full p-2 border rounded bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-700"
           />
         </div>
         <select 
           className="p-2 border rounded bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-700 min-w-[200px]"
-          defaultValue=""
+          title="Filtrar por carrera"
+          value={selectedCarrera}
+          onChange={(e) => setSelectedCarrera(e.target.value)}
         >
           <option value="">Todas las carreras</option>
-          <option value="ing-sistemas">Ing. en Sistemas</option>
-          <option value="ing-industrial">Ing. Industrial</option>
-          <option value="lic-administracion">Lic. Administración</option>
-          <option value="lic-contabilidad">Lic. Contabilidad</option>
+          {carreras.map((carrera) => (
+            <option key={carrera.id} value={carrera.id.toString()}>
+              {carrera.nombre}
+            </option>
+          ))}
         </select>
       </div>
+
+      {/* Indicadores de filtros activos */}
+      {(selectedCarrera || query) && (
+        <div className="mb-4 flex items-center gap-2 flex-wrap">
+          <span className="text-sm text-gray-600 dark:text-gray-300">Filtros activos:</span>
+          {selectedCarrera && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-sm">
+              Carrera: {carreras.find(c => c.id.toString() === selectedCarrera)?.nombre}
+              <button 
+                onClick={() => setSelectedCarrera('')}
+                className="ml-1 text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-100"
+                title="Quitar filtro de carrera"
+              >
+                ×
+              </button>
+            </span>
+          )}
+          {query && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-sm">
+              Búsqueda: "{query}"
+              <button 
+                onClick={() => setQuery('')}
+                className="ml-1 text-green-600 dark:text-green-300 hover:text-green-800 dark:hover:text-green-100"
+                title="Limpiar búsqueda"
+              >
+                ×
+              </button>
+            </span>
+          )}
+          <button 
+            onClick={() => { setSelectedCarrera(''); setQuery('') }}
+            className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline"
+          >
+            Limpiar todos los filtros
+          </button>
+        </div>
+      )}
 
       {/* Popup de confirmación para eliminación y modificación */}
       <ConfirmationPopup
         isOpen={showConfirmationPopup}
         onClose={() => {
           setShowConfirmationPopup(false)
-          router.push('/dashboard/administrativo/grillas/alumnos')
+          if (successType === 'deleted') {
+            // Refresh la página después de eliminar para obtener datos actualizados
+            window.location.reload()
+          } else {
+            // Para modificaciones, solo navegar sin refresh
+            router.push('/dashboard/administrativo/grillas/alumnos')
+          }
         }}
         title={successType === 'modified' ? '¡Alumno Modificado!' : '¡Alumno Eliminado!'}
         message={alumnoName ? `${successType === 'modified' ? 'El alumno' : 'Se eliminó al alumno'} ${alumnoName} ${successType === 'modified' ? 'ha sido modificado correctamente.' : 'del sistema.'}` : ''}
@@ -246,7 +323,7 @@ export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) 
                 </td>
                 <td className="py-3">{a.dni ?? '-'}</td>
                 <td className="py-3">{a.legajo ?? '-'}</td>
-                <td className="py-3">{a.carrera_id ?? '-'}</td>
+                <td className="py-3">{a.carrera?.nombre ?? '-'}</td>
                 <td className="py-3">
                   <div className="flex items-center gap-2">
                     <Button 
@@ -273,6 +350,8 @@ export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) 
                   <div>No se encontraron alumnos</div>
                   <div className="text-xs mt-2">
                     Debug: Total de datos: {data.length} | Filtrados: {filtered.length} | Página actual: {currentPage}
+                    {selectedCarrera && <div>Filtro de carrera activo: {carreras.find(c => c.id.toString() === selectedCarrera)?.nombre}</div>}
+                    {query && <div>Búsqueda activa: "{query}"</div>}
                   </div>
                 </td>
               </tr>
@@ -284,7 +363,10 @@ export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) 
       {/* Paginación */}
       <div className="mt-4 flex items-center justify-between">
         <div className="text-sm text-gray-600 dark:text-gray-300">
-          Vista hasta 40 alumnos.
+          {filtered.length === data.length 
+            ? `Mostrando ${Math.min(pageSize, filtered.length)} de ${filtered.length} alumnos`
+            : `Mostrando ${Math.min(pageSize, filtered.length)} de ${filtered.length} alumnos filtrados (total: ${data.length})`
+          }
         </div>
 
         <div className="flex items-center gap-2">

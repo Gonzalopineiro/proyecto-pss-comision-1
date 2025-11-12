@@ -74,6 +74,19 @@ export default function ModificarCarreraPage() {
             toast.error(result.error);
         } else {
             toast.success('Cambio guardado con éxito.');
+            // Guardar mensaje de éxito para mostrar en la grilla
+            try {
+                localStorage.setItem('carreraSuccess', JSON.stringify({
+                    message: `La carrera "${carrera?.nombre}" ha sido modificada exitosamente.`,
+                    type: 'modified'
+                }));
+            } catch (e) {
+                // Ignorar errores de localStorage
+            }
+            // Redirigir a la grilla después de un breve delay
+            setTimeout(() => {
+                router.push('/dashboard/administrativo/grillas/carreras');
+            }, 1000);
         }
         setIsSavingCarrera(false);
     };
@@ -288,6 +301,15 @@ const handleGuardarCambios = async () => {
         toast.error(result.error);
     } else {
         toast.success('¡Plan de estudios actualizado con éxito!');
+        // Guardar mensaje de éxito para mostrar en la grilla
+        try {
+            localStorage.setItem('carreraSuccess', JSON.stringify({
+                message: `El plan de estudios de "${plan.nombre}" ha sido actualizado exitosamente.`,
+                type: 'modified'
+            }));
+        } catch (e) {
+            // Ignorar errores de localStorage
+        }
         await onGuardadoExitoso();
         await cargarMateriasDisponibles();
     }
