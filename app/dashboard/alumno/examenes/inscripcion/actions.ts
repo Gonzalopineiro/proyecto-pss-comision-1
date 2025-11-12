@@ -16,19 +16,19 @@ export interface MesaDisponible {
 }
 
 export interface CorrelativaFinalInfo {
-  materia_id: number
-  nombre: string
-  codigo: string
-  cursada_aprobada: boolean
-  final_aprobado: boolean
-  cumplida: boolean
+  materia_id: number;
+  nombre: string;
+  codigo: string;
+  cursada_aprobada: boolean;
+  final_aprobado: boolean;
+  cumplida: boolean;
 }
 
 export interface VerificacionCorrelativasFinales {
-  puede_inscribirse: boolean
-  correlativas: CorrelativaFinalInfo[]
-  plan_id: number
-  error?: string
+  puede_inscribirse: boolean;
+  correlativas: CorrelativaFinalInfo[];
+  plan_id: number;
+  error?: string;
 }
 
 interface MesaRaw {
@@ -41,121 +41,142 @@ interface MesaRaw {
   materias: { nombre: string } | { nombre: string }[];
 }
 
-export async function obtenerMateriaIdPorCodigo(codigoMateria: string): Promise<number> {
-  const supabase = await createClient()
-  
+export async function obtenerMateriaIdPorCodigo(
+  codigoMateria: string
+): Promise<number> {
+  const supabase = await createClient();
+
   const { data, error } = await supabase
-    .from('materias')
-    .select('id')
-    .eq('codigo_materia', codigoMateria)
-    .single()
-  
+    .from("materias")
+    .select("id")
+    .eq("codigo_materia", codigoMateria)
+    .single();
+
   if (error || !data) {
-    throw new Error(`No se encontró la materia con código: ${codigoMateria}`)
+    throw new Error(`No se encontró la materia con código: ${codigoMateria}`);
   }
-  
-  return data.id
+
+  return data.id;
 }
 
 export async function verificarCorrelativasFinales(
   materiaId: number
 ): Promise<VerificacionCorrelativasFinales> {
-  console.log('🚀 INICIANDO verificarCorrelativasFinales para materia ID:', materiaId)
-  
-  const supabase = await createClient()
-  
+  console.log(
+    "🚀 INICIANDO verificarCorrelativasFinales para materia ID:",
+    materiaId
+  );
+
+  const supabase = await createClient();
+
   try {
     // Obtener el usuario autenticado
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
     if (authError || !user || !user.email) {
-      console.error('❌ Error de autenticación:', authError)
-      throw new Error('No hay sesión activa')
+      console.error("❌ Error de autenticación:", authError);
+      throw new Error("No hay sesión activa");
     }
 
-    console.log('👤 Usuario autenticado:', user.email, 'ID:', user.id)
+    console.log("👤 Usuario autenticado:", user.email, "ID:", user.id);
 
-    return await verificarCorrelativasFinalesTypeScript(user.email, user.id, materiaId, supabase)
-    
+    return await verificarCorrelativasFinalesTypeScript(
+      user.email,
+      user.id,
+      materiaId,
+      supabase
+    );
   } catch (error) {
-    console.error('Error en verificarCorrelativasFinales:', error)
-    throw new Error('Error al verificar correlativas de final')
+    console.error("Error en verificarCorrelativasFinales:", error);
+    throw new Error("Error al verificar correlativas de final");
   }
 }
 
 // Función que hace la verificación de correlativas para finales en TypeScript
 async function verificarCorrelativasFinalesTypeScript(
-  email: string, 
+  email: string,
   userId: string,
-  materiaId: number, 
+  materiaId: number,
   supabase: any
 ): Promise<VerificacionCorrelativasFinales> {
-  
-  console.log(`🔍 INICIANDO VERIFICACIÓN DE CORRELATIVAS FINALES`)
-  console.log(`📧 Email: ${email}`)
-  console.log(`👤 User ID: ${userId}`)
-  console.log(`📚 Materia ID: ${materiaId}`)
-  
+  console.log(`🔍 INICIANDO VERIFICACIÓN DE CORRELATIVAS FINALES`);
+  console.log(`📧 Email: ${email}`);
+  console.log(`👤 User ID: ${userId}`);
+  console.log(`📚 Materia ID: ${materiaId}`);
+
   // 1. Obtener el plan de estudios del alumno
   const { data: alumnoData, error: alumnoError } = await supabase
-    .from('usuarios')
-    .select(`
+    .from("usuarios")
+    .select(
+      `
       id,
       carrera_id,
       carreras!carrera_id (
         plan_de_estudio_id
       )
-    `)
-    .eq('email', email)
-    .single()
+    `
+    )
+    .eq("email", email)
+    .single();
 
   if (alumnoError || !alumnoData?.carreras) {
-    console.error('❌ Error obteniendo datos del alumno:', alumnoError)
-    throw new Error('No se encontró el alumno o su carrera')
+    console.error("❌ Error obteniendo datos del alumno:", alumnoError);
+    throw new Error("No se encontró el alumno o su carrera");
   }
 
-  const planId = (alumnoData.carreras as any).plan_de_estudio_id
-  console.log(`📋 Plan de estudios ID: ${planId}`)
+  const planId = (alumnoData.carreras as any).plan_de_estudio_id;
+  console.log(`📋 Plan de estudios ID: ${planId}`);
 
   // 2. Obtener correlativas requeridas para esta materia (para finales)
-  const { data: correlativasRequeridas, error: correlativasError } = await supabase
-    .from('correlatividades_final')
-    .select(`
+  const { data: correlativasRequeridas, error: correlativasError } =
+    await supabase
+      .from("correlatividades_final")
+      .select(
+        `
       correlativa_id
-    `)
-    .eq('plan_id', planId)
-    .eq('materia_id', materiaId)
+    `
+      )
+      .eq("plan_id", planId)
+      .eq("materia_id", materiaId);
 
   if (correlativasError) {
-    console.error('❌ Error obteniendo correlativas:', correlativasError)
-    throw new Error('Error al obtener correlativas requeridas')
+    console.error("❌ Error obteniendo correlativas:", correlativasError);
+    throw new Error("Error al obtener correlativas requeridas");
   }
 
-  console.log(`📊 Correlativas finales requeridas encontradas:`, correlativasRequeridas)
+  console.log(
+    `📊 Correlativas finales requeridas encontradas:`,
+    correlativasRequeridas
+  );
 
   // Si no hay correlativas, puede inscribirse
   if (!correlativasRequeridas || correlativasRequeridas.length === 0) {
     return {
       puede_inscribirse: true,
       correlativas: [],
-      plan_id: planId
-    }
+      plan_id: planId,
+    };
   }
 
   // Obtener información de las materias correlativas por separado
-  const correlativaIds = correlativasRequeridas.map((c: any) => c.correlativa_id)
-  
+  const correlativaIds = correlativasRequeridas.map(
+    (c: any) => c.correlativa_id
+  );
+
   const { data: materiasCorrelativas, error: materiasError } = await supabase
-    .from('materias')
-    .select('id, nombre, codigo_materia')
-    .in('id', correlativaIds)
+    .from("materias")
+    .select("id, nombre, codigo_materia")
+    .in("id", correlativaIds);
 
   if (materiasError) {
-    console.error('❌ Error obteniendo materias correlativas:', materiasError)
-    throw new Error('Error al obtener información de materias correlativas')
+    console.error("❌ Error obteniendo materias correlativas:", materiasError);
+    throw new Error("Error al obtener información de materias correlativas");
   }
 
-  console.log(`📚 Materias correlativas obtenidas:`, materiasCorrelativas)
+  console.log(`📚 Materias correlativas obtenidas:`, materiasCorrelativas);
 
   // 3. Verificar qué correlativas ya cumplió el alumno
   // Para finales, necesita tener:
@@ -164,97 +185,125 @@ async function verificarCorrelativasFinalesTypeScript(
   const correlativasConEstado = await Promise.all(
     correlativasRequeridas.map(async (correlativa: any) => {
       // Encontrar la información de la materia correlativa
-      const materiaInfo = materiasCorrelativas?.find((m: any) => m.id === correlativa.correlativa_id)
-      
-      console.log(`🔍 Verificando correlativa final: ${materiaInfo?.nombre} (ID: ${correlativa.correlativa_id})`)
-      
+      const materiaInfo = materiasCorrelativas?.find(
+        (m: any) => m.id === correlativa.correlativa_id
+      );
+
+      console.log(
+        `🔍 Verificando correlativa final: ${materiaInfo?.nombre} (ID: ${correlativa.correlativa_id})`
+      );
+
       // PASO 1: Verificar que tenga cursada aprobada
       const { data: cursadasMateria, error: cursadasError } = await supabase
-        .from('cursadas')
-        .select(`
+        .from("cursadas")
+        .select(
+          `
           id,
           materia_docente!inner (
             materia_id
           )
-        `)
-        .eq('materia_docente.materia_id', correlativa.correlativa_id)
+        `
+        )
+        .eq("materia_docente.materia_id", correlativa.correlativa_id);
 
-      let cursadaAprobada = false
-      let cursadaIds: any[] = []
+      let cursadaAprobada = false;
+      let cursadaIds: any[] = [];
 
       if (cursadasError) {
-        console.error('Error obteniendo cursadas:', cursadasError)
+        console.error("Error obteniendo cursadas:", cursadasError);
       } else if (cursadasMateria && cursadasMateria.length > 0) {
-        cursadaIds = cursadasMateria.map((c: any) => c.id)
-        
-        const { data: inscripcionesCursada, error: inscripcionesError } = await supabase
-          .from('inscripciones_cursada')
-          .select('estado, cursada_id')
-          .eq('alumno_id', userId)
-          .in('cursada_id', cursadaIds)
-          .eq('estado', 'aprobada')
+        cursadaIds = cursadasMateria.map((c: any) => c.id);
 
-        if (!inscripcionesError && inscripcionesCursada && inscripcionesCursada.length > 0) {
-          cursadaAprobada = true
+        const { data: inscripcionesCursada, error: inscripcionesError } =
+          await supabase
+            .from("inscripciones_cursada")
+            .select("estado, cursada_id")
+            .eq("alumno_id", userId)
+            .in("cursada_id", cursadaIds)
+            .eq("estado", "aprobada");
+
+        if (
+          !inscripcionesError &&
+          inscripcionesCursada &&
+          inscripcionesCursada.length > 0
+        ) {
+          cursadaAprobada = true;
         }
       }
 
-      console.log(`📚 Cursada ${materiaInfo?.nombre}: ${cursadaAprobada ? '✅ APROBADA' : '❌ NO APROBADA'}`)
+      console.log(
+        `📚 Cursada ${materiaInfo?.nombre}: ${
+          cursadaAprobada ? "✅ APROBADA" : "❌ NO APROBADA"
+        }`
+      );
 
       // PASO 2: Verificar que tenga final aprobado
-      let finalAprobado = false
+      let finalAprobado = false;
 
       // Buscar mesas de examen de esta materia
       const { data: mesasExamen, error: mesasError } = await supabase
-        .from('mesas_examen')
-        .select('id')
-        .eq('materia_id', correlativa.correlativa_id)
+        .from("mesas_examen")
+        .select("id")
+        .eq("materia_id", correlativa.correlativa_id);
 
       if (mesasError) {
-        console.error('Error obteniendo mesas de examen:', mesasError)
+        console.error("Error obteniendo mesas de examen:", mesasError);
       } else if (mesasExamen && mesasExamen.length > 0) {
-        const mesaIds = mesasExamen.map((m: any) => m.id)
-        
-        // Verificar si el alumno tiene inscripciones en estas mesas con nota aprobatoria
-        const { data: inscripcionesMesa, error: inscripcionesMesaError } = await supabase
-          .from('inscripciones_mesa_examen')
-          .select('mesa_examen_id, nota, estado')
-          .eq('estudiante_id', userId)
-          .in('mesa_examen_id', mesaIds)
-          .not('nota', 'is', null) // Solo inscripciones con nota cargada
-          .gte('nota', 4) // Nota >= 4 (aprobado)
+        const mesaIds = mesasExamen.map((m: any) => m.id);
 
-        if (!inscripcionesMesaError && inscripcionesMesa && inscripcionesMesa.length > 0) {
-          finalAprobado = true
+        // Verificar si el alumno tiene inscripciones en estas mesas con nota aprobatoria
+        const { data: inscripcionesMesa, error: inscripcionesMesaError } =
+          await supabase
+            .from("inscripciones_mesa_examen")
+            .select("mesa_examen_id, nota, estado")
+            .eq("estudiante_id", userId)
+            .in("mesa_examen_id", mesaIds)
+            .not("nota", "is", null) // Solo inscripciones con nota cargada
+            .gte("nota", 4); // Nota >= 4 (aprobado)
+
+        if (
+          !inscripcionesMesaError &&
+          inscripcionesMesa &&
+          inscripcionesMesa.length > 0
+        ) {
+          finalAprobado = true;
         }
       }
 
-      console.log(`🎓 Final ${materiaInfo?.nombre}: ${finalAprobado ? '✅ APROBADO' : '❌ NO APROBADO'}`)
+      console.log(
+        `🎓 Final ${materiaInfo?.nombre}: ${
+          finalAprobado ? "✅ APROBADO" : "❌ NO APROBADO"
+        }`
+      );
 
       // La correlativa está cumplida solo si AMBOS están aprobados
-      const cumplida = cursadaAprobada && finalAprobado
+      const cumplida = cursadaAprobada && finalAprobado;
 
-      console.log(`${cumplida ? '✅' : '❌'} Correlativa final ${materiaInfo?.nombre}: ${cumplida ? 'CUMPLIDA (cursada + final aprobados)' : 'NO CUMPLIDA'}`)
+      console.log(
+        `${cumplida ? "✅" : "❌"} Correlativa final ${materiaInfo?.nombre}: ${
+          cumplida ? "CUMPLIDA (cursada + final aprobados)" : "NO CUMPLIDA"
+        }`
+      );
 
       return {
         materia_id: correlativa.correlativa_id,
-        nombre: materiaInfo?.nombre || 'Materia desconocida',
-        codigo: materiaInfo?.codigo_materia || 'Sin código',
+        nombre: materiaInfo?.nombre || "Materia desconocida",
+        codigo: materiaInfo?.codigo_materia || "Sin código",
         cursada_aprobada: cursadaAprobada,
         final_aprobado: finalAprobado,
-        cumplida
-      }
+        cumplida,
+      };
     })
-  )
+  );
 
   // 4. Determinar si puede inscribirse
-  const puede_inscribirse = correlativasConEstado.every((c: any) => c.cumplida)
+  const puede_inscribirse = correlativasConEstado.every((c: any) => c.cumplida);
 
   return {
     puede_inscribirse,
     correlativas: correlativasConEstado,
-    plan_id: planId
-  }
+    plan_id: planId,
+  };
 }
 
 export async function obtenerMesasDisponibles(): Promise<MesaDisponible[]> {
@@ -290,7 +339,8 @@ export async function obtenerMesasDisponibles(): Promise<MesaDisponible[]> {
 
   const { data: mesas } = await supabase
     .from("mesas_examen")
-    .select(`
+    .select(
+      `
       id,
       materia_id,
       fecha_examen,
@@ -298,7 +348,8 @@ export async function obtenerMesasDisponibles(): Promise<MesaDisponible[]> {
       ubicacion,
       estado,
       materias (nombre)
-    `)
+    `
+    )
     .eq("estado", "programada")
     .in("materia_id", materiasIds);
 
@@ -306,8 +357,9 @@ export async function obtenerMesasDisponibles(): Promise<MesaDisponible[]> {
 
   const { data: inscripciones } = await supabase
     .from("inscripciones_mesa_examen")
-    .select("mesa_examen_id")
-    .eq("estudiante_id", userId);
+    .select("mesa_examen_id, estado")
+    .eq("estudiante_id", userId)
+    .neq("estado", "cancelado");
 
   const inscriptasIds = new Set(
     (inscripciones || []).map((i) => i.mesa_examen_id)
@@ -330,28 +382,35 @@ export async function obtenerMesasDisponibles(): Promise<MesaDisponible[]> {
 
 // 🔹 Server Action con revalidación de la página y verificación de correlativas
 export async function inscribirseEnMesa(mesaId: string, materiaId: number) {
-  console.log('🎯 INICIANDO inscribirseEnMesa para mesa:', mesaId, 'materia:', materiaId);
-  
+  console.log(
+    "🎯 INICIANDO inscribirseEnMesa para mesa:",
+    mesaId,
+    "materia:",
+    materiaId
+  );
+
   const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  
+
   if (!user) {
-    throw new Error('No hay sesión activa');
+    throw new Error("No hay sesión activa");
   }
 
   // Verificar correlativas antes de inscribirse
   const verificacion = await verificarCorrelativasFinales(materiaId);
-  
+
   if (!verificacion.puede_inscribirse) {
     const correlativasNoAprobadas = verificacion.correlativas
       .filter((c: any) => !c.cumplida)
       .map((c: any) => c.nombre)
-      .join(', ');
-    
-    throw new Error(`No puedes inscribirte al final. Necesitas aprobar las siguientes materias: ${correlativasNoAprobadas}`);
+      .join(", ");
+
+    throw new Error(
+      `No puedes inscribirte al final. Necesitas aprobar las siguientes materias: ${correlativasNoAprobadas}`
+    );
   }
 
   // Si pasa la verificación, proceder con la inscripción
@@ -362,12 +421,74 @@ export async function inscribirseEnMesa(mesaId: string, materiaId: number) {
   });
 
   if (error) {
-    console.error('Error inscribiendo en mesa:', error);
-    throw new Error('Error al inscribirse en el examen');
+    console.error("Error inscribiendo en mesa:", error);
+    throw new Error("Error al inscribirse en el examen");
   }
 
-  console.log('✅ Inscripción exitosa en mesa:', mesaId);
+  console.log("✅ Inscripción exitosa en mesa:", mesaId);
 
   // 🔹 Revalidar la ruta para que la página se vuelva a renderizar con los datos actualizados
+  revalidatePath("/dashboard/alumno/examenes/inscripcion");
+}
+
+export async function cancelarInscripcionMesa(mesaId: string) {
+  console.log("🚫 Cancelando inscripción a mesa:", mesaId);
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("No hay sesión activa");
+  }
+
+  // 🕒 Obtener la fecha y hora del examen
+  const { data: mesa, error: mesaError } = await supabase
+    .from("mesas_examen")
+    .select("fecha_examen, hora_examen")
+    .eq("id", mesaId)
+    .single();
+
+  if (mesaError || !mesa) {
+    console.error("❌ Error al obtener la mesa de examen:", mesaError);
+    throw new Error("No se pudo obtener la información de la mesa de examen.");
+  }
+
+  // Combinar fecha y hora del examen en un solo objeto Date
+  const examenDateTime = new Date(`${mesa.fecha_examen}T${mesa.hora_examen}`);
+
+  // Calcular el límite para cancelar (24h antes del examen)
+  const limiteCancelacion = new Date(
+    examenDateTime.getTime() - 24 * 60 * 60 * 1000
+  );
+  const ahora = new Date();
+
+  // 🚫 Verificar si ya pasó el límite
+  if (ahora >= limiteCancelacion) {
+    console.warn(
+      "❌ No se puede cancelar: faltan menos de 24h para el examen."
+    );
+    throw new Error(
+      "No se puede cancelar la inscripción porque faltan menos de 24 horas para el examen."
+    );
+  }
+
+  // ✅ Eliminar la inscripción de la base de datos
+  const { error } = await supabase
+    .from("inscripciones_mesa_examen")
+    .delete()
+    .eq("mesa_examen_id", mesaId)
+    .eq("estudiante_id", user.id)
+    .eq("estado", "inscripto"); // solo si estaba efectivamente inscripto
+
+  if (error) {
+    console.error("❌ Error al eliminar inscripción:", error);
+    throw new Error("Error al cancelar la inscripción al examen.");
+  }
+
+  console.log("✅ Inscripción eliminada con éxito.");
+
   revalidatePath("/dashboard/alumno/examenes/inscripcion");
 }
