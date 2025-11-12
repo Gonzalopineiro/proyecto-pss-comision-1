@@ -298,7 +298,17 @@ const AltaDocenteForm = () => {
     
     // Validación en tiempo real
     const error = validateField(name, value)
-    setErrors(prev => ({ ...prev, [name]: error }))
+    
+    // Solo agregar el error si existe, sino eliminarlo del objeto
+    setErrors(prev => {
+      const newErrors = { ...prev }
+      if (error) {
+        newErrors[name] = error
+      } else {
+        delete newErrors[name]
+      }
+      return newErrors
+    })
     
     // Verificar duplicados para campos específicos
     if ((name === 'dni' || name === 'legajo' || name === 'email') && !error) {
@@ -326,8 +336,8 @@ const AltaDocenteForm = () => {
 
   // Función para verificar si el formulario está completo y válido
   const isFormValid = () => {
-    // Verificar que no hay errores
-    const hasErrors = Object.keys(errors).length > 0
+    // Verificar que no hay errores significativos (solo errores no vacíos)
+    const hasErrors = Object.values(errors).some(error => error && error.trim() !== '')
 
     // Verificar que no hay verificaciones en curso
     const isChecking = checkingDuplicates.dni || checkingDuplicates.legajo || checkingDuplicates.email
@@ -345,7 +355,10 @@ const AltaDocenteForm = () => {
     // Verificar que al menos una materia está seleccionada
     const hasMateria = materiasSeleccionadas.length > 0
 
-    return !hasErrors && !isChecking && requiredFieldsComplete && hasMateria
+    // Resultado final
+    const isValid = !hasErrors && !isChecking && requiredFieldsComplete && hasMateria
+
+    return isValid
   }
 
   const validateForm = (): boolean => {
@@ -835,7 +848,7 @@ const AltaDocenteForm = () => {
                   <span className="font-medium">⚠️ No se puede registrar el docente:</span>
                 </p>
                 <ul className="text-sm text-yellow-700 mt-2 space-y-1">
-                  {Object.keys(errors).length > 0 && (
+                  {Object.values(errors).some(error => error && error.trim() !== '') && (
                     <li>• Corrija los errores marcados en rojo</li>
                   )}
                   {(checkingDuplicates.dni || checkingDuplicates.legajo || checkingDuplicates.email) && (
@@ -850,6 +863,17 @@ const AltaDocenteForm = () => {
                     <li>• Seleccione al menos una materia para el docente</li>
                   )}
                 </ul>
+                
+                {/* Debug info - remover en producción */}
+                <details className="mt-3 text-xs">
+                  <summary className="cursor-pointer text-yellow-600">Debug Info (clic para expandir)</summary>
+                  <div className="mt-2 p-2 bg-yellow-100 rounded text-yellow-800 font-mono text-xs">
+                    <div>Errores: {JSON.stringify(errors, null, 2)}</div>
+                    <div>Verificando: {JSON.stringify(checkingDuplicates, null, 2)}</div>
+                    <div>Materias seleccionadas: {materiasSeleccionadas.length}</div>
+                    <div>Form valid: {isFormValid().toString()}</div>
+                  </div>
+                </details>
               </div>
             )}
           </form>
