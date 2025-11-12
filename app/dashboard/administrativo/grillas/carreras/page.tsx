@@ -188,9 +188,6 @@ export default function CarrerasPage() {
                     Añadir Nueva Carrera
                   </Button>
                 </Link>
-                <Link href="/dashboard/administrativo/crear-plan" passHref>
-                  <Button variant="outline">Crear Plan de Estudio</Button>
-                </Link>
               </div>
             </div>
           </div>

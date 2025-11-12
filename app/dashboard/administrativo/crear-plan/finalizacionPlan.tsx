@@ -11,13 +11,17 @@ interface FinalizacionPlanProps {
   nombrePlan: string;
   materiasCount: number;
   onVolver: () => void;
+  onPlanCreado?: (planId: number) => void;
+  planCreadoId?: number | null;
 }
 
 export default function FinalizacionPlan({ 
   planId, 
   nombrePlan, 
   materiasCount, 
-  onVolver 
+  onVolver,
+  onPlanCreado,
+  planCreadoId
 }: FinalizacionPlanProps) {
   const [creandoCursadas, setCreandoCursadas] = useState(false);
   const [cursadasCreadas, setCursadasCreadas] = useState<number | null>(null);
@@ -167,22 +171,45 @@ export default function FinalizacionPlan({
       </div>
 
       <div className="flex justify-center gap-4 pt-4">
-        <Link href="/dashboard/administrativo" passHref>
-          <Button 
-            variant="outline" 
-            className="px-6 py-2"
-          >
-            Volver al Dashboard
-          </Button>
-        </Link>
-        
-        <Button 
-          variant="default"
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-700"
-          onClick={onVolver}
-        >
-          Crear Otro Plan
-        </Button>
+        {onPlanCreado ? (
+          // Modo integrado con carrera
+          <>
+            <Button 
+              variant="outline" 
+              className="px-6 py-2"
+              onClick={onVolver}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="default"
+              className="px-6 py-2 bg-green-600 hover:bg-green-700"
+              onClick={() => onPlanCreado(planId)}
+            >
+              Usar este Plan para la Carrera
+            </Button>
+          </>
+        ) : (
+          // Modo standalone
+          <>
+            <Link href="/dashboard/administrativo" passHref>
+              <Button 
+                variant="outline" 
+                className="px-6 py-2"
+              >
+                Volver al Dashboard
+              </Button>
+            </Link>
+            
+            <Button 
+              variant="default"
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700"
+              onClick={onVolver}
+            >
+              Crear Otro Plan
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

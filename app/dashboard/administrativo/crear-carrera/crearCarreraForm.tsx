@@ -20,7 +20,17 @@ interface PlanDeEstudio {
   duracion: string;
 }
 
-export default function CrearCarreraForm() {
+interface CrearCarreraFormProps {
+  onCrearNuevoPlan?: (datos: { nombre: string; departamento: string; codigo: string }) => void;
+  planCreadoId?: number | null;
+  modoIntegrado?: boolean;
+}
+
+export default function CrearCarreraForm({ 
+  onCrearNuevoPlan, 
+  planCreadoId,
+  modoIntegrado = false 
+}: CrearCarreraFormProps) {
   const router = useRouter();
 
   // --- Estados del Formulario ---
@@ -37,6 +47,26 @@ export default function CrearCarreraForm() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [carreraCreada, setCarreraCreada] = useState<string>('');
+
+  // Efecto para establecer el plan creado como seleccionado
+  useEffect(() => {
+    if (planCreadoId) {
+      setPlanDeEstudiosId(planCreadoId.toString());
+    }
+  }, [planCreadoId]);
+
+  // Función para manejar la opción "Crear nuevo plan"
+  const handleCrearNuevoPlan = () => {
+    if (onCrearNuevoPlan && nombre && departamento && codigo) {
+      onCrearNuevoPlan({
+        nombre,
+        departamento,
+        codigo
+      });
+    } else {
+      setServerError('Complete todos los campos requeridos antes de crear un nuevo plan');
+    }
+  };
 
   // Efecto para generar el código automáticamente cuando cambia el departamento
   useEffect(() => {
@@ -212,8 +242,20 @@ export default function CrearCarreraForm() {
       <form onSubmit={handleSubmit}>
         <div className="flex justify-between items-start mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Crear Nueva Carrera</h1>
-            <p className="text-sm text-gray-500 mt-1">Complete la información requerida para registrar una nueva carrera</p>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {modoIntegrado ? 'Crear Nueva Carrera con Plan de Estudios' : 'Crear Nueva Carrera'}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {modoIntegrado 
+                ? 'Complete la información de la carrera y seleccione o cree un plan de estudios asociado' 
+                : 'Complete la información requerida para registrar una nueva carrera'
+              }
+            </p>
+            {planCreadoId && (
+              <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                Plan de estudios creado exitosamente
+              </div>
+            )}
           </div>
           <div className="flex gap-3">
             <button type="button" onClick={() => router.back()} className="bg-white text-gray-800 font-semibold py-2 px-5 rounded-md border border-gray-300 hover:bg-gray-50">
@@ -284,32 +326,58 @@ export default function CrearCarreraForm() {
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Plan de Estudios Asociado *</label>
-              <select
-                title="Plan de Estudios"
-                value={planDeEstudiosId}
-                onChange={(e) => {
-                  setPlanDeEstudiosId(e.target.value);
-                  validateField('planDeEstudiosId', e.target.value);
-                }}
-                className={`w-full p-2.5 rounded-md border ${errors.planDeEstudiosId ? 'border-red-500' : 'border-gray-300'} shadow-sm`}
-              >
-                <option value="">Seleccionar plan de estudios...</option>
-                {planesDisponibles.map(plan => <option key={plan.id} value={plan.id}>{plan.nombre}</option>)}
-              </select>
+              <div className="flex gap-3">
+                <select
+                  title="Plan de Estudios"
+                  value={planDeEstudiosId}
+                  onChange={(e) => {
+                    setPlanDeEstudiosId(e.target.value);
+                    validateField('planDeEstudiosId', e.target.value);
+                  }}
+                  className={`flex-1 p-2.5 rounded-md border ${errors.planDeEstudiosId ? 'border-red-500' : 'border-gray-300'} shadow-sm`}
+                >
+                  <option value="">Seleccionar plan de estudios...</option>
+                  {planesDisponibles.map(plan => <option key={plan.id} value={plan.id}>{plan.nombre}</option>)}
+                </select>
+                {modoIntegrado && onCrearNuevoPlan && (
+                  <button
+                    type="button"
+                    onClick={handleCrearNuevoPlan}
+                    disabled={!nombre || !departamento || !codigo}
+                    className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium whitespace-nowrap"
+                  >
+                    Crear Nuevo Plan
+                  </button>
+                )}
+              </div>
               {errors.planDeEstudiosId && (
                 <p className="text-red-500 text-sm mt-1">{errors.planDeEstudiosId}</p>
               )}
-              <p className="text-xs text-gray-500 mt-1">Solo se muestran planes de estudios vigentes y aprobados</p>
+              {modoIntegrado && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Seleccione un plan existente o cree uno nuevo para esta carrera
+                </p>
+              )}
+              {!modoIntegrado && (
+                <p className="text-xs text-gray-500 mt-1">Solo se muestran planes de estudios vigentes y aprobados</p>
+              )}
             </div>
           </div>
 
           <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-            <h4 className="font-semibold text-sm text-gray-800 mb-2">Información Importante</h4>
+            <h4 className="font-semibold text-sm text-gray-800 mb-2">
+              {modoIntegrado ? 'Creación Integrada de Carrera y Plan' : 'Información Importante'}
+            </h4>
             <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
               <li>Todos los campos marcados con (*) son obligatorios</li>
               <li>El código de identificación debe ser único en el sistema</li>
               <li>La carrera debe estar vinculada a un plan de estudios válido</li>
               <li>No se pueden crear carreras duplicadas con el mismo nombre</li>
+              {modoIntegrado && (
+                <li className="text-blue-700 font-medium">
+                  💡 Puede crear un nuevo plan de estudios específico para esta carrera
+                </li>
+              )}
             </ul>
           </div>
           
