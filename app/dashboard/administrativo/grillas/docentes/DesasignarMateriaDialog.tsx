@@ -174,7 +174,7 @@ export default function DesasignarMateriaDialog({
               <Button 
                 onClick={confirmarDesasignacion}
                 disabled={loading}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-gray-800 hover:bg-black text-white"
               >
                 {loading ? 'Desasignando...' : 'Desasignar Seleccionadas'}
               </Button>
@@ -210,6 +210,7 @@ export default function DesasignarMateriaDialog({
             </div>
           </div>
           <button 
+            title='Cerrar'
             onClick={handleClose}
             disabled={loading}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition disabled:opacity-50"
@@ -260,6 +261,7 @@ export default function DesasignarMateriaDialog({
                 >
                   <div className="flex items-start gap-3">
                     <input
+                      title='Seleccionar materia'
                       type="checkbox"
                       checked={materiasSeleccionadas.includes(materia.id)}
                       onChange={() => {}}
@@ -331,7 +333,7 @@ export default function DesasignarMateriaDialog({
               <Button 
                 onClick={handleDesasignarClick}
                 disabled={loading || cargandoMaterias || materiasSeleccionadas.length === 0}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-gray-800 hover:bg-black text-white"
               >
                 Desasignar Seleccionadas
               </Button>

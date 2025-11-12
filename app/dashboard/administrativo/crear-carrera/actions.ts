@@ -8,6 +8,7 @@ export interface CarreraData {
   codigo: string
   departamento: string
   plan_de_estudio_id: number
+  descripcion?: string
 }
 
 export type CarreraCompleta = {
@@ -15,6 +16,7 @@ export type CarreraCompleta = {
   nombre: string;
   codigo: string;
   departamento: string | null;
+  descripcion?: string | null;
   duracion: string | null;
   inscriptos: number;
 };
@@ -89,7 +91,8 @@ export async function crearCarrera(
         nombre: data.nombre,
         codigo: data.codigo,
         departamento: data.departamento || null,
-        plan_de_estudio_id: data.plan_de_estudio_id
+        plan_de_estudio_id: data.plan_de_estudio_id,
+        descripcion: data.descripcion || null
       })
       .select()
       .single()
@@ -302,6 +305,7 @@ export async function obtenerDetallesCompletosCarrera(carreraId: number) {
         nombre,
         codigo,
         departamento,
+        descripcion,
         plan_de_estudio: plan_de_estudios (
           id,
           nombre,
@@ -356,6 +360,7 @@ export async function actualizarCarrera(
       .from('carreras')
       .update({
         departamento: data.departamento,
+        descripcion: data.descripcion
       })
       .eq('id', carreraId);
 

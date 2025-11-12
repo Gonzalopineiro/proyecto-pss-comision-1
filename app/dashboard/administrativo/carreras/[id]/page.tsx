@@ -58,6 +58,7 @@ export default function ModificarCarreraPage() {
         setCarrera(data);
         if (data) {
             setDepartamento(data.departamento || '');
+            setDescripcion(data.descripcion || '');
         }
         setIsLoading(false);
     };

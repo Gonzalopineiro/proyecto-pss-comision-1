@@ -38,6 +38,7 @@ export default function CrearCarreraForm({
   const [codigo, setCodigo] = useState('');
   const [departamento, setDepartamento] = useState('');
   const [planDeEstudiosId, setPlanDeEstudiosId] = useState('');
+  const [descripcion, setDescripcion] = useState('');
   
   // --- Estados de Soporte ---
   const [planesDisponibles, setPlanesDisponibles] = useState<PlanDeEstudio[]>([]);
@@ -212,7 +213,8 @@ export default function CrearCarreraForm({
         nombre,
         codigo,
         departamento,
-        plan_de_estudio_id: planId
+        plan_de_estudio_id: planId,
+        descripcion
       };
       
       // Llamar a la acción del servidor
@@ -361,6 +363,17 @@ export default function CrearCarreraForm({
               {!modoIntegrado && (
                 <p className="text-xs text-gray-500 mt-1">Solo se muestran planes de estudios vigentes y aprobados</p>
               )}
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Descripción (opcional)</label>
+              <textarea 
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+                placeholder="Descripción detallada de la carrera..."
+                rows={3}
+                className="w-full p-2.5 rounded-md border border-gray-300 shadow-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">Información adicional sobre la carrera (opcional)</p>
             </div>
           </div>
 
