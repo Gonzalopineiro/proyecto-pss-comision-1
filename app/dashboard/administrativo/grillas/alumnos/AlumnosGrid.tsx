@@ -30,7 +30,6 @@ interface Alumno {
 
 export default function AlumnosGrid({ initialData }: { initialData: Alumno[] }) {
   // Debug: Imprimir los datos recibidos
-  console.log('🔍 AlumnosGrid recibió initialData:', initialData)
   console.log('📊 Cantidad de alumnos recibidos:', initialData?.length || 0)
   
   const { role } = useUserRole()

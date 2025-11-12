@@ -37,7 +37,6 @@ export default async function GrillaAlumnos(){
     .order('apellido', { ascending: true })
 
   // Debug: Imprimir los datos en consola del servidor
-  console.log('🔍 Datos de alumnos:', alumnos)
   console.log('❌ Error de alumnos:', alumnosError)
   console.log('📊 Cantidad de alumnos:', alumnos?.length || 0)
 
