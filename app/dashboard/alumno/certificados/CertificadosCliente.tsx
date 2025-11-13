@@ -1,10 +1,9 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react' // 1. Importar useState
 import { AlumnoCompleto, FinalAprobadoRow, CursadaAprobadaRow } from './page'
-import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Printer, FileText } from 'lucide-react'
+import { Download, CheckCircle } from 'lucide-react' // 2. Importar el ícono de check
 import { generateVerificationCode } from '@/lib/utils' 
 
 interface Props {
@@ -14,6 +13,8 @@ interface Props {
 }
 
 export default function CertificadosCliente({ alumno, finalesAprobados, cursadasAprobadas }: Props) {
+    // 3. Crear el estado para controlar la visibilidad del mensaje
+    const [success, setSuccess] = useState(false)
 
     const generarCertificadoAnalitico = () => {
         const fechaGeneracion = new Date().toLocaleDateString('es-AR', {
@@ -22,7 +23,7 @@ export default function CertificadosCliente({ alumno, finalesAprobados, cursadas
         
         const codigoVerificacion = generateVerificationCode();
 
-        // Mapear las cursadas aprobadas al formato de fila
+        // Mapear las cursadas aprobadas (sin cambios)
         const cursadasRows = cursadasAprobadas.map(cursada => {
             const materia = cursada.cursadas?.materia_docente?.materias;
             return `
@@ -36,7 +37,7 @@ export default function CertificadosCliente({ alumno, finalesAprobados, cursadas
             `;
         }).join('');
 
-        // Mapear los finales aprobados al formato de fila
+        // Mapear los finales aprobados (sin cambios)
         const finalesRows = finalesAprobados.map(calif => {
             return `
                 <tr>
@@ -49,7 +50,7 @@ export default function CertificadosCliente({ alumno, finalesAprobados, cursadas
             `;
         }).join('');
 
-
+        // Contenido del HTML (sin cambios)
         const contenido = `
             <html>
             <head>
@@ -73,11 +74,7 @@ export default function CertificadosCliente({ alumno, finalesAprobados, cursadas
                 </style>
             </head>
             <body>
-                <div class="header">
-                    <h1>Historial Académico</h1>
-                    <p>Universidad de la Innovación</p>
-                </div>
-
+                <div class="header"><h1>Historial Académico</h1><p>Universidad Nacional de Córdoba</p></div>
                 <h2>Datos del Alumno</h2>
                 <div class="info-grid">
                     <div class="info-item"><strong>Nombre Completo:</strong> ${alumno.nombre} ${alumno.apellido}</div>
@@ -85,29 +82,9 @@ export default function CertificadosCliente({ alumno, finalesAprobados, cursadas
                     <div class="info-item"><strong>Legajo:</strong> ${alumno.legajo || 'No especificado'}</div>
                     <div class="info-item"><strong>Fecha de Nacimiento:</strong> ${alumno.nacimiento ? new Date(alumno.nacimiento).toLocaleDateString('es-AR') : 'No especificada'}</div>
                 </div>
-
                 <h2>Detalle de Materias</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Código</th>
-                            <th>Materia</th>
-                            <th>Estado</th>
-                            <th>Nota</th>
-                            <th>Fecha</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${cursadasRows}
-                        ${finalesRows}
-                    </tbody>
-                </table>
-
-                <div class="footer">
-                    <p>Certificado generado el ${fechaGeneracion}.</p>                    
-                    <!-- 3. AÑADIMOS EL CÓDIGO AL FOOTER -->
-                    <p class="verification-code">Código de Verificación: ${codigoVerificacion}</p>
-                </div>
+                <table><thead><tr><th>Código</th><th>Materia</th><th>Estado</th><th>Nota</th><th>Fecha</th></tr></thead><tbody>${cursadasRows}${finalesRows}</tbody></table>
+                <div class="footer"><p>Certificado generado el ${fechaGeneracion}.</p><p class="verification-code">Código de Verificación: ${codigoVerificacion}</p></div>
             </body>
             </html>
         `;
@@ -118,46 +95,41 @@ export default function CertificadosCliente({ alumno, finalesAprobados, cursadas
             ventana.document.close();
             setTimeout(() => ventana.print(), 500);
         }
+
+        // 4. Actualizar el estado para mostrar el mensaje
+        setSuccess(true);
     }
         
     const totalAprobadas = cursadasAprobadas.length + finalesAprobados.length;
 
     return (
-        <div>
-            <div className="mb-6">
-                <h1 className="text-3xl font-bold tracking-tight">Generación de Certificados</h1>
-                <p className="text-muted-foreground mt-2">
-                    Aquí puedes generar y descargar certificados oficiales de tu progreso académico.
+        <>
+            <Button 
+                onClick={generarCertificadoAnalitico} 
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                disabled={totalAprobadas === 0}
+            >
+                <Download className="h-4 w-4 mr-2" />
+                Generar Certificado
+            </Button>
+            
+            {totalAprobadas === 0 && (
+                 <p className="text-center text-sm text-amber-700 mt-4 p-3 bg-amber-50 rounded-md">
+                    Aún no tienes cursadas ni finales aprobados para generar este certificado.
                 </p>
-            </div>
+            )}
 
-            <Card className="p-6 md:p-8">
-                <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-                    <div className="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-lg">
-                        <FileText className="h-10 w-10 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                        <h2 className="text-xl font-semibold">Certificado de Estado Académico</h2>
-                        <p className="text-muted-foreground mt-1">
-                            Este documento oficial lista todas las cursadas y finales que has aprobado hasta la fecha.
-                            Actualmente tienes <strong>{cursadasAprobadas.length} cursadas</strong> y <strong>{finalesAprobados.length} finales</strong> aprobados.
-                        </p>
-                    </div>
-                    <Button 
-                        onClick={generarCertificadoAnalitico} 
-                        className="w-full md:w-auto"
-                        disabled={totalAprobadas === 0}
-                    >
-                        <Printer className="h-4 w-4 mr-2" />
-                        Generar e Imprimir
-                    </Button>
-                </div>
-                {totalAprobadas === 0 && (
-                     <p className="text-center text-sm text-amber-700 mt-4 p-3 bg-amber-50 rounded-md">
-                        Aún no tienes cursadas ni finales aprobados para generar este certificado.
+            {/* 5. Renderizar el mensaje de éxito condicionalmente */}
+            {success && (
+                <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <div className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5" />
+                    <p className="text-sm text-green-800 dark:text-green-200">
+                    ¡Certificado generado exitosamente! Se abrió una nueva ventana para visualizar el documento.
                     </p>
-                )}
-            </Card>
-        </div>
+                </div>
+                </div>
+            )}
+        </>
     )
 }
