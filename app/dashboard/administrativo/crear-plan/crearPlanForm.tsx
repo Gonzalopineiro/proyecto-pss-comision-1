@@ -49,7 +49,23 @@ function generarCodigoPlan(): string {
   return `${prefijo}-${numero}`;
 }
 
-export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
+interface CrearPlanFormProps {
+  onCancel?: () => void;
+  onPlanCreado?: (planId: number) => void;
+  tituloPersonalizado?: string;
+  contextoCarrera?: {
+    nombre: string;
+    departamento: string;
+    codigo: string;
+  } | null;
+}
+
+export default function CrearPlanForm({ 
+  onCancel, 
+  onPlanCreado,
+  tituloPersonalizado,
+  contextoCarrera 
+}: CrearPlanFormProps = {}) {
   const router = useRouter();
   const [step, setStep] = useState(1);
 
@@ -266,7 +282,19 @@ export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
     <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-100 max-w-4xl mx-auto">
       <div className="mb-6">
         <div className="text-sm text-gray-500 mb-1">Planes de Estudio &gt; Crear Nuevo Plan</div>
-        <h1 className="text-2xl font-bold text-gray-900">Crear Plan de Estudios</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {tituloPersonalizado || "Crear Plan de Estudios"}
+        </h1>
+        {contextoCarrera && (
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-3">
+            <p className="text-sm text-blue-800">
+              <span className="font-medium">Creando plan para:</span> {contextoCarrera.nombre}
+            </p>
+            <p className="text-xs text-blue-600 mt-1">
+              Departamento: {contextoCarrera.departamento} | Código de carrera: {contextoCarrera.codigo}
+            </p>
+          </div>
+        )}
       </div>
       
       {/* Indicador de pasos */}
@@ -483,6 +511,8 @@ export default function CrearPlanForm({ onCancel }: { onCancel?: () => void }) {
                 setPlanId(null);
                 setMateriasAsociadas([]);
               }}
+              onPlanCreado={onPlanCreado}
+              planCreadoId={planId}
             />
           </div>
         )}

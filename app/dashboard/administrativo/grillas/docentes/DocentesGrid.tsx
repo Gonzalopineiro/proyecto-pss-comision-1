@@ -293,13 +293,13 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
                 <div className="flex gap-2">
                   <button 
                     onClick={() => abrirDialogoAsignar(row)}
-                    className="text-green-600 hover:text-green-800 text-xs font-medium"
+                    className="text-gray-800 hover:text-black text-xs font-medium"
                   >
                     + Asignar
                   </button>
                   <button 
                     onClick={() => abrirDialogoDesasignar(row)}
-                    className="text-red-600 hover:text-red-800 text-xs font-medium"
+                    className="text-gray-800 hover:text-black text-xs font-medium"
                   >
                     − Desasignar
                   </button>
@@ -313,7 +313,7 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
           accessor: (row) => (
             <div className="flex gap-3">
               <button 
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-black font-medium text-sm"
                 onClick={() => handleEdit(row)}
                 disabled={loadingEdit}
               >
@@ -321,7 +321,7 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
               </button>
               <button 
                 onClick={() => abrirPopupEliminar(row)}
-                className="text-red-600 hover:text-red-800 font-medium"
+                className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-black font-medium text-sm"
               >
                 Eliminar
               </button>
@@ -332,7 +332,7 @@ export default function DocentesView({ docentes }: DocentesViewProps) {
       actions={
         <button 
           onClick={() => router.push('/dashboard/administrativo/registrar-docente')}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium"
+          className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-black font-medium"
         >
           + Agregar Docente
         </button>

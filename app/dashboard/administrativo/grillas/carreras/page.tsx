@@ -5,6 +5,7 @@ import { obtenerCarreras, type CarreraCompleta } from '@/app/dashboard/administr
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import ConfirmationPopup from '@/components/ui/confirmation-popup';
 import {
   Select,
   SelectContent,
@@ -20,7 +21,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Search, Plus } from 'lucide-react';
 import { CarreraActions } from './carrera-actions'; 
 
@@ -30,6 +30,10 @@ export default function CarrerasPage() {
   const [estadoFilter, setEstadoFilter] = useState('todos');
   const [facultadFilter, setFacultadFilter] = useState('todas');
   const [isLoading, setIsLoading] = useState(true);
+  const [showConfirmationPopup, setShowConfirmationPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState('');
+  const [popupTitle, setPopupTitle] = useState('');
+  const [actionType, setActionType] = useState<'deleted' | 'modified'>('deleted');
 
   useEffect(() => {
     async function cargarCarreras() {
@@ -44,10 +48,58 @@ export default function CarrerasPage() {
     }
     cargarCarreras();
   }, []);
+
+  // Verificar si hay mensajes de éxito de edición al cargar la página
+  useEffect(() => {
+    try {
+      const carreraSuccess = localStorage.getItem('carreraSuccess');
+      if (carreraSuccess) {
+        try {
+          const payload = JSON.parse(carreraSuccess);
+          if (payload && typeof payload === 'object') {
+            showSuccessPopup(
+              '¡Carrera Modificada!', 
+              payload.message || 'La carrera ha sido modificada exitosamente.',
+              'modified'
+            );
+          }
+        } catch (e) {
+          // Si no es JSON válido, tratar como mensaje simple
+          showSuccessPopup(
+            '¡Carrera Modificada!', 
+            'La carrera ha sido modificada exitosamente.',
+            'modified'
+          );
+        }
+        localStorage.removeItem('carreraSuccess');
+      }
+    } catch (e) {
+      // Ignorar errores de localStorage en servidor o cuando está bloqueado
+    }
+  }, []);
   const handleCarreraEliminada = (idCarreraEliminada: number) => {
     setTodasLasCarreras(prevCarreras => 
       prevCarreras.filter(carrera => carrera.id !== idCarreraEliminada)
     );
+    // Mostrar popup de confirmación
+    showSuccessPopup('¡Carrera Eliminada!', 'La carrera ha sido eliminada exitosamente del sistema.', 'deleted');
+  };
+
+  const handleCarreraModificada = (carreraModificada: CarreraCompleta) => {
+    setTodasLasCarreras(prevCarreras => 
+      prevCarreras.map(carrera => 
+        carrera.id === carreraModificada.id ? carreraModificada : carrera
+      )
+    );
+    // Mostrar popup de confirmación
+    showSuccessPopup('¡Carrera Modificada!', `La carrera "${carreraModificada.nombre}" ha sido modificada exitosamente.`, 'modified');
+  };
+
+  const showSuccessPopup = (title: string, message: string, type: 'deleted' | 'modified') => {
+    setPopupTitle(title);
+    setPopupMessage(message);
+    setActionType(type);
+    setShowConfirmationPopup(true);
   };
 
   const facultades = useMemo(() => {
@@ -136,9 +188,6 @@ export default function CarrerasPage() {
                     Añadir Nueva Carrera
                   </Button>
                 </Link>
-                <Link href="/dashboard/administrativo/crear-plan" passHref>
-                  <Button variant="outline">Crear Plan de Estudio</Button>
-                </Link>
               </div>
             </div>
           </div>
@@ -149,23 +198,30 @@ export default function CarrerasPage() {
         <CardContent>
           <div className="border rounded-lg">
             <Table>
-              <TableHeader></TableHeader>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Carrera</TableHead>
+                  <TableHead>Facultad/Departamento</TableHead>
+                  <TableHead>Duración</TableHead>
+                  <TableHead>Inscriptos</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center">
                       Cargando carreras...
                     </TableCell>
                   </TableRow>
                 ) : filteredCarreras.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center">
                       No se encontraron carreras con los filtros aplicados.
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredCarreras.map((carrera) => {
-                    const tieneInscriptos = carrera.inscriptos > 0;
                     return (
                       <TableRow key={carrera.id}>                        
                         <TableCell>
@@ -177,22 +233,11 @@ export default function CarrerasPage() {
                         <TableCell>{carrera.departamento || 'N/A'}</TableCell>
                         <TableCell>{carrera.duracion || 'No definida'}</TableCell>
                         <TableCell>{carrera.inscriptos}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={tieneInscriptos ? 'default' : 'destructive'}
-                            className={
-                              tieneInscriptos
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                            }
-                          >
-                            {tieneInscriptos ? 'Activo' : 'Inactivo'}
-                          </Badge>
-                        </TableCell>
                         <TableCell className="text-right">                         
                           <CarreraActions 
                             carrera={carrera} 
-                            onCarreraEliminada={handleCarreraEliminada} 
+                            onCarreraEliminada={handleCarreraEliminada}
+                            onCarreraModificada={handleCarreraModificada}
                           />
                         </TableCell>
                       </TableRow>
@@ -208,6 +253,14 @@ export default function CarrerasPage() {
           </div>
         </main>
       </div>
+
+      {/* Popup de confirmación */}
+      <ConfirmationPopup
+        isOpen={showConfirmationPopup}
+        onClose={() => setShowConfirmationPopup(false)}
+        title={popupTitle}
+        message={popupMessage}
+      />
     </div>
   );
 }

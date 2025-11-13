@@ -42,6 +42,7 @@ export default function DetalleCursadaPage() {
   const [cursadaInfo, setCursadaInfo] = useState<CursadaInfo | null>(null);
   const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState('todos');
 
@@ -49,6 +50,7 @@ export default function DetalleCursadaPage() {
     async function fetchData() {
       try {
         setLoading(true);
+        setError(null);
         const [alumnosData, cursadaData, adminData] = await Promise.all([
           obtenerAlumnosInscriptos(cursadaId),
           obtenerInfoCursada(cursadaId),
@@ -60,6 +62,8 @@ export default function DetalleCursadaPage() {
         setAdminInfo(adminData);
       } catch (error) {
         console.error('Error al cargar datos:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error al cargar los datos';
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -125,6 +129,37 @@ export default function DetalleCursadaPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto p-6">
+        <div className="flex items-center gap-4 mb-6">
+          <Link href="/dashboard/administrativo/listas-cursadas">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver a Lista de Cursadas
+            </Button>
+          </Link>
+        </div>
+        
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+              <Users className="h-4 w-4 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-red-900 dark:text-red-100">
+                {error}
+              </h2>
+              <p className="text-red-700 dark:text-red-300 mt-1">
+                Por favor, verifica tu conexión o contacta al administrador del sistema.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

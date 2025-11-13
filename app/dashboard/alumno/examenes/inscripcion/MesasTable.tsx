@@ -2,12 +2,15 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
+import ConfirmationPopup from "@/components/ui/confirmation-popup";
+import CancelExamDialog from "./CancelExamDialog";
 import { Loader2 } from "lucide-react";
-import { 
-  inscribirseEnMesa, 
-  MesaDisponible, 
+import {
+  inscribirseEnMesa,
+  cancelarInscripcionMesa,
+  MesaDisponible,
   verificarCorrelativasFinales,
-  VerificacionCorrelativasFinales 
+  VerificacionCorrelativasFinales,
 } from "./actions";
 import CorrelativasFinalesModal from "./CorrelativasFinalesModal";
 
@@ -30,7 +33,8 @@ export default function MesasTable({
 }: MesasTableProps) {
   const [mesas, setMesas] = useState<MesaDisponible[]>(initialMesas);
   const [selectedMesa, setSelectedMesa] = useState<MesaDisponible | null>(null);
-  const [verificacion, setVerificacion] = useState<VerificacionCorrelativasFinales | null>(null);
+  const [verificacion, setVerificacion] =
+    useState<VerificacionCorrelativasFinales | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [verificandoCorrelativas, setVerificandoCorrelativas] = useState(false);
   const [inscribiendo, setInscribiendo] = useState(false);
@@ -40,6 +44,14 @@ export default function MesasTable({
   const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIdx = startIdx + ITEMS_PER_PAGE;
   const currentMesas = mesas.slice(startIdx, endIdx);
+
+  const [popupOpen, setPopupOpen] = useState(false);
+  const [popupTitle, setPopupTitle] = useState("");
+  const [popupMessage, setPopupMessage] = useState("");
+  const [popupType, setPopupType] = useState<"success" | "error">("success");
+
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [canCancel, setCanCancel] = useState(true);
 
   const cerrarModal = () => {
     setModalOpen(false);
@@ -51,7 +63,7 @@ export default function MesasTable({
 
   // Función para formatear fecha sin problemas de zona horaria
   const formatearFechaSinDesfase = (fechaString: string) => {
-    const [año, mes, dia] = fechaString.split('-').map(Number);
+    const [año, mes, dia] = fechaString.split("-").map(Number);
     const fechaLocal = new Date(año, mes - 1, dia);
     return fechaLocal.toLocaleDateString("es-AR");
   };
@@ -59,16 +71,16 @@ export default function MesasTable({
   function generarComprobante(mesa: MesaDisponible) {
     const fecha = formatearFechaSinDesfase(mesa.fecha_examen);
     const contenido = `
-    <h1>Comprobante de Inscripción</h1>
-    <p><strong>Alumno:</strong> ${alumno.nombre}</p>
-    <p><strong>Legajo:</strong> ${alumno.legajo}</p>
-    <p><strong>Email:</strong> ${alumno.mail}</p>
-    <p><strong>Materia:</strong> ${mesa.materias?.nombre}</p>
-    <p><strong>Fecha:</strong> ${fecha}</p>
-    <p><strong>Horario:</strong> ${mesa.hora_examen}</p>
-    <p><strong>Ubicación:</strong> ${mesa.ubicacion}</p>
-    <p>Este comprobante certifica su inscripción en el examen.</p>
-  `;
+      <h1>Comprobante de Inscripción</h1>
+      <p><strong>Alumno:</strong> ${alumno.nombre}</p>
+      <p><strong>Legajo:</strong> ${alumno.legajo}</p>
+      <p><strong>Email:</strong> ${alumno.mail}</p>
+      <p><strong>Materia:</strong> ${mesa.materias?.nombre}</p>
+      <p><strong>Fecha:</strong> ${fecha}</p>
+      <p><strong>Horario:</strong> ${mesa.hora_examen}</p>
+      <p><strong>Ubicación:</strong> ${mesa.ubicacion}</p>
+      <p>Este comprobante certifica su inscripción en el examen.</p>
+    `;
     const ventana = window.open("", "_blank", "width=600,height=400");
     if (ventana) {
       ventana.document.write(contenido);
@@ -78,22 +90,17 @@ export default function MesasTable({
   }
 
   const manejarInscripcion = async (mesa: MesaDisponible) => {
-    console.log('🎯 INICIANDO manejarInscripcion para mesa:', mesa.id, 'materia:', mesa.materias?.nombre);
     setVerificandoCorrelativas(true);
     setSelectedMesa(mesa);
-    
+
     try {
       const materiaId = parseInt(mesa.materia_id);
-      console.log('📋 ID de materia obtenido:', materiaId);
-      
-      console.log('🔬 Verificando correlativas finales...');
       const verificacionResult = await verificarCorrelativasFinales(materiaId);
-      console.log('📊 Resultado de verificación finales:', verificacionResult);
       setVerificacion(verificacionResult);
       setModalOpen(true);
     } catch (error: any) {
-      console.error('❌ Error verificando correlativas finales:', error);
-      alert(error.message || 'Error al verificar correlativas para el final');
+      console.error("❌ Error verificando correlativas finales:", error);
+      alert(error.message || "Error al verificar correlativas para el final");
       cerrarModal();
     } finally {
       setVerificandoCorrelativas(false);
@@ -102,27 +109,81 @@ export default function MesasTable({
 
   const procederConInscripcion = async () => {
     if (!selectedMesa || !verificacion) return;
-    
+
     setInscribiendo(true);
     try {
       const materiaId = parseInt(selectedMesa.materia_id);
-      
+
       await inscribirseEnMesa(selectedMesa.id, materiaId);
-      
-      // Actualizar el estado local
+
       setMesas((prev) =>
         prev.map((m) =>
           m.id === selectedMesa.id ? { ...m, ya_inscripto: true } : m
         )
       );
-      
-      alert('¡Inscripción exitosa al examen final!');
+
+      setPopupTitle("¡Inscripción exitosa!");
+      setPopupMessage(
+        "Tu inscripción al examen final se realizó correctamente ✅"
+      );
+      setPopupType("success");
+      setPopupOpen(true);
+
       cerrarModal();
     } catch (error: any) {
-      console.error('❌ Error en inscripción:', error);
-      alert(error.message || 'Error al inscribirse en el examen');
+      console.error("❌ Error en inscripción:", error);
+      setPopupTitle("Error al inscribirse");
+      setPopupMessage(
+        error.message || "Ocurrió un error al inscribirte en el examen."
+      );
+      setPopupType("error");
+      setPopupOpen(true);
     } finally {
       setInscribiendo(false);
+    }
+  };
+
+  const manejarCancelacion = (mesa: MesaDisponible) => {
+    setSelectedMesa(mesa);
+
+    // 🧮 Calcular si faltan al menos 24 horas para el examen
+    const examDateTime = new Date(`${mesa.fecha_examen}T${mesa.hora_examen}`);
+    const now = new Date();
+    const diffHours =
+      (examDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    const puedeCancelar = diffHours >= 24;
+    setCanCancel(puedeCancelar);
+
+    setCancelDialogOpen(true);
+  };
+
+  const confirmarCancelacion = async () => {
+    if (!selectedMesa) return;
+
+    try {
+      await cancelarInscripcionMesa(selectedMesa.id);
+
+      // Actualizamos el estado local: ya no está inscripto
+      setMesas((prev) =>
+        prev.map((m) =>
+          m.id === selectedMesa.id ? { ...m, ya_inscripto: false } : m
+        )
+      );
+
+      setPopupTitle("Inscripción cancelada");
+      setPopupMessage("Tu inscripción fue cancelada correctamente ✅");
+      setPopupType("success");
+    } catch (error: any) {
+      console.error("❌ Error al cancelar inscripción:", error);
+      setPopupTitle("Error al cancelar inscripción");
+      setPopupMessage(
+        error.message || "Ocurrió un error al cancelar la inscripción."
+      );
+      setPopupType("error");
+    } finally {
+      setPopupOpen(true);
+      setSelectedMesa(null);
     }
   };
 
@@ -167,22 +228,31 @@ export default function MesasTable({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        disabled={mesa.ya_inscripto || verificandoCorrelativas}
-                        onClick={() => manejarInscripcion(mesa)}
-                      >
-                        {verificandoCorrelativas && selectedMesa?.id === mesa.id ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Verificando...
-                          </>
-                        ) : mesa.ya_inscripto ? (
-                          "Ya estás inscripto"
-                        ) : (
-                          "Inscribirse"
-                        )}
-                      </Button>
+                      {mesa.ya_inscripto ? (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => manejarCancelacion(mesa)}
+                        >
+                          Cancelar inscripción
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          disabled={verificandoCorrelativas}
+                          onClick={() => manejarInscripcion(mesa)}
+                        >
+                          {verificandoCorrelativas &&
+                          selectedMesa?.id === mesa.id ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Verificando...
+                            </>
+                          ) : (
+                            "Inscribirse"
+                          )}
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
@@ -239,14 +309,44 @@ export default function MesasTable({
         isOpen={modalOpen}
         onClose={cerrarModal}
         verificacion={verificacion}
-        mesaInfo={selectedMesa ? {
-          materia_nombre: selectedMesa.materias?.nombre || 'Materia desconocida',
-          fecha_examen: selectedMesa.fecha_examen,
-          hora_examen: selectedMesa.hora_examen,
-          ubicacion: selectedMesa.ubicacion
-        } : null}
+        mesaInfo={
+          selectedMesa
+            ? {
+                materia_nombre:
+                  selectedMesa.materias?.nombre || "Materia desconocida",
+                fecha_examen: selectedMesa.fecha_examen,
+                hora_examen: selectedMesa.hora_examen,
+                ubicacion: selectedMesa.ubicacion,
+              }
+            : null
+        }
         onConfirm={procederConInscripcion}
         isLoading={inscribiendo}
+      />
+
+      {selectedMesa && (
+        <CancelExamDialog
+          isOpen={cancelDialogOpen}
+          examName={selectedMesa.materias?.nombre || "Examen"}
+          examDate={selectedMesa.fecha_examen}
+          examTime={selectedMesa.hora_examen}
+          onClose={() => {
+            setCancelDialogOpen(false);
+            setSelectedMesa(null);
+          }}
+          onConfirm={async () => {
+            await confirmarCancelacion();
+            setCancelDialogOpen(false);
+          }}
+        />
+      )}
+
+      <ConfirmationPopup
+        isOpen={popupOpen}
+        onClose={() => setPopupOpen(false)}
+        title={popupTitle}
+        message={popupMessage}
+        type={popupType}
       />
     </>
   );
