@@ -76,10 +76,12 @@ export async function obtenerCursadasDocente(): Promise<CursadaInfo[]> {
     console.log('🔍 IDs de materia_docente:', materiaDocenteIds);
 
     // Buscar cursadas para estas relaciones materia_docente
+    // Solo mostrar cursadas activas (no finalizadas ni canceladas)
     const { data: cursadas, error: cursadasError } = await supabase
       .from('cursadas')
       .select('id, anio, cuatrimestre, materia_docente_id, estado')
-      .in('materia_docente_id', materiaDocenteIds);
+      .in('materia_docente_id', materiaDocenteIds)
+      .eq('estado', 'activa'); // Solo cursadas activas
 
     console.log('🔍 Query cursadas result:', { cursadas, error: cursadasError });
 
@@ -404,5 +406,194 @@ export async function obtenerInfoCursada(cursadaId: string): Promise<CursadaInfo
   } catch (error) {
     console.error('💥 Error en obtenerInfoCursada:', error);
     throw error;
+  }
+}
+
+// Función para actualizar las calificaciones de múltiples alumnos
+export async function actualizarCalificaciones(cursadaId: string, calificaciones: { inscripcionId: number; estado: string }[]): Promise<void> {
+  const supabase = await createClient();
+
+  try {
+    // Verificar el usuario autenticado
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('No hay usuario autenticado');
+    }
+
+    console.log('🔍 Actualizando calificaciones para cursada ID:', cursadaId);
+    console.log('📝 Calificaciones a actualizar:', calificaciones);
+
+    // Verificar que el docente tiene acceso a esta cursada
+    const { data: docenteData, error: docenteError } = await supabase
+      .from('docentes')
+      .select('id')
+      .eq('email', user.email)
+      .single();
+
+    if (docenteError || !docenteData) {
+      throw new Error('No se encontró información del docente');
+    }
+
+    // Verificar acceso a la cursada
+    const { data: cursadaRow, error: cursadaRowError } = await supabase
+      .from('cursadas')
+      .select('id, materia_docente_id')
+      .eq('id', cursadaId)
+      .single();
+
+    if (cursadaRowError || !cursadaRow) {
+      throw new Error('No se encontró la cursada');
+    }
+
+    const { data: mdRecord, error: mdError } = await supabase
+      .from('materia_docente')
+      .select('docente_id')
+      .eq('id', cursadaRow.materia_docente_id)
+      .single();
+
+    if (mdError || !mdRecord || String(mdRecord.docente_id) !== String(docenteData.id)) {
+      throw new Error('No tienes acceso para modificar las calificaciones de esta cursada');
+    }
+
+    // Actualizar cada calificación
+    const actualizaciones = calificaciones.map(async (calificacion) => {
+      const { error } = await supabase
+        .from('inscripciones_cursada')
+        .update({ 
+          estado: calificacion.estado,
+          fecha_respuesta: new Date().toISOString()
+        })
+        .eq('id', calificacion.inscripcionId)
+        .eq('cursada_id', cursadaId); // Doble verificación de seguridad
+
+      if (error) {
+        console.error(`❌ Error actualizando inscripción ${calificacion.inscripcionId}:`, error);
+        throw new Error(`Error actualizando la calificación del alumno`);
+      }
+    });
+
+    // Ejecutar todas las actualizaciones
+    await Promise.all(actualizaciones);
+
+    console.log('✅ Calificaciones actualizadas correctamente');
+
+  } catch (error) {
+    console.error('💥 Error en actualizarCalificaciones:', error);
+    throw error;
+  }
+}
+
+// Función para publicar las notas (marcar notas_publicadas = true)
+export async function publicarNotas(cursadaId: string): Promise<void> {
+  const supabase = await createClient();
+
+  try {
+    // Verificar el usuario autenticado
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('No hay usuario autenticado');
+    }
+
+    console.log('🔍 Publicando notas para cursada ID:', cursadaId);
+
+    // Verificar que el docente tiene acceso a esta cursada
+    const { data: docenteData, error: docenteError } = await supabase
+      .from('docentes')
+      .select('id')
+      .eq('email', user.email)
+      .single();
+
+    if (docenteError || !docenteData) {
+      throw new Error('No se encontró información del docente');
+    }
+
+    // Verificar acceso a la cursada
+    const { data: cursadaRow, error: cursadaRowError } = await supabase
+      .from('cursadas')
+      .select('id, materia_docente_id')
+      .eq('id', cursadaId)
+      .single();
+
+    if (cursadaRowError || !cursadaRow) {
+      throw new Error('No se encontró la cursada');
+    }
+
+    const { data: mdRecord, error: mdError } = await supabase
+      .from('materia_docente')
+      .select('docente_id')
+      .eq('id', cursadaRow.materia_docente_id)
+      .single();
+
+    if (mdError || !mdRecord || String(mdRecord.docente_id) !== String(docenteData.id)) {
+      throw new Error('No tienes acceso para publicar las notas de esta cursada');
+    }
+
+    // Verificar que todas las calificaciones están completas
+    const { data: inscripcionesPendientes } = await supabase
+      .from('inscripciones_cursada')
+      .select('id')
+      .eq('cursada_id', cursadaId)
+      .eq('estado', 'pendiente');
+
+    if (inscripcionesPendientes && inscripcionesPendientes.length > 0) {
+      throw new Error('No se pueden publicar las notas. Hay alumnos sin calificar.');
+    }
+
+    // Marcar todas las inscripciones como publicadas
+    const { error: publicarError } = await supabase
+      .from('inscripciones_cursada')
+      .update({ 
+        notas_publicadas: true
+      })
+      .eq('cursada_id', cursadaId);
+
+    if (publicarError) {
+      console.error('❌ Error publicando notas:', publicarError);
+      throw new Error('Error al publicar las notas');
+    }
+
+    // Marcar la cursada como finalizada en la tabla cursadas
+    const { error: finalizarCursadaError } = await supabase
+      .from('cursadas')
+      .update({ 
+        estado: 'finalizada'
+      })
+      .eq('id', cursadaId);
+
+    if (finalizarCursadaError) {
+      console.error('❌ Error finalizando cursada:', finalizarCursadaError);
+      throw new Error('Error al finalizar la cursada');
+    }
+
+    console.log('✅ Notas publicadas y cursada finalizada correctamente');
+
+  } catch (error) {
+    console.error('💥 Error en publicarNotas:', error);
+    throw error;
+  }
+}
+
+// Función para verificar si las notas ya están publicadas
+export async function verificarNotasPublicadas(cursadaId: string): Promise<boolean> {
+  const supabase = await createClient();
+
+  try {
+    const { data, error } = await supabase
+      .from('inscripciones_cursada')
+      .select('notas_publicadas')
+      .eq('cursada_id', cursadaId)
+      .limit(1)
+      .single();
+
+    if (error) {
+      console.error('Error verificando estado de publicación:', error);
+      return false;
+    }
+
+    return data?.notas_publicadas || false;
+
+  } catch (error) {
+    console.error('💥 Error en verificarNotasPublicadas:', error);
+    return false;
   }
 }

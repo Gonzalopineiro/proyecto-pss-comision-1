@@ -149,6 +149,7 @@ export default async function AlumnoDashboard() {
     : '0.0'
 
     // Obtener materias actuales que está cursando (inscripciones a cursadas)
+    // Solo mostrar las que NO tienen notas publicadas (cursadas activas)
     const añoActual = new Date().getFullYear()
   const { data: materiasActuales, error: errorActuales } = await supabase
         .from('inscripciones_cursada')
@@ -164,6 +165,7 @@ export default async function AlumnoDashboard() {
         .eq('alumno_id', data.user.id)
         .in('estado', ['pendiente', 'aprobada', 'regular'])
         .eq('cursadas.anio', añoActual)
+        .eq('notas_publicadas', false) // Solo cursadas activas (notas NO publicadas)
 
 
 
