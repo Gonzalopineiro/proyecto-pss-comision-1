@@ -121,7 +121,7 @@ export async function verificarElegibilidadConstancia() {
     if (cursadasFormateadas.length === 0) {
       return {
         success: false,
-        error: 'No tienes cursadas activas en el último año. Para obtener la constancia de alumno regular debes tener al menos una cursada activa.',
+        error: 'Aún no tienes cursadas activas para generar este certificado.',
         data: null
       }
     }
@@ -163,3 +163,106 @@ export async function verificarElegibilidadConstancia() {
   }
 }
 
+// Tipos para certificado de examen
+export interface ExamenAprobadoInfo {
+  id: number
+  nota: number
+  fecha_examen: string
+  materia: {
+    codigo_materia: string
+    nombre: string
+  }
+  docente: {
+    nombre: string
+    apellido: string
+    legajo: string
+  }
+}
+
+// Obtener exámenes aprobados con información del docente
+export async function obtenerExamenesAprobados() {
+  const supabase = await createClient()
+  
+  // Verificar autenticación
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    redirect('/login')
+  }
+
+  try {
+    // Obtener exámenes aprobados del alumno con información completa
+    const { data: examenesData, error: examenesError } = await supabase
+      .from('inscripciones_mesa_examen')
+      .select(`
+        id,
+        nota,
+        mesas_examen!inner (
+          id,
+          fecha_examen,
+          docente_id,
+          materias!inner (
+            codigo_materia,
+            nombre
+          )
+        )
+      `)
+      .eq('estudiante_id', user.id)
+      .eq('estado', 'aprobado')
+      .not('nota', 'is', null)
+      .gte('nota', 4)
+      .order('fecha_examen', { foreignTable: 'mesas_examen', ascending: false })
+
+    if (examenesError) {
+      console.error('Error al obtener exámenes aprobados:', examenesError)
+      return []
+    }
+
+    if (!examenesData || examenesData.length === 0) {
+      return []
+    }
+
+    // Obtener información de los docentes
+    const docenteIds = examenesData.map((e: any) => e.mesas_examen.docente_id)
+    const uniqueDocenteIds = [...new Set(docenteIds)]
+
+    const { data: docentesData, error: docentesError } = await supabase
+      .from('docentes')
+      .select('id, nombre, apellido, legajo')
+      .in('id', uniqueDocenteIds)
+
+    if (docentesError) {
+      console.error('Error al obtener docentes:', docentesError)
+      return []
+    }
+
+    // Crear mapa de docentes para acceso rápido
+    const docentesMap = new Map(
+      (docentesData || []).map((d: any) => [d.id, d])
+    )
+
+    // Formatear datos
+    const examenesFormateados: ExamenAprobadoInfo[] = examenesData.map((examen: any) => {
+      const docente = docentesMap.get(examen.mesas_examen.docente_id)
+      
+      return {
+        id: examen.id,
+        nota: parseFloat(examen.nota),
+        fecha_examen: examen.mesas_examen.fecha_examen,
+        materia: {
+          codigo_materia: examen.mesas_examen.materias.codigo_materia,
+          nombre: examen.mesas_examen.materias.nombre
+        },
+        docente: {
+          nombre: docente?.nombre || 'No especificado',
+          apellido: docente?.apellido || '',
+          legajo: docente?.legajo || 'N/A'
+        }
+      }
+    })
+
+    return examenesFormateados
+  } catch (error: any) {
+    console.error('Error obteniendo exámenes aprobados:', error)
+    return []
+  }
+}
