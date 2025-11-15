@@ -238,48 +238,64 @@ export default function CertificadosCliente({ alumno, finalesAprobados, cursadas
             setError('Primero debes generar el certificado')
             return
         }
+        
+        try {
+            setError(null)
+            
+            // Crear iframe oculto para generar el PDF
+            const iframe = document.createElement('iframe')
+            iframe.style.position = 'absolute'
+            iframe.style.width = '0'
+            iframe.style.height = '0'
+            iframe.style.border = 'none'
+            document.body.appendChild(iframe)
 
-        // Crear iframe oculto para generar el PDF
-        const iframe = document.createElement('iframe')
-        iframe.style.position = 'absolute'
-        iframe.style.width = '0'
-        iframe.style.height = '0'
-        iframe.style.border = 'none'
-        document.body.appendChild(iframe)
+            const iframeDoc = iframe.contentWindow?.document
+            if (iframeDoc) {
+                iframeDoc.open()
+                iframeDoc.write(certificadoGenerado)
+                iframeDoc.close()
 
-        const iframeDoc = iframe.contentWindow?.document
-        if (!iframeDoc) return
+                // Cargar html2pdf.js y generar PDF
+                const script = iframeDoc.createElement('script')
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'
+                script.onload = () => {
+                    // Esperar a que se cargue el script
+                    setTimeout(() => {
+                        const fecha = new Date().toISOString().split('T')[0]
+                        const nombreArchivo = `Certificado_Analitico_${alumno.legajo}_${fecha}.pdf`
 
-        iframeDoc.open()
-        iframeDoc.write(certificadoGenerado)
-        iframeDoc.close()
+                        const opciones = {
+                            margin: 0.5,
+                            filename: nombreArchivo,
+                            image: { type: 'jpeg', quality: 0.98 },
+                            html2canvas: { 
+                                scale: 2,
+                                useCORS: true,
+                                letterRendering: true
+                            },
+                            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                        }
 
-        // Cargar html2pdf.js y generar PDF
-        const script = iframeDoc.createElement('script')
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'
-        script.onload = () => {
-            const fecha = new Date().toISOString().split('T')[0]
-            const nombreArchivo = `Certificado_Analitico_${alumno.legajo}_${fecha}.pdf`
-
-            const opciones = {
-                margin: [0.4, 0.4, 0.4, 0.4],
-                filename: nombreArchivo,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                        // @ts-ignore - html2pdf está cargado dinámicamente
+                        if (iframe.contentWindow?.html2pdf) {
+                            // @ts-ignore
+                            iframe.contentWindow.html2pdf()
+                                .set(opciones)
+                                .from(iframeDoc.body)
+                                .save()
+                                .then(() => {
+                                    // Limpiar el iframe después de la descarga
+                                    setTimeout(() => document.body.removeChild(iframe), 1000)
+                                })
+                        }
+                    }, 500)
+                }
+                iframeDoc.head.appendChild(script)
             }
-
-            ;(iframe.contentWindow as any).html2pdf()
-                .set(opciones)
-                .from(iframeDoc.body)
-                .save()
+        } catch (err) {
+            setError('Error al descargar el certificado')
         }
-        iframeDoc.head.appendChild(script)
-
-        // Limpiar iframe después de un segundo
-        setTimeout(() => {
-            document.body.removeChild(iframe)
-        }, 1000)
     }
 
     const handleImprimir = () => {
