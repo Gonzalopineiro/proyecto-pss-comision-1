@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import ConfirmationPopup from "@/components/ui/confirmation-popup";
 import CancelExamDialog from "./CancelExamDialog";
+import BlockInscriptionDialog from "./BlockInscriptionDialog";
 import { Loader2 } from "lucide-react";
 import {
   inscribirseEnMesa,
@@ -53,6 +54,8 @@ export default function MesasTable({
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [canCancel, setCanCancel] = useState(true);
 
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+
   const cerrarModal = () => {
     setModalOpen(false);
     setSelectedMesa(null);
@@ -90,6 +93,19 @@ export default function MesasTable({
   }
 
   const manejarInscripcion = async (mesa: MesaDisponible) => {
+    // 🧮 Calcular si faltan al menos 24 horas
+    const examDateTime = new Date(`${mesa.fecha_examen}T${mesa.hora_examen}`);
+    const now = new Date();
+    const diffHours =
+      (examDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    if (diffHours < 24) {
+      setSelectedMesa(mesa);
+      setBlockDialogOpen(true);
+      return; // ⛔ No sigue con correlativas ni inscripción
+    }
+
+    // 🟢 Si pasa la regla de 24 h, sigue como antes
     setVerificandoCorrelativas(true);
     setSelectedMesa(mesa);
 
@@ -337,6 +353,19 @@ export default function MesasTable({
           onConfirm={async () => {
             await confirmarCancelacion();
             setCancelDialogOpen(false);
+          }}
+        />
+      )}
+
+      {selectedMesa && (
+        <BlockInscriptionDialog
+          isOpen={blockDialogOpen}
+          examName={selectedMesa.materias?.nombre || "Examen"}
+          examDate={selectedMesa.fecha_examen}
+          examTime={selectedMesa.hora_examen}
+          onClose={() => {
+            setBlockDialogOpen(false);
+            setSelectedMesa(null);
           }}
         />
       )}
