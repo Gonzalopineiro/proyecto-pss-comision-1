@@ -145,8 +145,19 @@ const AltaUsuarioForm = () => {
         if (!value.trim()) {
           return 'Este campo es obligatorio'
         }
-        if (value.trim().length < 5) {
-          return 'La dirección debe tener al menos 5 caracteres'
+        if (value.trim().length < 10) {
+          return 'La dirección debe ser más específica'
+        }
+        // Verificar formato específico: calle, número, código postal
+        // Patrón: texto + coma + número + coma + código postal (4-5 dígitos)
+        const direccionPattern = /^[A-Za-záéíóúÁÉÍÓÚüÜñÑ\s.''-]+,\s*\d+,\s*\d{4,5}$/
+        if (!direccionPattern.test(value.trim())) {
+          return 'Formato requerido: Calle, 123, 1234 (calle, número, código postal separados por comas)'
+        }
+        // Verificar que tenga exactamente 2 comas
+        const comas = (value.match(/,/g) || []).length
+        if (comas !== 2) {
+          return 'Debe contener exactamente 2 comas: calle, número, código postal'
         }
         return ''
       
@@ -195,6 +206,28 @@ const AltaUsuarioForm = () => {
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
+  }
+
+  // Función para verificar si el formulario está completo y válido
+  const isFormValid = () => {
+    // Verificar que no hay errores significativos (solo errores no vacíos)
+    const hasErrors = Object.values(errors).some(error => error && error.trim() !== '')
+
+    // Verificar que todos los campos requeridos están completos
+    const requiredFieldsComplete = 
+      formData.nombre.trim() &&
+      formData.apellido.trim() &&
+      formData.dni.trim() &&
+      formData.legajo.trim() &&
+      formData.fechaNacimiento &&
+      formData.email.trim() &&
+      formData.direccion.trim() &&
+      formData.carreraId.trim()
+
+    // Resultado final
+    const isValid = !hasErrors && requiredFieldsComplete
+
+    return isValid
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -429,8 +462,9 @@ const AltaUsuarioForm = () => {
                   className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${
                     errors.direccion ? 'border-red-300 bg-red-50' : 'border-gray-300'
                   }`}
-                  placeholder="Calle, número, ciudad, provincia, código postal"
+                  placeholder="Ej: Av. Corrientes, 1234, 1043"
                 />
+                <p className="text-xs text-gray-500 mt-1">Formato requerido: Calle, Número, Código Postal (separado por comas)</p>
                 {errors.direccion && <p className="mt-1 text-sm text-red-600">{errors.direccion}</p>}
               </div>
 
@@ -527,13 +561,36 @@ const AltaUsuarioForm = () => {
               
               <Button
                 type="submit"
-                disabled={isSubmitting}
-                className="sm:order-2 bg-gray-800 hover:bg-gray-900 text-white px-8 py-3 flex items-center justify-center gap-2 sm:ml-auto"
+                disabled={isSubmitting || !isFormValid()}
+                className={`sm:order-2 px-8 py-3 flex items-center justify-center gap-2 sm:ml-auto ${
+                  isSubmitting || !isFormValid() 
+                    ? 'bg-gray-400 cursor-not-allowed text-gray-600' 
+                    : 'bg-gray-800 hover:bg-gray-900 text-white'
+                }`}
               >
                 <span className="text-lg">👤</span>
                 {isSubmitting ? 'Registrando...' : 'Registrar Alumno'}
               </Button>
             </div>
+
+            {/* Mensaje informativo cuando el botón está deshabilitado */}
+            {!isFormValid() && !isSubmitting && (
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  <span className="font-medium">⚠️ No se puede registrar el alumno:</span>
+                </p>
+                <ul className="text-sm text-yellow-700 mt-2 space-y-1">
+                  {Object.values(errors).some(error => error && error.trim() !== '') && (
+                    <li>• Corrija los errores marcados en rojo</li>
+                  )}
+                  {(!formData.nombre.trim() || !formData.apellido.trim() || !formData.dni.trim() || 
+                    !formData.legajo.trim() || !formData.fechaNacimiento || !formData.email.trim() || 
+                    !formData.direccion.trim() || !formData.carreraId.trim()) && (
+                    <li>• Complete todos los campos obligatorios (*)</li>
+                  )}
+                </ul>
+              </div>
+            )}
 
             {/* Popup de confirmación - Movido aquí para mayor visibilidad */}
             <div className="mt-4">

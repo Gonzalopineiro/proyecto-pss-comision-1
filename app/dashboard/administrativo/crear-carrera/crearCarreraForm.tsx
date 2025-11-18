@@ -185,6 +185,24 @@ export default function CrearCarreraForm({
     setErrors(newErrors);
   };
 
+  // Función para verificar si el formulario está completo y válido
+  const isFormValid = () => {
+    // Verificar que no hay errores significativos (solo errores no vacíos)
+    const hasErrors = Object.values(errors).some(error => error && error.trim() !== '');
+
+    // Verificar que todos los campos requeridos están completos
+    const requiredFieldsComplete = 
+      nombre.trim() &&
+      departamento.trim() &&
+      planDeEstudiosId.trim() &&
+      codigo.trim();
+
+    // Resultado final
+    const isValid = !hasErrors && requiredFieldsComplete;
+
+    return isValid;
+  };
+
   // Función para manejar el envío del formulario
   const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
@@ -263,7 +281,11 @@ export default function CrearCarreraForm({
             <button type="button" onClick={() => router.back()} className="bg-white text-gray-800 font-semibold py-2 px-5 rounded-md border border-gray-300 hover:bg-gray-50">
               Cancelar
             </button>
-            <button type="submit" disabled={loading} className="bg-gray-800 text-white font-semibold py-2 px-5 rounded-md hover:bg-black disabled:opacity-50">
+            <button type="submit" disabled={loading || !isFormValid()} className={`font-semibold py-2 px-5 rounded-md ${
+              loading || !isFormValid() 
+                ? 'bg-gray-400 cursor-not-allowed text-gray-600' 
+                : 'bg-gray-800 text-white hover:bg-black'
+            }`}>
               {showSuccessPopup 
                 ? "Carrera creada exitosamente. Redirigiendo..." 
                 : loading 
@@ -397,6 +419,23 @@ export default function CrearCarreraForm({
           {serverError && (
             <div className="bg-red-50 text-red-700 p-3 rounded-md border border-red-200 text-sm">
               <strong>Error:</strong> {serverError}
+            </div>
+          )}
+
+          {/* Mensaje informativo cuando el botón está deshabilitado */}
+          {!isFormValid() && !loading && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800">
+                <span className="font-medium">⚠️ No se puede crear la carrera:</span>
+              </p>
+              <ul className="text-sm text-yellow-700 mt-2 space-y-1">
+                {Object.values(errors).some(error => error && error.trim() !== '') && (
+                  <li>• Corrija los errores marcados en rojo</li>
+                )}
+                {(!nombre.trim() || !departamento.trim() || !planDeEstudiosId.trim() || !codigo.trim()) && (
+                  <li>• Complete todos los campos obligatorios (*)</li>
+                )}
+              </ul>
             </div>
           )}
 

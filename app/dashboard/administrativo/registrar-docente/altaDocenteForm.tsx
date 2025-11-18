@@ -259,13 +259,16 @@ const AltaDocenteForm = () => {
         if (value.trim().length < 10) {
           return 'La dirección debe ser más específica'
         }
-        // Verificar que contenga al menos un número (para la altura de la calle)
-        if (!/\d/.test(value)) {
-          return 'La dirección debe incluir altura (números)'
+        // Verificar formato específico: calle, número, código postal
+        // Patrón: texto + coma + número + coma + código postal (4-5 dígitos)
+        const direccionPattern = /^[A-Za-záéíóúÁÉÍÓÚüÜñÑ\s.''-]+,\s*\d+,\s*\d{4,5}$/
+        if (!direccionPattern.test(value.trim())) {
+          return 'Formato requerido: Calle, 123, 1234 (calle, número, código postal separados por comas)'
         }
-        // Verificar caracteres válidos para una dirección
-        if (!/^[A-Za-z0-9áéíóúÁÉÍÓÚüÜñÑ\s,.'-]+$/.test(value)) {
-          return 'La dirección contiene caracteres no permitidos'
+        // Verificar que tenga exactamente 2 comas
+        const comas = (value.match(/,/g) || []).length
+        if (comas !== 2) {
+          return 'Debe contener exactamente 2 comas: calle, número, código postal'
         }
         return ''
       
@@ -656,8 +659,9 @@ const AltaDocenteForm = () => {
                   className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${
                     errors.direccion ? 'border-red-300 bg-red-50' : 'border-gray-300'
                   }`}
-                  placeholder="Calle, número, ciudad, provincia, código postal"
+                  placeholder="Ej: Av. Corrientes, 1234, 1043"
                 />
+                <p className="text-xs text-gray-500 mt-1">Formato requerido: Calle, Número, Código Postal (separado por comas)</p>
                 {errors.direccion && <p className="mt-1 text-sm text-red-600">{errors.direccion}</p>}
               </div>
 
