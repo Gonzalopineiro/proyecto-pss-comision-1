@@ -10,6 +10,7 @@ import {
   obtenerMateriaIdPorCodigo,
   VerificacionCorrelativas 
 } from './actions';
+import ConfirmationPopup from '@/components/ui/confirmation-popup'
 import CorrelativasModal from './CorrelativasModal';
 
 export type Cursada = {
@@ -59,6 +60,10 @@ export default function CursadasTable({
   const [verificacion, setVerificacion] = useState<VerificacionCorrelativas | null>(null);
   const [materiaSeleccionada, setMateriaSeleccionada] = useState<Cursada | null>(null);
   const [inscribiendo, setInscribiendo] = useState(false);
+  const [popupOpen, setPopupOpen] = useState(false)
+  const [popupTitle, setPopupTitle] = useState('')
+  const [popupMessage, setPopupMessage] = useState('')
+  const [popupType, setPopupType] = useState<'success' | 'error'>('success')
 
   const totalPages = Math.ceil(cursadas.length / ITEMS_PER_PAGE);
   const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -112,8 +117,11 @@ export default function CursadasTable({
       setVerificacion(verificacionResult);
     } catch (error: any) {
       console.error('❌ Error verificando correlativas:', error);
-      // Si hay error, mostrar un alert simple y no abrir el modal
-      alert(error.message || 'Error al verificar correlativas');
+      // Mostrar popup de error y no abrir el modal
+      setPopupTitle('Error verificando correlativas')
+      setPopupMessage(error.message || 'Error al verificar correlativas')
+      setPopupType('error')
+      setPopupOpen(true)
       cerrarModal();
     } finally {
       setVerificandoCorrelativas(false);
@@ -128,16 +136,22 @@ export default function CursadasTable({
       const materiaId = await obtenerMateriaIdPorCodigo(materiaSeleccionada.materia_docente.materia.codigo_materia);
       
       await inscribirseACursada(materiaSeleccionada.id, materiaId);
-      
+
       // Actualizar el estado local
       cursadasInscripto.add(materiaSeleccionada.id);
+
+      setPopupTitle('¡Inscripción realizada exitosamente!')
+      setPopupMessage('Te inscribiste correctamente en la cursada ✅')
+      setPopupType('success')
+      setPopupOpen(true)
       
-      alert('¡Inscripción realizada exitosamente!');
-      
-      // Recargar la página para actualizar el estado completo
-      window.location.reload();
+      // Recargar la página al cerrar el popup
+      // (el cierre se maneja más abajo)
     } catch (error: any) {
-      alert(error.message || 'Error al procesar la inscripción');
+      setPopupTitle('Error en la inscripción')
+      setPopupMessage(error.message || 'Error al procesar la inscripción')
+      setPopupType('error')
+      setPopupOpen(true)
     } finally {
       setInscribiendo(false);
       cerrarModal();
@@ -282,6 +296,20 @@ export default function CursadasTable({
           inscribiendo={inscribiendo}
         />
       )}
+
+      <ConfirmationPopup
+        isOpen={popupOpen}
+        onClose={() => {
+          setPopupOpen(false)
+          if (popupType === 'success') {
+            // refrescar para actualizar estados (como antes con window.location.reload())
+            window.location.reload()
+          }
+        }}
+        title={popupTitle}
+        message={popupMessage}
+        type={popupType}
+      />
     </>
   );
 }
