@@ -7,7 +7,8 @@ import { Plus, Download, Printer, AlertCircle } from 'lucide-react'
 import { generateVerificationCode } from '@/lib/utils' 
 
 interface Props {
-    alumno: AlumnoCompleto
+    // Se añade la propiedad 'carreras' al tipo del alumno para que coincida con los datos pasados desde page.tsx
+    alumno: AlumnoCompleto & { carreras: { nombre: string } | null }
     finalesAprobados: FinalAprobadoRow[]
     cursadasAprobadas: CursadaAprobadaRow[]
 }
@@ -182,6 +183,10 @@ export default function CertificadosCliente({ alumno, finalesAprobados, cursadas
                     <div class="info-item">
                         <strong>Fecha de nacimiento</strong>
                         ${alumno.nacimiento ? new Date(alumno.nacimiento).toLocaleDateString('es-AR') : 'No especificada'}
+                    </div>
+                    <div class="info-item" style="grid-column: 1 / -1;">
+                        <strong>Carrera</strong>
+                        ${alumno.carreras?.nombre || 'No especificada'}
                     </div>
                 </div>
 
