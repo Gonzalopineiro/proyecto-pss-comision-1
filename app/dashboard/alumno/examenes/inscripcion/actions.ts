@@ -351,6 +351,12 @@ export async function obtenerMesasDisponibles(): Promise<MesaDisponible[]> {
     `
     )
     .eq("estado", "programada")
+    // Filtrar solo mesas con fecha de examen hoy o en el futuro
+    .gte(
+      "fecha_examen",
+      // Fecha en formato YYYY-MM-DD (comparación por fecha)
+      new Date().toISOString().split("T")[0]
+    )
     .in("materia_id", materiasIds);
 
   if (!mesas) return [];

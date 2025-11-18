@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import ProfileEditor from './ProfileEditor'
+import SidebarAlumno from '@/components/ui/sidebar_alumno'
 
 export default async function PerfilPage() {
   const supabase = await createClient()
@@ -202,6 +203,35 @@ export default async function PerfilPage() {
     )
   }
 
+  // Mostrar sidebar solo para estudiantes (rol 'user'). Para otros roles, usar layout genérico.
+  if (userRole === 'user') {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+        <div className="flex">
+          <aside className="w-64">
+            <SidebarAlumno />
+          </aside>
+          <main className="flex-1 p-8">
+            <div className="max-w-4xl mx-auto">
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Mi Perfil</h1>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  Gestiona tu información personal y mantén tus datos actualizados
+                </p>
+              </div>
+
+              <ProfileEditor 
+                user={profile} 
+                userRole={userRole}
+              />
+            </div>
+          </main>
+        </div>
+      </div>
+    )
+  }
+
+  // Layout genérico para otros roles
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-6">
