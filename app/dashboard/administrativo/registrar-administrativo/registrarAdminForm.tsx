@@ -101,13 +101,16 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
         if (value.trim().length < 10) {
           return 'La dirección debe ser más específica'
         }
-        // Verificar que contenga al menos un número (para la altura de la calle)
-        if (!/\d/.test(value)) {
-          return 'La dirección debe incluir altura (números)'
+        // Verificar formato específico: calle, número, código postal
+        // Patrón: texto + coma + número + coma + código postal (4-5 dígitos)
+        const direccionPattern = /^[A-Za-záéíóúÁÉÍÓÚüÜñÑ\s.''-]+,\s*\d+,\s*\d{4,5}$/
+        if (!direccionPattern.test(value.trim())) {
+          return 'Formato requerido: Calle, 123, 1234 (calle, número, código postal separados por comas)'
         }
-        // Verificar caracteres válidos para una dirección
-        if (!/^[A-Za-z0-9áéíóúÁÉÍÓÚüÜñÑ\s,.'-]+$/.test(value)) {
-          return 'La dirección contiene caracteres no permitidos'
+        // Verificar que tenga exactamente 2 comas
+        const comas = (value.match(/,/g) || []).length
+        if (comas !== 2) {
+          return 'Debe contener exactamente 2 comas: calle, número, código postal'
         }
         return ''
       
@@ -160,6 +163,27 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
     
     setErrors(e)
     return Object.keys(e).length === 0
+  }
+
+  // Función para verificar si el formulario está completo y válido
+  const isFormValid = () => {
+    // Verificar que no hay errores significativos (solo errores no vacíos)
+    const hasErrors = Object.values(errors).some(error => error && error.trim() !== '')
+
+    // Verificar que todos los campos requeridos están completos
+    const requiredFieldsComplete = 
+      formData.nombre.trim() &&
+      formData.apellido.trim() &&
+      formData.dni.trim() &&
+      formData.legajo.trim() &&
+      formData.fechaNacimiento &&
+      formData.email.trim() &&
+      formData.direccion.trim()
+
+    // Resultado final
+    const isValid = !hasErrors && requiredFieldsComplete
+
+    return isValid
   }
 
   const [passwordUsed, setPasswordUsed] = useState<string | null>(null)
@@ -333,8 +357,9 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
             value={formData.direccion}
             onChange={handleChange}
             className={`w-full mt-1 p-2 rounded border h-28 ${errors.direccion ? 'border-red-500' : ''}`}
-            placeholder="Ingrese la dirección completa"
+            placeholder="Ej: Av. Corrientes, 1234, 1043"
           />
+          <p className="text-xs text-gray-500 mt-1">Formato requerido: Calle, Número, Código Postal (separado por comas)</p>
           {errors.direccion && <p className="text-xs text-red-600 mt-1">{errors.direccion}</p>}
         </div>
 
@@ -368,6 +393,25 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
 
         {serverError && <p className="text-sm text-red-600">{serverError}</p>}
 
+        {/* Mensaje informativo cuando el botón está deshabilitado */}
+        {!isFormValid() && !loading && (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-800">
+              <span className="font-medium">⚠️ No se puede crear el administrador:</span>
+            </p>
+            <ul className="text-sm text-yellow-700 mt-2 space-y-1">
+              {Object.values(errors).some(error => error && error.trim() !== '') && (
+                <li>• Corrija los errores marcados en rojo</li>
+              )}
+              {(!formData.nombre.trim() || !formData.apellido.trim() || !formData.dni.trim() || 
+                !formData.legajo.trim() || !formData.fechaNacimiento || !formData.email.trim() || 
+                !formData.direccion.trim()) && (
+                <li>• Complete todos los campos obligatorios (*)</li>
+              )}
+            </ul>
+          </div>
+        )}
+
         <div className="flex items-center gap-3 mt-4">
           {onCancel ? (
             <button type="button" onClick={onCancel} className="px-4 py-2 rounded-md border">Cancelar</button>
@@ -381,8 +425,12 @@ export default function RegistrarAdministrativoForm({ onCancel }: { onCancel?: (
             <Button 
               type="submit" 
               variant="default" 
-              className="w-full py-3 rounded-2xl"
-              disabled={loading}
+              className={`w-full py-3 rounded-2xl ${
+                loading || !isFormValid() 
+                  ? 'bg-gray-400 cursor-not-allowed text-gray-600' 
+                  : 'bg-gray-800 hover:bg-gray-900 text-white'
+              }`}
+              disabled={loading || !isFormValid()}
             >
               {loading ? 'Creando...' : 'Crear Administrador'}
             </Button>
