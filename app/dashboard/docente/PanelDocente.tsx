@@ -231,10 +231,6 @@ export default function PanelDocente() {
                 Calificaciones examenes
               </Button>
               </Link>
-              <Button className="w-full justify-start" variant="outline">
-                <FileText className="h-4 w-4 mr-3" />
-                Actas
-              </Button>
             </div>
           </div>
 

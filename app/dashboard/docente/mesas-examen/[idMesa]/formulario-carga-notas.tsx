@@ -120,7 +120,7 @@ export default function FormularioCargaNotas({
   const handleGuardarClickeado = () => {
     setPopupInfo({
       title: 'Progreso Guardado',
-      message: 'Tus cambios se guardan automáticamente al editar cada fila. Este botón confirma que todo está guardado.'
+      message: 'Se han guardado los cambios realizados en la mesa de examen.'
     })
     setShowInfoPopup(true)
   };

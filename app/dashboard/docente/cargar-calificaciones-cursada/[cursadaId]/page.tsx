@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import ConfirmationPopup from '@/components/ui/confirmation-popup';
+import ConfirmDialog from '@/components/ui/confirm-dialog';
 
 import { 
   obtenerAlumnosInscriptos, 
@@ -74,6 +75,7 @@ export default function ListaAlumnosPage() {
   const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const [errorMessage, setErrorMessage] = useState({ title: '', message: '' });
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -254,11 +256,13 @@ export default function ListaAlumnosPage() {
       return;
     }
 
-    const confirmacion = window.confirm(
-      '¿Está seguro de que desea publicar las notas? Una vez publicadas no se pueden modificar y los estudiantes serán notificados.'
-    );
+    // Mostrar diálogo de confirmación
+    setShowPublishConfirm(true);
+  };
 
-    if (!confirmacion) return;
+  // Función para confirmar la publicación de notas
+  const handleConfirmarPublicacion = async () => {
+    setShowPublishConfirm(false);
 
     try {
       setPublicandoNotas(true);
@@ -688,6 +692,17 @@ export default function ListaAlumnosPage() {
         title={errorMessage.title}
         message={errorMessage.message}
         type="error"
+      />
+
+      <ConfirmDialog
+        isOpen={showPublishConfirm}
+        onClose={() => setShowPublishConfirm(false)}
+        title="Confirmar Publicación de Notas"
+        message="¿Está seguro de que desea publicar las notas? Una vez publicadas no se pueden modificar y los estudiantes serán notificados."
+        onConfirm={handleConfirmarPublicacion}
+        confirmLabel="Publicar Notas"
+        cancelLabel="Cancelar"
+        loading={publicandoNotas}
       />
     </div>
   );
